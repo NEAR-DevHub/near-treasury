@@ -204,13 +204,53 @@ input[type="number"] {
 }
 
 /* Form styles */
+.form-control {
+  background-color: var(--bg-page-color) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.form-control:focus {
+  background-color: var(--bg-page-color) !important;
+  border-color: var(--theme-color) !important;
+  color: var(--text-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(1, 191, 122, 0.25) !important;
+}
+
+.form-control::placeholder {
+  color: var(--text-secondary-color) !important;
+}
+
+.form-select {
+  background-color: var(--bg-page-color) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.form-select:focus {
+  background-color: var(--bg-page-color) !important;
+  border-color: var(--theme-color) !important;
+  color: var(--text-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(1, 191, 122, 0.25) !important;
+}
+
 .form-check-input {
   border-color: var(--border-color) !important;
   box-shadow: none !important;
+  background-color: var(--bg-page-color) !important;
 }
 
 .form-check-input:checked {
   background-color: var(--theme-color) !important;
+  border-color: var(--theme-color) !important;
+}
+
+.form-label {
+  color: var(--text-color) !important;
+}
+
+.form-text {
+  color: var(--text-secondary-color) !important;
 }
 
 /* Utility classes */

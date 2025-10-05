@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useTheme } from "@/context/ThemeContext";
-import { NAVIGATION_LINKS } from "@/constants/navigation";
+import { useDao } from "@/context/DaoContext";
+import { NAVIGATION_LINKS, NEAR_TREASURY_CONFIG } from "@/constants/navigation";
 import NearTreasuryLogo from "@/components/ui/Logo";
 
 const Navbar = () => {
   const { accountId, connect, disconnect } = useNearWallet();
   const { isDarkTheme, toggleTheme } = useTheme();
+  const { daoId } = useDao();
   const pathname = usePathname();
 
   const handleSignIn = async () => {
@@ -30,7 +32,21 @@ const Navbar = () => {
 
   const isActive = (linkTitle) => {
     const linkPath = linkTitle.toLowerCase().replace(/ /g, "-");
-    let currentPath = pathname.toLowerCase().replace("/", "");
+    let currentPath = pathname.toLowerCase();
+
+    // Remove leading slash
+    if (currentPath.startsWith("/")) {
+      currentPath = currentPath.substring(1);
+    }
+
+    // If we have a daoId, remove it from the path
+    if (daoId && currentPath.startsWith(daoId.toLowerCase())) {
+      currentPath = currentPath.substring(daoId.length);
+      // Remove leading slash if present
+      if (currentPath.startsWith("/")) {
+        currentPath = currentPath.substring(1);
+      }
+    }
 
     // If current path is empty (root), treat it as dashboard
     if (currentPath === "") {
@@ -44,7 +60,7 @@ const Navbar = () => {
     <nav className="navbar navbar-expand-lg shadow-sm border-bottom navbar-theme">
       <div className="container-fluid d-flex justify-content-between align-items-center">
         {/* Logo */}
-        <Link href="/" className="navbar-brand">
+        <Link href={NEAR_TREASURY_CONFIG.brandUrl} className="navbar-brand">
           <NearTreasuryLogo />
         </Link>
 
@@ -55,7 +71,7 @@ const Navbar = () => {
               {NAVIGATION_LINKS.map((link, idx) => (
                 <li key={idx} className="nav-item">
                   <Link
-                    href={link.href}
+                    href={daoId ? `/${daoId}${link.href}` : link.href}
                     className={`nav-link ${isActive(link.title)}`}
                   >
                     {link.title}
