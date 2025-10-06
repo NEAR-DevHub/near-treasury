@@ -147,13 +147,13 @@ input[type="number"] {
 .dropdown-item.active,
 .dropdown-item:active {
   background-color: var(--grey-04) !important;
-  color: inherit !important;
+  color: var(--text-color) !important;
 }
 
 .dropdown-item:hover,
 .dropdown-item:focus {
   background-color: var(--grey-04) !important;
-  color: inherit !important;
+  color: var(--text-color) !important;
 }
 
 /* Offcanvas styles */
@@ -782,4 +782,54 @@ fieldset:disabled:not(.no-transparent) {
 .nav-link {
   font-weight: 500 !important;
   font-size: 17px !important;
+}
+
+/* Skeleton Loading Animation */
+.skeleton {
+  background: var(--grey-04);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* FtLockupPortfolio specific classes */
+.permission-warning {
+  background: var(--bg-page-color);
+  color: var(--grey-02);
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.success-icon {
+  color: var(--other-green);
+}
+
+.reverse-border-color {
+  border-color: var(--border-color) !important;
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6{
+  color: var(--text-color) !important;
+}
+
+
+.HoverCardContent {
+  background-color: var(--bg-system-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 300px;
+  text-align: left;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }

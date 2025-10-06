@@ -1,49 +1,41 @@
-import { NearRpcClient, viewAccount } from '@near-js/jsonrpc-client';
-import { logger } from "@/utils/logger";
+import { NearRpcClient, viewAccount as viewAccountNear,viewFunctionAsJson,query   } from '@near-js/jsonrpc-client';
 
-export const getAccountBalance = async (accountId) => {
-  try {
-    const client = new NearRpcClient({
-      endpoint: 'https://rpc.mainnet.near.org',
-    });
+export const client = new NearRpcClient({
+  endpoint: 'https://rpc.mainnet.fastnear.com',
+});
 
-    const account = await viewAccount(client, {
+export const Near = {
+  view: async (contractId, methodName, args = {}) => {
+    if(!contractId || !methodName) {
+      return null;
+    }
+   const result = await viewFunctionAsJson(client, {
+    accountId: contractId,
+    methodName: methodName,
+    finality: "final",
+    argsBase64: Buffer.from(JSON.stringify(args)).toString('base64'),
+  });
+    return result;
+  },
+  viewState: async (contractId) => {
+    const result = await query(client, {
+        finality: "final",
+        requestType: "view_state",
+        accountId: contractId,
+       prefixBase64:''
+      
+    })
+    return result.values
+  },
+
+  viewAccount: async (accountId) => {
+    if(!accountId) {
+      return null;
+    }
+    const account = await viewAccountNear(client, {
       accountId: accountId,
       finality: 'final',
     });
-    
-    return {
-      available: (parseInt(account.amount) / 1e24).toString(),
-      staked: (parseInt(account.locked) / 1e24).toString(),
-      pending: "0"
-    };
-  } catch (error) {
-    logger.error("Error getting balance:", error);
-    return {
-      available: "0",
-      staked: "0", 
-      pending: "0"
-    };
-  }
-};
-
-// Get DAO information
-export const getDaoInfo = async (daoId) => {
-  try {
-    const client = new NearRpcClient({
-      endpoint: 'https://rpc.mainnet.near.org',
-    });
-    
-    // Call DAO's get_policy method
-    const result = await client.call({
-      contractId: daoId,
-      methodName: 'get_policy',
-      args: {},
-    });
-    
-    return result;
-  } catch (error) {
-    logger.error("Error getting DAO info:", error);
-    return null;
+    return account;
   }
 };
