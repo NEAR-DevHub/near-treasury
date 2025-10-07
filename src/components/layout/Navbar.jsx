@@ -57,7 +57,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg shadow-sm border-bottom navbar-theme">
+    <nav className="navbar navbar-expand-lg border-bottom navbar-theme">
       <div className="container-fluid d-flex justify-content-between align-items-center">
         {/* Logo */}
         <Link href={NEAR_TREASURY_CONFIG.brandUrl} className="navbar-brand">
@@ -101,7 +101,7 @@ const Navbar = () => {
                   style={{ maxWidth: "300px" }}
                 >
                   <span className="text-truncate flex-grow-1">{accountId}</span>
-                  <i class="bi bi-chevron-down"></i>
+                  <i className="bi bi-chevron-down"></i>
                 </button>
                 <ul className="dropdown-menu">
                   <li>

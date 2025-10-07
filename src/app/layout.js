@@ -5,10 +5,12 @@ import { NearWalletProvider } from "@/context/NearWalletContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { DaoProvider } from "@/context/DaoContext";
 import Script from "next/script";
+import { Inter } from "next/font/google";
+const inter = Inter();
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.className}>
       <body>
         <ThemeProvider>
           <NearWalletProvider>
