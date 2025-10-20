@@ -36,6 +36,18 @@
   /* Bootstrap Integration */
   --bs-body-bg: var(--bg-page-color);
   --bs-border-color: var(--border-color);
+  --bs-table-border-color: var(--border-color);
+}
+
+/* Utility Classes */
+.bg-theme-color {
+  background-color: var(--theme-color) !important;
+  color: white !important;
+}
+
+.bg-grey-04 {
+  background-color: var(--grey-04) !important;
+  color: var(--text-secondary-color) !important;
 }
 
 /* Dark Theme */
@@ -133,6 +145,23 @@ input[type="number"] {
 .dropdown-menu {
   background-color: var(--bg-page-color) !important;
   color: var(--text-color) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+.dropdown-toggle::after {
+  display: none;
+}
+
+.custom-select {
+  position: relative;
+}
+
+.custom-select .dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  min-width: 220px;
+  z-index: 9999;
 }
 
 .dropdown-item {
@@ -160,6 +189,28 @@ input[type="number"] {
 .offcanvas {
   background-color: var(--bg-page-color) !important;
   color: var(--text-color) !important;
+}
+
+.offcanvas.offcanvas-end {
+  width: 30% !important;
+  z-index: 1054;
+}
+
+@media screen and (max-width: 1200px) {
+  .offcanvas.offcanvas-end {
+    width: 50% !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .offcanvas.offcanvas-end {
+    width: 100% !important;
+  }
+}
+
+.offcanvas-body {
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* Link styles */
@@ -192,7 +243,7 @@ input[type="number"] {
 .primary-button {
   background: var(--theme-color) !important;
   color: var(--text-alt-color) !important;
-  border: none !important;
+  border-color: transparent !important;
 }
 
 .primary-button:hover {
@@ -258,6 +309,11 @@ input[type="number"] {
   font-size: 15px;
 }
 
+.text-large {
+  font-size: 18px;
+  font-weight: 600;
+}
+
 .fw-semi-bold {
   font-weight: 500;
 }
@@ -287,6 +343,9 @@ input[type="number"] {
 
 .btn-transparent {
   border: 1px solid var(--border-color);
+  :hover {
+    border: 1px solid var(--border-color);
+  }
 }
 
 .btn-transparent:hover {
@@ -588,6 +647,10 @@ fieldset:disabled:not(.no-transparent) {
   color: var(--other-red) !important;
 }
 
+.text-grey-02 {
+  color: var(--grey-02) !important;
+}
+
 .border-right {
   border-right: 1px solid var(--border-color);
 }
@@ -598,6 +661,50 @@ fieldset:disabled:not(.no-transparent) {
 
 .warning-icon {
   color: var(--other-warning) !important;
+}
+
+.warning-box {
+  background: rgba(255, 158, 0, 0.1);
+  color: var(--other-warning);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* FAQ Accordion Styles */
+.faq-question {
+  cursor: pointer;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.faq-question.expanded {
+  border-bottom: none;
+  padding-bottom: 1rem !important;
+}
+
+.faq-answer {
+  color: var(--text-secondary-color) !important;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.faq-answer p {
+  margin-bottom: 0px !important;
+}
+
+.faq-answer ul {
+  margin-bottom: 0px !important;
+}
+
+.faq-answer.expanded {
+  max-height: 500px;
+  padding-bottom: 0.5rem;
+}
+
+.faq-question.last-child {
+  border-bottom: none !important;
+  padding-bottom: 0px;
 }
 
 .error-icon {
@@ -633,6 +740,18 @@ fieldset:disabled:not(.no-transparent) {
   flex: 1;
 }
 
+.flex-2 {
+  flex: 2;
+}
+
+.flex-3 {
+  flex: 3;
+}
+
+.gap-10px {
+  gap: 10px !important;
+}
+
 .layout-flex-wrap {
   display: flex;
   gap: 8px;
@@ -645,11 +764,14 @@ fieldset:disabled:not(.no-transparent) {
   min-width: 0;
   overflow: auto;
   min-width: 300px;
+  padding: 1rem;
 }
 
 .layout-secondary {
   flex: 1.7;
   min-width: 0;
+  padding: 1rem;
+  padding-left: 0rem;
   overflow: auto;
   position: absolute;
   right: 0;
@@ -817,7 +939,7 @@ fieldset:disabled:not(.no-transparent) {
 }
 
 .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6{
-  color: var(--text-color) !important;
+  color: var(--text-color);
 }
 
 
@@ -832,4 +954,100 @@ fieldset:disabled:not(.no-transparent) {
   max-width: 300px;
   text-align: left;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+}
+
+/* Proposal Status Badge Styles */
+.status-badge {
+  padding: 6px 8px;
+  border-radius: 8px;
+  width: fit-content;
+  font-weight: 500;
+}
+
+.approve-status {
+  background-color: rgba(0, 202, 134, 0.16);
+  color: var(--other-green);
+}
+
+.reject-status {
+  background-color: rgba(217, 92, 74, 0.16);
+  color: var(--other-red);
+}
+
+.failed-status {
+  background-color: rgba(255, 122, 0, 0.16);
+  color: var(--other-warning);
+}
+
+.expire-status {
+  background-color: var(--grey-04);
+  color: var(--grey-02);
+}
+
+/* Votes Component - Vote separator line */
+.vote-separator {
+  left: 50%;
+  width: 1px;
+  height: 19px;
+  background-color: var(--text-secondary-color);
+  position: absolute;
+}
+
+/* Approvers Component - Approval status badge positioning */
+.approver-status {
+  position: absolute;
+  bottom: 0;
+  right: -5px;
+}
+
+
+.custom-tabs {
+  min-width: 300px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+
+  .nav-link {
+    color: var(--text-secondary-color) !important;
+    padding-bottom: 24px;
+  }
+  .active {
+    color: var(--text-color) !important;
+    border-bottom: 3px solid var(--theme-color);
+  }
+  .nav-link:hover {
+    color: var(--text-color) !important;
+  }
+}
+
+.proposal-label {
+  font-size: 13px !important;
+  color: var(--text-secondary-color) !important;
+}
+
+.proposal-label.border-top {
+  padding-top: 0.6rem !important;
+}
+
+/* Modal close button for dark theme */
+[data-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.navbar-my-treasuries-dropdown {
+  position: absolute;
+  background-color: var(--bg-page-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: 50%;
+  bottom: -5px;
+  left: 30px;
+  height: 24px;
+  width: 24px;
+  text-align: center;
+}
+
+.text-warning i.h5  {
+  color: var(--other-warning) !important;
 }

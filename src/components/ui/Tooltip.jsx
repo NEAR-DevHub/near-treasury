@@ -4,8 +4,8 @@ import * as HoverCard from "@radix-ui/react-hover-card";
 
 const Tooltip = ({ tooltip, children, placement = "top" }) => {
   return (
-    <HoverCard.Root>
-      <HoverCard.Trigger asChild openDelay={100}>
+    <HoverCard.Root openDelay={50}>
+      <HoverCard.Trigger asChild>
         {children ? (
           <span>{children}</span>
         ) : (

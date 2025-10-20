@@ -1,7 +1,7 @@
 "use client";
 
 import { LOCAL_STORAGE_KEYS } from "@/constants/localStorage";
-import Tooltip from "./Tooltip";
+import Tooltip from "@/components/ui/Tooltip";
 
 const DateTimeDisplay = ({ timestamp, format }) => {
   if (!timestamp) return null;

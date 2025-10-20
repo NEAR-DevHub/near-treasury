@@ -5,19 +5,19 @@ import Skeleton from "@/components/ui/Skeleton";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import Tooltip from "@/components/ui/Tooltip";
 import { useNearWallet } from "@/context/NearWalletContext";
-import { Near } from "@/lib/near";
-import { formatCurrency } from "@/lib/common";
-import { getFTTokenMetadata } from "@/lib/api";
+import { Near } from "@/api/near";
+import { formatCurrency } from "@/helpers/formatters";
+import { getFTTokenMetadata } from "@/api/backend";
 import Big from "big.js";
 
 const FtLockupPortfolio = ({
   contractId,
   treasuryDaoID,
   metadata,
-  setFtLockupBalance,
-  refreshData,
+  setFtLockupBalance = () => {},
+  refreshData = () => {},
 }) => {
-  const { accountId } = useNearWallet();
+  const { accountId, signAndSendTransactions } = useNearWallet();
 
   const [loading, setLoading] = useState(true);
   const [contractMetadata, setContractMetadata] = useState(null);
@@ -480,70 +480,75 @@ const FtLockupPortfolio = ({
     );
   };
 
-  function onClaim() {
-    setTxnCreated(true);
-    const calls = [];
-
-    if (!isFTRegistered) {
-      calls.push({
-        contractName: contractMetadata?.token_account_id,
-        methodName: "storage_deposit",
-        args: {
-          account_id: treasuryDaoID,
-          registration_only: true,
-        },
-        gas: 300000000000000,
-        deposit: Big(0.125).mul(Big(10).pow(24)).toFixed(),
-      });
-    }
-
-    calls.push({
-      contractName: contractId,
-      methodName: "claim",
-      args: {
-        account_id: treasuryDaoID,
-      },
-    });
-
-    // Note: Near.call needs to be implemented in the wallet context
-    console.log("Claim calls:", calls);
-  }
-
   function fetchAccountMetadata() {
     return Near.view(contractId, "get_account", {
       account_id: treasuryDaoID,
     });
   }
 
-  // useEffect(() => {
-  //   if (isTxnCreated && hasPermissionToClaim) {
-  //     let checkTxnTimeout = null;
+  async function onClaim() {
+    setTxnCreated(true);
+    const calls = [];
 
-  //     const checkForNewClaim = () => {
-  //       fetchAccountMetadata().then((res) => {
-  //         if (accountMetadata.claimed_amount !== res.claimed_amount) {
-  //           setAccountMetadata(res);
-  //           clearTimeout(checkTxnTimeout);
-  //           setShowToastStatus("ClaimSuccess");
-  //           setTxnCreated(false);
-  //           if (refreshData) {
-  //             refreshData();
-  //           }
-  //         } else {
-  //           checkTxnTimeout = setTimeout(() => checkForNewClaim(), 1000);
-  //         }
-  //       });
-  //     };
+    if (!isFTRegistered) {
+      calls.push({
+        signerId: accountId,
+        receiverId: contractMetadata?.token_account_id,
+        actions: [
+          {
+            type: "FunctionCall",
+            params: {
+              methodName: "storage_deposit",
+              args: {
+                account_id: treasuryDaoID,
+                registration_only: true,
+              },
+              gas: 300000000000000,
+              deposit: Big(0.125).mul(Big(10).pow(24)).toFixed(),
+            },
+          },
+        ],
+      });
+    }
 
-  //     checkForNewClaim();
+    calls.push({
+      signerId: accountId,
+      receiverId: contractId,
+      actions: [
+        {
+          type: "FunctionCall",
+          params: {
+            methodName: "claim",
+            args: {
+              account_id: treasuryDaoID,
+            },
+            gas: "300000000000000",
+            deposit: "0",
+          },
+        },
+      ],
+    });
 
-  //     return () => {
-  //       clearTimeout(checkTxnTimeout);
-  //     };
-  //   }
-  // }, [isTxnCreated, hasPermissionToClaim, accountMetadata, refreshData]);
+    const result = await signAndSendTransactions({
+      transactions: calls,
+    }).catch((error) => {
+      console.error("Claim error:", error);
+      setShowToastStatus("ClaimError");
+      setTxnCreated(false);
+    });
 
-  const ClaimSuccessToast = () => {
+    if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
+      fetchAccountMetadata().then((res) => {
+        setAccountMetadata(res);
+      });
+      setShowToastStatus("ClaimSuccess");
+      setTxnCreated(false);
+      refreshData();
+    }
+    console.log("Claim result:", result);
+  }
+
+  const ClaimToast = () => {
     return showToastStatus ? (
       <div className="toast-container position-fixed bottom-0 end-0 p-3">
         <div className={`toast ${showToastStatus ? "show" : ""}`}>
@@ -555,10 +560,17 @@ const FtLockupPortfolio = ({
             ></i>
           </div>
           <div className="toast-body">
-            <div className="d-flex align-items-center gap-3">
-              <i className="bi bi-check2 h3 mb-0 success-icon"></i>
-              <div>Tokens are successfully claimed.</div>
-            </div>
+            {showToastStatus === "ClaimSuccess" ? (
+              <div className="d-flex align-items-center gap-2">
+                <i className="bi bi-check2 mb-0 success-icon"></i>
+                <div>Tokens are successfully claimed.</div>
+              </div>
+            ) : (
+              <div className="d-flex align-items-center gap-2">
+                <i className="bi bi-x-lg mb-0 error-icon"></i>
+                <div>Failed to claim tokens.</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -569,7 +581,7 @@ const FtLockupPortfolio = ({
     return (
       Big(accountMetadata.unclaimed_amount ?? 0).gt(0) && (
         <div
-          className="border border-1 rounded-3 overflow-hidden reverse-border-color"
+          className="border border-1 rounded-3 overflow-hidden reverse-border-color text-color"
           style={{
             backgroundColor: "var(--bg-system-color)",
           }}
@@ -673,7 +685,7 @@ const FtLockupPortfolio = ({
 
   return (
     <div className="text-color">
-      <ClaimSuccessToast />
+      <ClaimToast />
       <div className="card flex-1 overflow-hidden border-bottom">
         {heading}
         <div className="d-flex flex-column gap-3 px-3 mb-3">

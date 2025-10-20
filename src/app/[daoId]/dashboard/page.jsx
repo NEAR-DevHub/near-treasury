@@ -1,22 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDao } from "@/context/DaoContext";
-import Portfolio from "./Portfolio";
+import Portfolio from "@/app/[daoId]/dashboard/Portfolio";
 import Chart from "@/components/ui/Chart";
-import IntentsPortfolio from "./IntentsPortfolio";
-import TransactionHistory from "./TransactionHistory";
-import FtLockupPortfolio from "./FtLockupPortfolio";
+import IntentsPortfolio from "@/app/[daoId]/dashboard/IntentsPortfolio";
+import TransactionHistory from "@/app/[daoId]/dashboard/TransactionHistory";
+import FtLockupPortfolio from "@/app/[daoId]/dashboard/FtLockupPortfolio";
+import Intents from "@/app/[daoId]/dashboard/intents-deposit/Intents";
+import SputnikDao from "@/app/[daoId]/dashboard/intents-deposit/SputnikDao";
 import {
   getNearPrice,
   getHistoricalData,
   getIntentsHistoricalData,
-} from "@/lib/api";
+} from "@/api/backend";
 import Skeleton from "@/components/ui/Skeleton";
 import Big from "big.js";
 import Tooltip from "@/components/ui/Tooltip";
 
 const Dashboard = () => {
+  const searchParams = useSearchParams();
+  const depositType = searchParams.get("deposit");
+
   const {
     daoId,
     lockupContract,
@@ -159,6 +165,38 @@ const Dashboard = () => {
     }
   }, [lockupContract]);
 
+  // If deposit parameter is present, show deposit page
+  if (depositType) {
+    return (
+      <div className="w-100 h-100">
+        <div className="container-fluid px-3 py-4">
+          <div className="d-flex flex-column gap-4">
+            <div
+              className="mx-auto"
+              style={{ maxWidth: "1200px", width: "100%" }}
+            >
+              <div className="d-flex flex-column gap-3">
+                <div className="d-flex justify-content-center align-items-center position-relative">
+                  <button
+                    className="btn btn-outline-secondary d-flex gap-1 align-items-center position-absolute start-0"
+                    onClick={() => {
+                      window.history.pushState({}, "", `/${daoId}/dashboard`);
+                      window.dispatchEvent(new PopStateEvent("popstate"));
+                    }}
+                  >
+                    <i className="bi bi-arrow-left"></i> Back
+                  </button>
+                  <div className="h3 mb-0">Deposit</div>
+                </div>
+                {depositType === "sputnik-dao" ? <SputnikDao /> : <Intents />}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="container-fluid px-3 py-4">
@@ -179,12 +217,58 @@ const Dashboard = () => {
                         {formatCurrency(totalBalance)} USD
                       </span>
                       <div className="mt-2">
-                        <button
-                          className="btn theme-btn w-100"
-                          onClick={() => navigate("/deposit")}
-                        >
-                          Deposit
-                        </button>
+                        <div className="dropdown w-100">
+                          <button
+                            className="btn theme-btn w-100"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            data-testid="deposit-btn"
+                          >
+                            Deposit
+                          </button>
+                          <ul className="dropdown-menu dropdown-menu-end dropdown-menu-lg-start px-2 shadow w-100">
+                            <li
+                              className="dropdown-item cursor-pointer py-2"
+                              onClick={() => {
+                                const params = new URLSearchParams(
+                                  window.location.search
+                                );
+                                params.set("deposit", "sputnik-dao");
+                                window.history.pushState(
+                                  {},
+                                  "",
+                                  `?${params.toString()}`
+                                );
+                              }}
+                            >
+                              Sputnik DAO
+                              <div className="text-secondary text-sm mt-1">
+                                Manage tokens: payments, staking, swaps &
+                                lockups
+                              </div>
+                            </li>
+                            <li
+                              className="dropdown-item cursor-pointer py-2"
+                              onClick={() => {
+                                const params = new URLSearchParams(
+                                  window.location.search
+                                );
+                                params.set("deposit", "intents");
+                                window.history.pushState(
+                                  {},
+                                  "",
+                                  `?${params.toString()}`
+                                );
+                              }}
+                            >
+                              Intents
+                              <div className="text-secondary text-sm mt-1">
+                                Cross-chain tokens & payments only
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </>
@@ -211,7 +295,6 @@ const Dashboard = () => {
                     </div>
                   </div>
                 }
-                onDepositClick={() => navigate("/deposit")}
               />
 
               {/* Intents Portfolio */}
@@ -291,7 +374,9 @@ const Dashboard = () => {
                     aria-controls="hidden-ft-lockup"
                     onClick={() => setIsFtLockupCollapsed(!isFtLockupCollapsed)}
                   >
-                    {isFtLockupCollapsed ? "Show History" : "Show Less"}
+                    {isFtLockupCollapsed
+                      ? "Show Archived FT Lockup Accounts"
+                      : "Show Less"}
                   </button>
                 </div>
               )}
