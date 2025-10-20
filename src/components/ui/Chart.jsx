@@ -16,7 +16,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { formatAmountToReadableFormat } from "@/lib/common";
+import { formatAmountToReadableFormat } from "@/helpers/formatters";
 
 ChartJS.register(
   CategoryScale,

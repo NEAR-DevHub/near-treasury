@@ -2,12 +2,17 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getFtTokens } from "@/lib/api";
-import { getNearBalances, getNearStakedBalances } from "@/lib/rpc";
-import { sha256 } from "js-sha256";
+import { getFtTokens } from "@/api/backend";
+import {
+  getNearBalances,
+  getNearStakedBalances,
+  getIntentsBalances,
+} from "@/api/rpc";
 import Big from "big.js";
-import { Near } from "@/lib/near";
-import { formatNearAmount } from "@/lib/common";
+import { Near } from "@/api/near";
+import { formatNearAmount, accountToLockup } from "@/helpers/nearHelpers";
+import { useNearWallet } from "@/context/NearWalletContext";
+import { getDaoConfig } from "@/config";
 const DaoContext = createContext(null);
 
 export const useDao = () => {
@@ -23,7 +28,7 @@ function aggregateStakedBalances(stakedBalances) {
   let unstakedBalance = 0;
   let totalBalance = 0;
   let availableToWithdraw = 0;
-  stakedBalances.forEach((pool) => {
+  (stakedBalances || []).forEach((pool) => {
     stakedBalance = Big(stakedBalance).plus(pool.staked);
     unstakedBalance = Big(unstakedBalance).plus(pool.unstaked);
     totalBalance = Big(totalBalance).plus(pool.total);
@@ -47,16 +52,21 @@ export const DaoProvider = ({ children }) => {
   const [daoNearBalances, setDaoNearBalances] = useState(null);
   const [daoFtBalances, setDaoFtBalances] = useState(null);
   const [daoStakedBalances, setDaoStakedBalances] = useState(null);
+  const [daoStakedPools, setDaoStakedPools] = useState(null);
   const [lockupNearBalances, setLockupNearBalances] = useState(null);
   const [lockupStakedBalances, setLockupStakedBalances] = useState(null);
+  const [lockupStakedPools, setLockupStakedPools] = useState(null);
   const [lockupContractState, setLockupContractState] = useState(null);
+  const [lastProposalId, setLastProposalId] = useState(null);
+  const [daoPolicy, setDaoPolicy] = useState(null);
+  const [intentsBalances, setIntentsBalances] = useState(null);
+  const [daoConfig, setDaoConfig] = useState(null);
+  const [customConfig, setCustomConfig] = useState(getDaoConfig(null));
+  const [lockupStakedPoolId, setLockupStakedPoolId] = useState(null);
 
-  async function accountToLockup() {
-    const lockupAccount = `${sha256(Buffer.from(daoId))
-      .toString("hex")
-      .slice(0, 40)}.lockup.near`;
-    const account = await getNearBalances(lockupAccount);
-    if (account) {
+  async function checkAndSetLockupContract() {
+    const lockupAccount = await accountToLockup(daoId);
+    if (lockupAccount) {
       setLockupContract(lockupAccount);
       getLockupBalances(lockupAccount);
     }
@@ -69,11 +79,12 @@ export const DaoProvider = ({ children }) => {
     return /^[a-z0-9._-]+\.near$/.test(id) || /^[a-f0-9]{64}$/.test(id);
   };
 
-  // Extract daoId from URL params
+  // Extract daoId from URL params and set app config
   useEffect(() => {
     if (params?.daoId) {
       if (isValidDaoId(params.daoId)) {
         setDaoId(params.daoId);
+        setCustomConfig(getDaoConfig(params.daoId));
       }
     }
   }, [params]);
@@ -86,6 +97,7 @@ export const DaoProvider = ({ children }) => {
       setDaoNearBalances(balances);
     });
     getNearStakedBalances(daoId).then((pools) => {
+      setDaoStakedPools(pools);
       setDaoStakedBalances(aggregateStakedBalances(pools));
     });
   }
@@ -95,7 +107,10 @@ export const DaoProvider = ({ children }) => {
       getNearStakedBalances(lockupContract),
       getNearBalances(lockupContract),
       Near.view(lockupContract, "get_locked_amount"),
-    ]).then(([stakedPools, lockupBalances, contractLocked]) => {
+      Near.view(lockupContract, "get_staking_pool_account_id"),
+    ]).then(([stakedPools, lockupBalances, contractLocked, stakingPoolId]) => {
+      setLockupStakedPoolId(stakingPoolId);
+      setLockupStakedPools(stakedPools);
       const contractLockedParsed = formatNearAmount(contractLocked);
       const lockupStakedBalances = aggregateStakedBalances(stakedPools);
       const stakedTokensYoctoNear = Big(lockupStakedBalances.total)
@@ -189,6 +204,9 @@ export const DaoProvider = ({ children }) => {
 
                 instancesWithDao.forEach((ftLockup) => {
                   const claimedAmount = Big(ftLockup.claimed_amount).toFixed();
+                  if (Big(ftLockup.deposited_amount).lte(0)) {
+                    return;
+                  }
 
                   if (Big(claimedAmount).gte(Big(ftLockup.deposited_amount))) {
                     fullyClaimed.push(ftLockup);
@@ -207,11 +225,182 @@ export const DaoProvider = ({ children }) => {
     });
   }
 
+  function getLastProposalId() {
+    return Near.view(daoId, "get_last_proposal_id", {})
+      .then((id) => {
+        setLastProposalId(id);
+        return id;
+      })
+      .catch((err) => {
+        console.error("Error fetching last proposal ID:", err);
+        return null;
+      });
+  }
+
+  function getDaoPolicy() {
+    return Near.view(daoId, "get_policy", {})
+      .then((policy) => {
+        setDaoPolicy(policy);
+        return policy;
+      })
+      .catch((err) => {
+        console.error("Error fetching DAO policy:", err);
+        return null;
+      });
+  }
+
+  function fetchIntentsBalances() {
+    return getIntentsBalances(daoId)
+      .then((balances) => {
+        setIntentsBalances(balances);
+        return balances;
+      })
+      .catch((err) => {
+        console.error("Error fetching intents balances:", err);
+        return [];
+      });
+  }
+
+  function getDaoMetadata() {
+    return Near.view(daoId, "get_config", {})
+      .then((config) => {
+        console.log("config", config);
+        const metadata = config?.metadata
+          ? JSON.parse(atob(config?.metadata))
+          : null;
+        setDaoConfig({
+          ...config,
+          metadata,
+        });
+        return { ...config, metadata };
+      })
+      .catch((err) => {
+        console.error("Error fetching DAO config:", err);
+        return null;
+      });
+  }
+
+  function hasPermission(kindName, actionType) {
+    return true;
+    const { accountId } = useNearWallet();
+    if (!accountId) {
+      return false;
+    }
+
+    if (!daoPolicy || !Array.isArray(daoPolicy.roles)) {
+      return false;
+    }
+
+    const kindNames = Array.isArray(kindName) ? kindName : [kindName];
+    const actionTypes = Array.isArray(actionType) ? actionType : [actionType];
+
+    // if the role is all and has everyone, we need to check for it
+    for (const role of daoPolicy.roles) {
+      if (
+        role.kind !== "Everyone" &&
+        Array.isArray(role.kind.Group) &&
+        !role.kind.Group.includes(accountId)
+      ) {
+        continue;
+      }
+
+      for (const kind of kindNames) {
+        for (const action of actionTypes) {
+          const permissionVariants = [
+            `${kind}:${action}`,
+            `${kind}:*`,
+            `*:${action}`,
+            "*:*",
+          ];
+
+          if (
+            permissionVariants.some((perm) => role.permissions.includes(perm))
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function getApproversAndThreshold(kind, isDeleteCheck) {
+    const { accountId } = useNearWallet();
+    const groupWithPermission = (daoPolicy?.roles ?? []).filter((role) => {
+      const permissions = isDeleteCheck
+        ? ["*:*", `${kind}:*`, `${kind}:VoteRemove`, "*:VoteRemove"]
+        : [
+            "*:*",
+            `${kind}:*`,
+            `${kind}:VoteApprove`,
+            `${kind}:VoteReject`,
+            "*:VoteApprove",
+            "*:VoteReject",
+          ];
+      return (role?.permissions ?? []).some((i) => permissions.includes(i));
+    });
+
+    let approversGroup = [];
+    let ratios = [];
+    let requiredVotes = null;
+    let everyoneHasAccess = false;
+    // if group kind is everyone, current user will have access
+    groupWithPermission.map((i) => {
+      approversGroup = approversGroup.concat(i?.kind?.Group ?? []);
+      everyoneHasAccess = i.kind === "Everyone";
+      const votePolicy =
+        Object.values(i?.vote_policy?.[kind] ?? {}).length > 0
+          ? i.vote_policy[kind]
+          : daoPolicy.default_vote_policy;
+      if (votePolicy.weight_kind === "RoleWeight") {
+        if (Array.isArray(votePolicy.threshold)) {
+          ratios = ratios.concat(votePolicy.threshold);
+          ratios = ratios.concat(votePolicy.threshold);
+        } else {
+          requiredVotes = parseFloat(votePolicy.threshold);
+        }
+      }
+    });
+
+    let numerator = 0;
+    let denominator = 0;
+
+    if (ratios.length > 0) {
+      ratios.forEach((value, index) => {
+        if (index == 0 || index % 2 === 0) {
+          // Even index -> numerator
+          numerator += value;
+        } else {
+          // Odd index -> denominator
+          denominator += value;
+        }
+      });
+    }
+    const approverAccounts = Array.from(new Set(approversGroup));
+
+    return {
+      // if everyoneHasAccess, current account doesn't change the requiredVotes
+      approverAccounts:
+        everyoneHasAccess && accountId
+          ? [...approverAccounts, accountId]
+          : approverAccounts,
+      requiredVotes:
+        typeof requiredVotes === "number"
+          ? requiredVotes
+          : Math.floor((numerator / denominator) * approverAccounts.length) + 1,
+    };
+  }
+
   useEffect(() => {
     if (daoId) {
-      accountToLockup();
+      checkAndSetLockupContract();
       getDaoBalances();
       fetchFtLockups();
+      getLastProposalId();
+      getDaoPolicy();
+      fetchIntentsBalances();
+      getDaoMetadata();
     }
   }, [daoId]);
 
@@ -222,12 +411,26 @@ export const DaoProvider = ({ children }) => {
     daoNearBalances,
     daoFtBalances,
     daoStakedBalances,
+    daoStakedPools,
     lockupStakedBalances,
+    lockupStakedPools,
     lockupNearBalances,
     lockupContractState,
+    lastProposalId,
+    daoPolicy,
+    intentsBalances,
+    daoConfig,
+    customConfig,
     refreshDaoBalances: getDaoBalances,
     refreshLockupBalances: getLockupBalances,
     refreshFtLockups: fetchFtLockups,
+    refetchLastProposalId: getLastProposalId,
+    refetchDaoPolicy: getDaoPolicy,
+    refetchIntentsBalances: fetchIntentsBalances,
+    refetchDaoConfig: getDaoConfig,
+    hasPermission,
+    getApproversAndThreshold,
+    lockupStakedPoolId,
   };
 
   return <DaoContext.Provider value={value}>{children}</DaoContext.Provider>;

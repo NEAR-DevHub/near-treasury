@@ -1,7 +1,7 @@
 "use client";
 
 import { NearConnector } from "@hot-labs/near-connect";
-import { logger } from "@/utils/logger";
+import { logger } from "@/helpers/logger";
 import { NEAR_TREASURY_CONFIG } from "@/constants/navigation";
 import {
   createContext,
@@ -52,6 +52,7 @@ export const NearWalletProvider = ({ children }) => {
 
     try {
       const wallet = await newConnector.wallet();
+      console.log("wallet", wallet);
       const accountId = await wallet.getAddress();
       if (accountId) {
         setAccountId(accountId);

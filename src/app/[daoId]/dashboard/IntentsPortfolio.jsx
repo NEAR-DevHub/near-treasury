@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Skeleton from "@/components/ui/Skeleton";
-import NearToken from "@/components/ui/NearToken";
-import {
-  formatTokenAmount,
-  formatUsdValue,
-  formatCurrency,
-} from "@/lib/common";
-import { getIntentsBalances } from "@/lib/rpc";
+import NearToken from "@/components/icons/NearToken";
+import { formatTokenAmount, formatUsdValue } from "@/helpers/nearHelpers";
+import { formatCurrency } from "@/helpers/formatters";
+import { getIntentsBalances } from "@/api/rpc";
 import Big from "big.js";
 
 const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {

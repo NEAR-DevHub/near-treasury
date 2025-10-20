@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Tooltip from "@/components/ui/Tooltip";
-import Copy from "./Copy";
+import Copy from "@/components/ui/Copy";
+import { getProfilesFromSocialDb } from "@/api/social";
+
+// Cache for profile data to prevent re-fetching
+const profileCache = {};
 
 const Profile = ({
   accountId,
@@ -18,13 +22,30 @@ const Profile = ({
   const imageSrc = `https://i.near.social/magic/large/https://near.social/magic/img/account/${accountId}`;
   const name = profile?.name;
 
-  //   useEffect(() => {
-  // setProfile({ name: accountId });
-  //   }, [accountId]);
+  useEffect(() => {
+    if (!accountId) {
+      setProfile(null);
+      return;
+    }
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-  };
+    // Check cache first
+    if (profileCache[accountId]) {
+      setProfile(profileCache[accountId]);
+      return;
+    }
+
+    // Fetch from API if not cached
+    getProfilesFromSocialDb(accountId)
+      .then((profile) => {
+        setProfile(profile);
+        profileCache[accountId] = profile; // Cache the result
+      })
+      .catch((error) => {
+        console.error("Error fetching profile:", error);
+        setProfile(null);
+        profileCache[accountId] = null; // Cache null to prevent retries
+      });
+  }, [accountId]);
 
   const HoverCard = () => (
     <div style={{ width: 200 }} className="py-1">
@@ -93,7 +114,7 @@ const Profile = ({
 
       <div className="d-flex flex-column" style={{ minWidth: 0, flex: 1 }}>
         {displayName && (
-          <div className="mb-0 text-truncate" title={name}>
+          <div className="mb-0 text-truncate text-left" title={name}>
             {name}
           </div>
         )}
@@ -105,6 +126,7 @@ const Profile = ({
               overflow: "hidden",
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
+              fontSize: "12px",
             }}
           >
             {displayName ? "@" + accountId : accountId}

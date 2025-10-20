@@ -1,110 +1,57 @@
-const { getUserTreasuries, isWeb4Page } = VM.require(
-  "${REPL_BASE_DEPLOYMENT_ACCOUNT}/widget/lib.common"
-);
+"use client";
 
-const instance = props.instance;
-if (!instance) {
-  return <></>;
-}
+import { useState, useEffect, useRef } from "react";
+import { useNearWallet } from "@/context/NearWalletContext";
+import { useDao } from "@/context/DaoContext";
+import { getUserTreasuries } from "@/helpers/treasuryHelpers";
 
-const { treasuryDaoID, navbarLinks, logo, isTesting } = VM.require(
-  `${instance}/widget/config.data`
-);
+const MyTreasuries = () => {
+  const { accountId } = useNearWallet();
+  const { daoConfig } = useDao();
+  const [currentTreasury, setCurrentTreasury] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [userTreasuries, setUserTreasuries] = useState(null);
+  const dropdownRef = useRef(null);
 
-const [currentTreasury, setCurrentTreasury] = useState(null);
-const [isOpen, setIsOpen] = useState(false);
-
-const accountId = context.accountId;
-
-function parseMetadata(config) {
-  return JSON.parse(atob(config.metadata ?? ""));
-}
-
-const [userTreasuries, setUserTreasuries] = useState(null);
-
-useEffect(() => {
-  if (accountId) {
-    getUserTreasuries(accountId).then((results) => {
-      const withTreasury = results.filter((dao) => dao.hasTreasury);
-      setUserTreasuries(withTreasury);
-    });
-  }
-  if (treasuryDaoID) {
-    Near.asyncView(treasuryDaoID, "get_config").then((config) => {
-      setCurrentTreasury({
-        ...config,
-        metadata: parseMetadata(config),
+  useEffect(() => {
+    if (accountId) {
+      getUserTreasuries(accountId).then((results) => {
+        setUserTreasuries(results);
       });
-    });
-  }
-}, [treasuryDaoID]);
+    }
+  }, [accountId]);
 
-const defaultImage =
-  "https://ipfs.near.social/ipfs/bafkreia5drpo7tfsd7maf4auxkhatp6273sunbg7fthx5mxmvb2mooc5zy";
+  useEffect(() => {
+    if (daoConfig) {
+      setCurrentTreasury(daoConfig);
+    }
+  }, [daoConfig]);
 
-if (!currentTreasury) {
-  return <></>;
-}
+  const defaultImage =
+    "https://ipfs.near.social/ipfs/bafkreia5drpo7tfsd7maf4auxkhatp6273sunbg7fthx5mxmvb2mooc5zy";
 
-const treasuryLogo = (currentTreasury.metadata?.flagLogo ?? "")?.includes(
-  "ipfs"
-)
-  ? currentTreasury?.metadata?.flagLogo
-  : logo
-  ? logo
-  : defaultImage;
-
-const Container = styled.div`
-  font-size: 14px !important;
-  --bs-dropdown-font-size: 14px;
-  .image-container {
-    position: relative;
+  if (!currentTreasury) {
+    return <></>;
   }
 
-  .scroll-box {
-    max-height: 300px;
-    overflow-y: scroll;
-  }
+  const treasuryLogo = (currentTreasury.metadata?.flagLogo ?? "")?.includes(
+    "ipfs"
+  )
+    ? currentTreasury?.metadata?.flagLogo
+    : defaultImage;
 
-  .custom-dropdown {
-    position: absolute;
-    background-color: var(--bg-page-color);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    border-radius: 50%;
-    bottom: -1px;
-    right: -2px;
-    height: 24px;
-    width: 24px;
-    text-align: center;
-  }
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
 
-  .dropdown-menu {
-    width: 400px;
-  }
-
-  .heading {
-    padding: var(--bs-dropdown-item-padding-y) var(--bs-dropdown-item-padding-x);
-  }
-
-  .text-sm {
-    font-size: 12px;
-  }
-`;
-
-const toggleDropdown = () => {
-  setIsOpen(!isOpen);
-};
-
-return (
-  <Container>
+  return (
     <div
-      className="image-container"
+      ref={dropdownRef}
+      className="position-relative"
       tabIndex="0"
+      style={{ width: "fit-content" }}
       onBlur={() => {
-        setTimeout(() => {
-          setIsOpen(false);
-        }, 200);
+        setTimeout(() => setIsOpen(false), 200);
       }}
     >
       {treasuryLogo && typeof treasuryLogo === "string" ? (
@@ -113,25 +60,27 @@ return (
           width={50}
           height={50}
           className="rounded-3 object-fit-cover"
+          alt="Treasury Logo"
         />
       ) : (
         treasuryLogo
       )}
       {Array.isArray(userTreasuries) && userTreasuries?.length > 0 && (
-        <div className="custom-dropdown" onClick={toggleDropdown}>
-          <div className="d-flex justify-content-center align-items-center w-100 h-100">
-            <i class="bi bi-chevron-down h6 mb-0 "></i>
-          </div>
+        <div className="navbar-my-treasuries-dropdown" onClick={toggleDropdown}>
+          <i className="bi bi-chevron-down h6 mb-0"></i>
         </div>
       )}
       {isOpen && (
-        <div className="dropdown-menu dropdown-menu-end dropdown-menu-lg-start shadow show">
-          <div className="d-flex justify-content-between w-100 fw-semi-bold heading align-items-center">
+        <div
+          className="dropdown-menu dropdown-menu-end dropdown-menu-lg-start shadow show p-2"
+          style={{ width: "300px" }}
+        >
+          <div className="d-flex justify-content-between w-100 fw-semi-bold heading align-items-center mb-1">
             <div>My Treasuries</div>
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href={`https://near.social/treasury-factory.near/widget/app?page=my-treasuries`}
+              href="https://near.social/treasury-factory.near/widget/app?page=my-treasuries"
             >
               <div className="primary-text-color text-sm">Manage</div>
             </a>
@@ -140,12 +89,11 @@ return (
             {userTreasuries.map((option) => {
               return (
                 <a
+                  key={option.daoId}
                   target="_blank"
                   rel="noopener noreferrer"
-                  href={`${isWeb4Page ? "https://" : "https://near.social/"}${
-                    option.instanceAccount
-                  }${isWeb4Page ? ".page" : ""}/widget/app`}
-                  className={`dropdown-item cursor-pointer w-100 text-wrap d-flex gap-2 align-items-center`}
+                  href={`/${option.daoId}/dashboard`}
+                  className="dropdown-item cursor-pointer w-100 text-wrap d-flex gap-2 align-items-center"
                 >
                   <img
                     src={
@@ -156,6 +104,7 @@ return (
                     width={32}
                     height={32}
                     className="rounded-3 object-fit-cover"
+                    alt={option.config.name}
                   />
                   <div className="d-flex flex-column">
                     <div className="fw-semi-bold">{option.config.name}</div>
@@ -170,5 +119,7 @@ return (
         </div>
       )}
     </div>
-  </Container>
-);
+  );
+};
+
+export default MyTreasuries;

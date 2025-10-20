@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Skeleton from "@/components/ui/Skeleton";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
-import NearToken from "@/components/ui/NearToken";
+import NearToken from "@/components/icons/NearToken";
 import Profile from "@/components/ui/Profile";
 import Copy from "@/components/ui/Copy";
-import { accountToLockup } from "@/lib/common";
-import { Near } from "@/lib/near";
-import { getTransactionTransferHistory } from "@/lib/api";
+import { accountToLockup } from "@/helpers/nearHelpers";
+import { Near } from "@/api/near";
+import { getTransactionTransferHistory } from "@/api/backend";
 import Big from "big.js";
 
 const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
@@ -273,7 +273,7 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
               {showMoreLoading ? (
                 loader
               ) : (
-                <div className="w-100 h-100 mb-3">
+                <div className="w-100 h-100 mb-3 px-3">
                   {!hideViewMore && (
                     <button
                       onClick={() => {

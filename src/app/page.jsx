@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import NearTreasuryLogo from "@/components/ui/Logo";
+import NearTreasuryLogo from "@/components/icons/Logo";
 
 const DaoSelector = () => {
   const [daoId, setDaoId] = useState("");

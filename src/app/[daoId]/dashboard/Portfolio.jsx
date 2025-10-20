@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { deserializeLockupContract, formatNearAmount } from "@/lib/common";
-import NearToken from "@/components/ui/NearToken";
+import {
+  deserializeLockupContract,
+  formatNearAmount,
+} from "@/helpers/nearHelpers";
+import NearToken from "@/components/icons/NearToken";
 import Skeleton from "@/components/ui/Skeleton";
 import Tooltip from "@/components/ui/Tooltip";
 import { TOOLTIP_TEXT, LOCKUP_TOOLTIP_TEXT } from "@/constants/ui";
@@ -590,8 +593,7 @@ const Portfolio = ({
                   <>
                     {showHiddenTokens && <TokensList tokens={hiddenTokens} />}
                     <div
-                      role="button"
-                      className="d-flex align-items-center justify-content-between px-3 py-2"
+                      className="d-flex align-items-center justify-content-between px-3 py-2 text-color"
                       onClick={() => setShowHiddenTokens(!showHiddenTokens)}
                     >
                       <div>
