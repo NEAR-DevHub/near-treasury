@@ -76,11 +76,14 @@ Create `playwright.config.js` with:
 
 ## Technical Considerations
 
-### API Mocking Strategy
-The old tests used extensive RPC mocking. For the new app:
-- Mock Next.js API routes (`/api/*`)
-- Mock external APIs (NEAR RPC, pricing APIs, etc.)
-- Consider using MSW (Mock Service Worker) for more robust mocking
+### Test Environment Setup
+For E2E tests, we'll run the full Next.js development server with supporting services:
+- **Next.js server**: Tests will run against the real Next.js server (localhost:3000)
+- **Next.js API routes** (`/api/*`) will run normally, no mocking needed
+- **NEAR RPC**: Configure app to use near-sandbox RPC endpoint instead of mainnet
+- **near-sandbox** provides its own RPC server for blockchain interactions
+- **Indexer API**: Run test instance of [sputnik-dao-caching-api-server](https://github.com/near-daos/sputnik-dao-caching-api-server) with test database
+- **External APIs** (pricing APIs, etc.) may need mocking
 
 ### Test Data Management
 - Use consistent test DAO IDs across tests
