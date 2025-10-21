@@ -1,4 +1,12 @@
+# NEAR Treasury
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+This project is a conversion of the [NEAR DevHub Treasury Dashboard](https://github.com/NEAR-DevHub/neardevhub-treasury-dashboard), which was originally built on NEAR BOS (Blockchain Operating System).
+
+While BOS is excellent for serving multiple apps in one web portal, the sandbox environment and isolation enforced by [NEAR Social VM](https://github.com/NearSocial/VM) create development challenges. These restrictions limit access to certain web browser features and APIs that are not available to BOS widgets/components.
+
+We chose to rebuild NEAR Treasury as a standard Next.js React app to accelerate development and unlock the full potential of modern web technologies for an optimal user experience.
 
 ## Getting Started
 
