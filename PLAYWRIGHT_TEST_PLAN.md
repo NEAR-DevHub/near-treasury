@@ -67,6 +67,68 @@ Create `playwright.config.js` with:
 - Screenshot/video on failure
 - Parallel execution settings
 
+### Phase 2: GitHub Actions CI/CD Setup
+
+#### 2.1 Create GitHub Actions Workflow
+Create `.github/workflows/playwright.yml` to run tests automatically on:
+- Pull requests to main branch
+- Pushes to main branch
+- Manual workflow dispatch (for on-demand runs)
+
+#### 2.2 Workflow Configuration
+The workflow should:
+- Set up Node.js environment
+- Install dependencies (including Playwright browsers)
+- Build the Next.js application
+- Start the Next.js dev server
+- Run Playwright tests
+- Upload test artifacts (screenshots, videos, trace files) on failure
+- Upload HTML test report for review
+
+#### 2.3 Test Environment Services
+Configure the workflow to start required services:
+- **Next.js server**: Start and wait for it to be ready
+- **near-sandbox**: Set up local NEAR testnet
+- **Indexer API**: Start test instance with database snapshot (when applicable)
+- Configure proper environment variables for test mode
+
+#### 2.4 Optimization Strategies
+- Cache Node.js dependencies for faster builds
+- Cache Playwright browsers between runs
+- Run tests in parallel using sharding for speed
+- Set appropriate timeouts for CI environment
+- Implement retry logic for flaky tests
+
+#### 2.5 Reporting and Artifacts
+- Generate HTML test report
+- Upload test artifacts (screenshots, videos, traces) on failure
+- Provide clear test result summary in PR comments (optional)
+- Store test results for historical tracking
+
+**Example workflow structure:**
+```yaml
+name: Playwright Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - name: Install dependencies
+      - name: Install Playwright browsers
+      - name: Build application
+      - name: Start services (Next.js, near-sandbox, indexer)
+      - name: Run Playwright tests
+      - name: Upload artifacts
+```
+
 ## Acceptance Criteria
 
 - [ ] Playwright is installed and configured
