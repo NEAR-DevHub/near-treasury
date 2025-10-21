@@ -328,7 +328,11 @@ const ProposalDetails = ({
                 true
               )}
               <label className="border-top proposal-label">Note</label>
-              <Markdown>{proposalData?.notes ?? "-"}</Markdown>
+              {proposalData?.notes ? (
+                <Markdown>{proposalData?.notes}</Markdown>
+              ) : (
+                "-"
+              )}
             </div>
           </div>
         </div>
