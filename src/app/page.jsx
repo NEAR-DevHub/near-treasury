@@ -1,19 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import NearTreasuryLogo from "@/components/icons/Logo";
+import { validateDaoId } from "@/helpers/daoValidation";
 
 const DaoSelector = () => {
   const [daoId, setDaoId] = useState("");
-  const router = useRouter();
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!daoId.trim()) return;
 
-    // Navigate to the DAO dashboard
-    router.push(`/${daoId.trim()}/dashboard`);
+    setIsValidating(true);
+    setValidationError("");
+
+    const validation = await validateDaoId(daoId);
+
+    setIsValidating(false);
+
+    if (validation.isValid) {
+      // Navigate to the DAO dashboard
+      window.location.href = `/${validation.daoId}/dashboard`;
+    } else {
+      setValidationError(validation.error || "Validation failed");
+    }
   };
 
   return (
@@ -37,21 +49,40 @@ const DaoSelector = () => {
                     </label>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${
+                        validationError ? "is-invalid" : ""
+                      }`}
                       id="daoId"
                       value={daoId}
-                      onChange={(e) => setDaoId(e.target.value)}
+                      onChange={(e) => {
+                        setDaoId(e.target.value);
+                        if (validationError) setValidationError("");
+                      }}
                       placeholder="e.g., treasury.sputnik-dao.near"
                       required
                     />
+                    {validationError && (
+                      <div className="invalid-feedback">{validationError}</div>
+                    )}
                   </div>
 
                   <button
                     type="submit"
                     className="btn theme-btn w-100"
-                    disabled={!daoId.trim()}
+                    disabled={!daoId.trim() || isValidating}
                   >
-                    Access Treasury
+                    {isValidating ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                        Validating...
+                      </>
+                    ) : (
+                      "Access Treasury"
+                    )}
                   </button>
                 </form>
               </div>

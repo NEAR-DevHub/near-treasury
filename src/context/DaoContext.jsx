@@ -13,6 +13,7 @@ import { Near } from "@/api/near";
 import { formatNearAmount, accountToLockup } from "@/helpers/nearHelpers";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { getDaoConfig } from "@/config";
+import { validateDaoId } from "@/helpers/daoValidation";
 const DaoContext = createContext(null);
 
 export const useDao = () => {
@@ -72,20 +73,19 @@ export const DaoProvider = ({ children }) => {
     }
   }
 
-  // Validate DAO ID format
-  const isValidDaoId = (id) => {
-    if (!id) return false;
-    // Basic validation for NEAR account ID format
-    return /^[a-z0-9._-]+\.near$/.test(id) || /^[a-f0-9]{64}$/.test(id);
-  };
-
-  // Extract daoId from URL params and set app config
+  // Extract daoId from URL params and validate
   useEffect(() => {
     if (params?.daoId) {
-      if (isValidDaoId(params.daoId)) {
-        setDaoId(params.daoId);
-        setCustomConfig(getDaoConfig(params.daoId));
-      }
+      // Validate format and check blockchain in one call
+      validateDaoId(params.daoId).then((validation) => {
+        if (validation.isValid) {
+          setDaoId(validation.daoId);
+          setCustomConfig(getDaoConfig(validation.daoId));
+        } else {
+          // Redirect to home page if invalid
+          window.location.href = "/";
+        }
+      });
     }
   }, [params]);
 
