@@ -159,15 +159,16 @@ const CreatePaymentRequest = ({
   }
 
   const { invalidateCategory } = useProposals({
+    daoId: treasuryDaoID,
     category: "payments",
     enabled: false,
   });
 
   function refreshData() {
-    if (setVoteProposalId) setVoteProposalId(lastProposalId);
-    if (setToastStatus) setToastStatus("ProposalAdded");
     // Invalidate proposals cache
     invalidateCategory();
+    if (setVoteProposalId) setVoteProposalId(lastProposalId);
+    if (setToastStatus) setToastStatus("ProposalAdded");
   }
 
   function cleanInputs() {

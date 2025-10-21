@@ -542,7 +542,7 @@ const ProposalDetailsPage = ({
                 href={proposalData?.proposalUrl}
               >
                 <button
-                  className="btn p-0 d-flex align-items-center gap-2 h-auto"
+                  className="btn p-0 d-flex align-items-center gap-2 h-auto text-color"
                   style={{ fontSize: 14 }}
                 >
                   Open Proposal <i className="bi bi-box-arrow-up-right"></i>

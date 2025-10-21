@@ -91,10 +91,10 @@ const PaymentsIndex = () => {
   }
 
   function updateVoteSuccess(status, proposalId) {
-    setVoteProposalId(proposalId);
-    setToastStatus(status);
     // Invalidate the proposals cache
     invalidateCategory();
+    setVoteProposalId(proposalId);
+    setToastStatus(status);
   }
 
   async function checkProposalStatus(proposalId) {

@@ -161,10 +161,10 @@ const Table = ({
   }, [proposals]);
 
   function updateVoteSuccess(status, proposalId) {
+    refreshTableData?.();
     setToastStatus?.(status);
     setVoteProposalId?.(proposalId);
     onSelectRequest?.(null);
-    refreshTableData?.();
   }
 
   async function checkProposalStatus(proposalId) {

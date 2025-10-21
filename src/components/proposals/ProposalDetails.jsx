@@ -11,6 +11,7 @@ import Copy from "@/components/ui/Copy";
 import Profile from "@/components/ui/Profile";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import { formatSubmissionTimeStamp } from "@/helpers/daoHelpers";
+import Markdown from "@/components/ui/Markdown";
 
 const ProposalDetails = ({
   proposalData,
@@ -327,7 +328,7 @@ const ProposalDetails = ({
                 true
               )}
               <label className="border-top proposal-label">Note</label>
-              <div className="markdown-href">{proposalData?.notes ?? "-"}</div>
+              <Markdown>{proposalData?.notes ?? "-"}</Markdown>
             </div>
           </div>
         </div>

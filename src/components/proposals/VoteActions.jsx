@@ -407,9 +407,7 @@ const VoteActions = ({
                       className="btn btn-success w-100 text-center"
                       disabled={isTxnCreated}
                     >
-                      {isTxnCreated && vote === actions.APPROVE
-                        ? "Loading..."
-                        : "Approve"}
+                      Approve
                     </button>
                   )}
                   checkForDeposit={false}
@@ -432,9 +430,7 @@ const VoteActions = ({
                       className="btn btn-danger w-100 text-center"
                       disabled={isTxnCreated}
                     >
-                      {isTxnCreated && vote === actions.REJECT
-                        ? "Loading..."
-                        : "Reject"}
+                      Reject
                     </button>
                   )}
                   disabled={isTxnCreated}

@@ -448,6 +448,11 @@ a.primary-text-color:hover {
   color: inherit !important;
 }
 
+/* Markdown content styles */
+.markdown-content p {
+  margin-bottom: 0 !important;
+}
+
 .primary-text-color.btn:hover {
   color: inherit !important;
 }

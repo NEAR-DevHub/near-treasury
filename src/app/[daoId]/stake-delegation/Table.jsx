@@ -20,6 +20,7 @@ import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import { LOCAL_STORAGE_KEYS } from "@/constants/localStorage";
 import Validator from "./Validator";
 import Type from "./Type";
+import Markdown from "@/components/ui/Markdown";
 
 const StakeDelegationTable = ({
   proposals = [],
@@ -279,7 +280,7 @@ const StakeDelegationTable = ({
                 }`}
               >
                 {notes || customNotes ? (
-                  <div className="markdown-content">{customNotes || notes}</div>
+                  <Markdown>{customNotes || notes}</Markdown>
                 ) : (
                   "-"
                 )}

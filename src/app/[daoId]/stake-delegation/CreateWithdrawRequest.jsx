@@ -15,7 +15,7 @@ import {
   formatNearAmount,
   LOCKUP_MIN_BALANCE_FOR_STORAGE,
 } from "@/helpers/nearHelpers";
-
+import { useProposals } from "@/hooks/useProposals";
 const CreateWithdrawRequest = ({
   onCloseCanvas = () => {},
   setVoteProposalId,
@@ -34,7 +34,11 @@ const CreateWithdrawRequest = ({
     refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-
+  const { invalidateCategory } = useProposals({
+    daoId: treasuryDaoID,
+    category: "stake-delegation",
+    enabled: false,
+  });
   const [withdrawValidators, setWithdrawValidators] = useState([]);
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -205,6 +209,7 @@ const CreateWithdrawRequest = ({
           setVoteProposalId(id);
           setToastStatus("WithdrawProposalAdded");
           setTxnCreated(false);
+          invalidateCategory();
           onCloseCanvas();
         });
       }

@@ -18,6 +18,7 @@ import {
   formatNearAmount,
   LOCKUP_MIN_BALANCE_FOR_STORAGE,
 } from "@/helpers/nearHelpers";
+import { useProposals } from "@/hooks/useProposals";
 
 const CreateStakeRequest = ({
   onCloseCanvas = () => {},
@@ -37,6 +38,11 @@ const CreateStakeRequest = ({
     refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
+  const { invalidateCategory } = useProposals({
+    daoId: treasuryDaoID,
+    category: "stake-delegation",
+    enabled: false,
+  });
 
   const [validators, setValidators] = useState([]);
   const [isTxnCreated, setTxnCreated] = useState(false);
@@ -253,6 +259,7 @@ const CreateStakeRequest = ({
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         refetchLastProposalId().then((id) => {
+          invalidateCategory();
           setVoteProposalId(id);
           setToastStatus("StakeProposalAdded");
           setTxnCreated(false);
