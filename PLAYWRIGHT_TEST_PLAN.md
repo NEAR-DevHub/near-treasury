@@ -91,9 +91,16 @@ For E2E tests, we'll run the full Next.js development server with supporting ser
 - Consider test data fixtures for complex scenarios
 
 ### Running Against Different Environments
-- Local development (http://localhost:3000)
-- Staging environment (if available)
-- Testnet vs Mainnet DAO IDs
+
+**Read-only/viewing tests** (no transactions):
+- Can run against real backends and mainnet
+- Tests UI rendering and display logic with real data
+- Historical data won't change, providing stable test assertions
+- Examples: dashboard display, portfolio views, transaction history
+
+**Transaction/mutation tests** (making changes):
+- Must run against near-sandbox for isolation and control
+- Examples: creating proposals, staking, payments, settings changes
 
 ### CI/CD Integration (Future)
 - Run tests on pull requests
@@ -103,9 +110,17 @@ For E2E tests, we'll run the full Next.js development server with supporting ser
 
 ## Resources
 
-- [Old test suite](../neardevhub-treasury-dashboard/playwright-tests/)
+- [Old test suite](https://github.com/NEAR-DevHub/neardevhub-treasury-dashboard/tree/develop/playwright-tests) - Reference for test patterns and structure
 - [Playwright Documentation](https://playwright.dev)
 - [Next.js Testing Documentation](https://nextjs.org/docs/testing)
+
+## Key Technology Changes from Old Test Suite
+
+The old test suite uses **near-workspaces** for blockchain interactions. We will replace this with:
+- **near-sandbox** - Local NEAR testnet for isolated testing
+- **@near-js/jsonrpc-client** - Library for interacting with the sandbox RPC server
+
+This provides more direct control over the test environment and aligns with modern NEAR tooling.
 
 ## Testing Approach
 
@@ -115,12 +130,16 @@ For E2E tests, we'll run the full Next.js development server with supporting ser
 - Allows testing real blockchain interactions without external dependencies
 - **Indexer API**: We can likely set up a test instance with its own database (needs further investigation)
 
-## Questions to Resolve
+## Test Setup Requirements
 
-1. Do we need authentication state for tests? (wallet connection)
-2. How should we handle test data setup and teardown?
-3. Should we reuse the old project's sandbox utilities or create new ones?
-4. How to set up test instance of indexer API with test database?
+1. **Authentication state**: Yes, tests need wallet-connected states (like old test suite) to view the app as users do
+2. **Test data setup/teardown**:
+   - Initialize near-sandbox before tests (like old test suite)
+   - Initialize indexer database with snapshot when needed
+3. **Sandbox utilities**: Use **near-sandbox** and **@near-js/jsonrpc-client** instead of near-workspaces
+4. **Indexer API setup**:
+   - Get build from [sputnik-dao-caching-api-server](https://github.com/near-daos/sputnik-dao-caching-api-server) repository
+   - Use database snapshot copy for consistent test data
 
 ## Next Steps
 
