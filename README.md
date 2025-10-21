@@ -8,6 +8,22 @@ While BOS is excellent for serving multiple apps in one web portal, the sandbox 
 
 We chose to rebuild NEAR Treasury as a standard Next.js React app to accelerate development and unlock the full potential of modern web technologies for an optimal user experience.
 
+## Development Environment
+
+### DevContainer Setup
+
+This project includes a DevContainer configuration with:
+- Pre-configured development environment with all dependencies
+- **Remote Desktop** via noVNC - accessible in your web browser
+- Useful for running Playwright tests in UI mode or headed mode
+
+To access the remote desktop:
+1. Open the project in the DevContainer
+2. Check the Ports panel in VS Code for the noVNC port (typically 6080)
+3. Click "Open in Browser" to access the desktop environment
+
+The remote desktop allows you to run `npm run test:e2e:ui` and interact with the Playwright UI directly.
+
 ## Getting Started
 
 First, run the development server:
