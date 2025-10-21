@@ -69,7 +69,6 @@ const Filters = ({
 
   // Fetch filter options from indexer
   useEffect(() => {
-    console.log("treasuryDaoID", treasuryDaoID);
     if (treasuryDaoID) {
       getProposalApprovers(treasuryDaoID).then(setApproverOptions);
       getProposalRecipients(treasuryDaoID).then(setRecipientOptions);

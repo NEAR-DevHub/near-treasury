@@ -481,11 +481,8 @@ const CreatePaymentRequest = ({
   }, [isReceiverAccountValid, receiver, trigger]);
 
   return (
-    <div className="container-fluid">
-      <TransactionLoader
-        showInProgress={isTxnCreated}
-        cancelTxn={() => setTxnCreated(false)}
-      />
+    <div>
+      <TransactionLoader showInProgress={isTxnCreated} />
       <Modal
         isOpen={showCancelModal}
         heading="Are you sure you want to cancel?"

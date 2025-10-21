@@ -33,7 +33,6 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
       setShowMoreLoading(true);
       getTransactionTransferHistory(treasuryDaoID, lockupContract, page)
         .then(async (res) => {
-          console.log({ res });
           if (!res || !res.data) {
             setAPIError();
           } else {
@@ -52,7 +51,6 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
               ),
             ];
 
-            console.log({ contractsToFetch });
             // Fetch metadata for all unique contracts
             await Promise.all(
               contractsToFetch.map((contractId) =>

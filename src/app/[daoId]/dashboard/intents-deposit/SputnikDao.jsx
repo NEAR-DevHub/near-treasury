@@ -9,7 +9,7 @@ const SputnikDao = () => {
   return (
     <div
       className="card card-body d-flex flex-column gap-2 text-left mx-auto"
-      style={{ maxWidth: "1200px", fontSize: "14px" }}
+      style={{ maxWidth: "800px", fontSize: "14px" }}
     >
       <div className="h4 mb-0">Sputnik DAO</div>
       <div style={{ fontWeight: 500 }}>

@@ -7,6 +7,7 @@ import { formatTokenAmount, formatUsdValue } from "@/helpers/nearHelpers";
 import { getTokenPrice } from "@/api/backend";
 import NearToken from "@/components/icons/NearToken";
 import Tooltip from "@/components/ui/Tooltip";
+import Skeleton from "@/components/ui/Skeleton";
 
 // Cache for token metadata to prevent re-fetching (shared with TokenIcon)
 const tokenMetadataCache = {};
@@ -166,11 +167,10 @@ const TokenAmount = ({
 
   if (!ftMetadata) {
     return (
-      <div className="text-center">
-        <div className="spinner-border spinner-border-sm" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
+      <Skeleton
+        style={{ height: "30px", width: "100%" }}
+        className="rounded-3"
+      />
     );
   }
 

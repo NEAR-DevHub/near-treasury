@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Near } from "@/api/near";
 import NearToken from "@/components/icons/NearToken";
+import Skeleton from "@/components/ui/Skeleton";
 
 // Cache for token metadata to prevent re-fetching
 const tokenMetadataCache = {};
@@ -60,15 +61,10 @@ const TokenIcon = ({ address = "", number = null }) => {
 
   if (!ftMetadata) {
     return (
-      <div className="d-flex gap-1 align-items-center mb-0 justify-content-center">
-        <div
-          className="spinner-border spinner-border-sm"
-          role="status"
-          style={{ width: "24px", height: "24px" }}
-        >
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
+      <Skeleton
+        style={{ height: "30px", width: "100%" }}
+        className="rounded-3"
+      />
     );
   }
 

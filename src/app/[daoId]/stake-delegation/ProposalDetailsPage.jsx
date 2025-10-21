@@ -168,7 +168,9 @@ const ProposalDetailsPage = ({
   function refreshData() {
     setProposalData(null);
     // Invalidate all proposal-related queries
-    queryClient.invalidateQueries({ queryKey: ["proposals"] });
+    queryClient.invalidateQueries({
+      queryKey: ["proposals", treasuryDaoID, "stake-delegation"],
+    });
   }
 
   function updateVoteSuccess(status, proposalId) {
@@ -202,14 +204,15 @@ const ProposalDetailsPage = ({
           (hasVotingPermission || hasDeletePermission) &&
           proposalData?.status === "InProgress" ? (
             <VoteActions
-              proposal={proposalData?.proposal}
-              hasVotingPermission={hasVotingPermission}
+              votes={proposalData?.votes}
+              proposalId={proposalData?.id}
               hasDeletePermission={hasDeletePermission}
-              onVoteSuccess={(status) =>
-                updateVoteSuccess(status, proposalData?.id)
-              }
-              onDeleteSuccess={() => checkProposalStatus(proposalData?.id)}
+              hasVotingPermission={hasVotingPermission}
+              proposalCreator={proposalData?.proposer}
+              proposal={proposalData?.proposal}
+              checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
               avoidCheckForBalance={true}
+              isProposalDetailsPage={true}
             />
           ) : null,
         ProposalContent: proposalData && (

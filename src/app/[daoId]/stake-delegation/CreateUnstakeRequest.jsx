@@ -304,10 +304,7 @@ const CreateUnstakeRequest = ({
 
   return (
     <>
-      <TransactionLoader
-        showInProgress={isTxnCreated}
-        cancelTxn={() => setTxnCreated(false)}
-      />
+      <TransactionLoader showInProgress={isTxnCreated} />
 
       <Modal
         isOpen={showCancelModal}

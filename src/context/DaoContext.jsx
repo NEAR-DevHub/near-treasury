@@ -264,7 +264,6 @@ export const DaoProvider = ({ children }) => {
   function getDaoMetadata() {
     return Near.view(daoId, "get_config", {})
       .then((config) => {
-        console.log("config", config);
         const metadata = config?.metadata
           ? JSON.parse(atob(config?.metadata))
           : null;
@@ -281,7 +280,6 @@ export const DaoProvider = ({ children }) => {
   }
 
   function hasPermission(kindName, actionType) {
-    return true;
     const { accountId } = useNearWallet();
     if (!accountId) {
       return false;

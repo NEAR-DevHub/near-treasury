@@ -221,10 +221,7 @@ const BulkImportPreviewTable = ({
 
   return (
     <>
-      <TransactionLoader
-        showInProgress={isTxnCreated}
-        cancelTxn={() => setTxnCreated(false)}
-      />
+      <TransactionLoader showInProgress={isTxnCreated} />
 
       {/* Cancel Confirmation Modal */}
       <Modal

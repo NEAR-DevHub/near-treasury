@@ -12,7 +12,6 @@ import {
 import VoteActions from "@/components/proposals/VoteActions";
 import HistoryStatus from "@/components/proposals/HistoryStatus";
 import TokenAmount from "@/components/proposals/TokenAmount";
-import Tooltip from "@/components/ui/Tooltip";
 import Profile from "@/components/ui/Profile";
 import Approvers from "@/components/proposals/Approvers";
 import Votes from "@/components/proposals/Votes";
@@ -219,19 +218,6 @@ const StakeDelegationTable = ({
 
           const isLockup = receiverAccount === lockupContract;
           const treasuryWallet = isLockup ? lockupContract : treasuryDaoID;
-
-          // Debug log
-          console.log("Proposal #" + item.id, {
-            action: action?.method_name,
-            receiverAccount,
-            amount,
-            isStakeRequest,
-            isWithdrawRequest,
-            withdrawAmount,
-            actionDeposit: action?.deposit,
-            decodedArgs: decodeBase64(action?.args),
-          });
-
           return (
             <tr
               key={item.id}
@@ -338,13 +324,13 @@ const StakeDelegationTable = ({
                 (hasVotingPermission || hasDeletePermission) && (
                   <td className="text-end" onClick={(e) => e.stopPropagation()}>
                     <VoteActions
+                      votes={item.votes}
+                      proposalId={item.id}
                       proposal={item}
+                      proposalCreator={item.proposer}
                       hasVotingPermission={hasVotingPermission}
                       hasDeletePermission={hasDeletePermission}
-                      onVoteSuccess={(status) =>
-                        updateVoteSuccess(status, item.id)
-                      }
-                      onDeleteSuccess={() => checkProposalStatus(item.id)}
+                      checkProposalStatus={() => checkProposalStatus(item.id)}
                       avoidCheckForBalance={true}
                       isWithdrawRequest={isWithdrawRequest}
                       validatorAccount={validatorAccount}

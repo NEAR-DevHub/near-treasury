@@ -7,7 +7,7 @@
  * @param {boolean} showInProgress - Whether to show the loader
  * @param {Function} cancelTxn - Callback to cancel transaction
  */
-const TransactionLoader = ({ showInProgress, cancelTxn }) => {
+const TransactionLoader = ({ showInProgress }) => {
   if (!showInProgress) return null;
 
   return (
@@ -28,14 +28,6 @@ const TransactionLoader = ({ showInProgress, cancelTxn }) => {
               <div className="flex-1 text-left">
                 Awaiting transaction confirmation...
               </div>
-
-              <button
-                onClick={cancelTxn}
-                className="btn btn-transparent text-color"
-                style={{ width: "fit-content" }}
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>

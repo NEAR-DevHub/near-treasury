@@ -52,7 +52,6 @@ export const NearWalletProvider = ({ children }) => {
 
     try {
       const wallet = await newConnector.wallet();
-      console.log("wallet", wallet);
       const accountId = await wallet.getAddress();
       if (accountId) {
         setAccountId(accountId);

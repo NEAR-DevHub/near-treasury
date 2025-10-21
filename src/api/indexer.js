@@ -10,7 +10,6 @@ export const getProposalApprovers = async (daoId) => {
     logger.info("Indexer call: getProposalApprovers", { daoId });
     const response = await fetch(`${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/approvers`);
     const data = await response.json();
-    console.log("data", data);
     return data?.approvers || [];
   } catch (error) {
     logger.error("Error getting proposal approvers:", error);

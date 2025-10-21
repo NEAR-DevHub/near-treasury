@@ -173,7 +173,10 @@ const Dashboard = () => {
           <div className="d-flex flex-column gap-4">
             <div
               className="mx-auto"
-              style={{ maxWidth: "1200px", width: "100%" }}
+              style={{
+                maxWidth: depositType === "sputnik-dao" ? "800px" : "1200px",
+                width: "100%",
+              }}
             >
               <div className="d-flex flex-column gap-3">
                 <div className="d-flex justify-content-center align-items-center position-relative">

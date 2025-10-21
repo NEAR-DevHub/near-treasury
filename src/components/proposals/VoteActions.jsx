@@ -39,6 +39,11 @@ const VoteActions = ({
     daoNearBalances,
     daoFtBalances,
     intentsBalances,
+    refreshDaoBalances,
+    refreshLockupBalances,
+    refetchDaoPolicy,
+    refetchIntentsBalances,
+    refetchDaoConfig,
   } = useDao();
 
   const alreadyVoted = Object.keys(votes).includes(accountId);
@@ -169,9 +174,18 @@ const VoteActions = ({
         ],
       });
       console.log("Result:", result);
-      if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
+      if (
+        result &&
+        result.length > 0 &&
+        typeof result[0]?.status?.SuccessValue === "string"
+      ) {
         checkProposalStatus?.();
         setTxnCreated(false);
+        refreshDaoBalances();
+        refreshLockupBalances();
+        refetchDaoPolicy();
+        refetchIntentsBalances();
+        refetchDaoConfig();
       }
     } catch (error) {
       console.error("Error acting on proposal:", error);
@@ -250,10 +264,7 @@ const VoteActions = ({
 
   return (
     <div>
-      <TransactionLoader
-        cancelTxn={() => setTxnCreated(false)}
-        showInProgress={isTxnCreated}
-      />
+      <TransactionLoader showInProgress={isTxnCreated} />
 
       <InsufficientBalanceWarning />
 

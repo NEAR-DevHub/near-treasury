@@ -459,7 +459,9 @@ const ProposalDetailsPage = ({
   function refreshData() {
     setProposalData(null);
     // Invalidate all proposal-related queries
-    queryClient.invalidateQueries({ queryKey: ["proposals"] });
+    queryClient.invalidateQueries({
+      queryKey: ["proposals", treasuryDaoID, "payments"],
+    });
   }
 
   function updateVoteSuccess(status, proposalId) {

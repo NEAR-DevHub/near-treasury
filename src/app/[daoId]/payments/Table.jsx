@@ -181,7 +181,7 @@ const Table = ({
 
   const TooltipContent = ({ title, summary }) => {
     return (
-      <div className="p-1">
+      <div className="p-1 text-color">
         {title && <h6>{title}</h6>}
         <div>{summary}</div>
       </div>
@@ -370,7 +370,7 @@ const Table = ({
                   description
                 ) : (
                   <Tooltip
-                    content={<TooltipContent title={title} summary={summary} />}
+                    tooltip={<TooltipContent title={title} summary={summary} />}
                   >
                     <div
                       className="custom-truncate fw-semi-bold"
@@ -383,7 +383,7 @@ const Table = ({
               </td>
               <td className={isVisible("Summary")}>
                 <Tooltip
-                  content={<TooltipContent title={title} summary={summary} />}
+                  tooltip={<TooltipContent title={title} summary={summary} />}
                 >
                   <div
                     className="custom-truncate"

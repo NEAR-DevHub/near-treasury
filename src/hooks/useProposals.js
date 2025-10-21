@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { getProposalsFromIndexer } from "@/api/indexer";
+import { useDebounce } from "./useDebounce";
 
 /**
  * Custom hook to fetch and manage proposals with React Query
@@ -37,17 +38,9 @@ export function useProposals({
   const { accountId } = useNearWallet();
   const queryClient = useQueryClient();
 
-  // Debounced search value
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
-
-  // Debounce search input
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [search]);
+  // Debounced values using custom hook
+  const debouncedSearch = useDebounce(search, 500);
+  const debouncedAmountValues = useDebounce(amountValues, 1000);
 
   // Normalize filters to only include filters with actual values
   const normalizedFilters = Object.keys(filters).reduce((acc, key) => {
@@ -62,11 +55,11 @@ export function useProposals({
   }, {});
 
   // Normalize amount values to only include non-empty values
-  const normalizedAmountValues = Object.keys(amountValues).reduce((acc, key) => {
-    if (key !== 'value' && amountValues[key] && amountValues[key] !== "") {
-      acc[key] = amountValues[key];
+  const normalizedAmountValues = Object.keys(debouncedAmountValues).reduce((acc, key) => {
+    if (key !== 'value' && debouncedAmountValues[key] && debouncedAmountValues[key] !== "") {
+      acc[key] = debouncedAmountValues[key];
     } else if (key === 'value') {
-      acc[key] = amountValues[key];
+      acc[key] = debouncedAmountValues[key];
     }
     return acc;
   }, {});
@@ -98,7 +91,7 @@ export function useProposals({
         sortDirection,
         filters,
         search: debouncedSearch,
-        amountValues,
+        amountValues: debouncedAmountValues,
         proposalType,
         accountId,
       }),

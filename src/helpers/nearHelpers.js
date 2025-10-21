@@ -203,7 +203,6 @@ export const deserializeLockupContract = (byteArray) => {
         transfer_poll_account_id: readString(),
       };
     }
-    console.log("var", variant);
     throw `Invalid TransfersInformation variant ${variant}`;
   }
 

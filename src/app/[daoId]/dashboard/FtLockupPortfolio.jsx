@@ -318,25 +318,6 @@ const FtLockupPortfolio = ({
     });
   }
 
-  // useEffect(() => {
-  //   if (accountMetadata && ftMetadata) {
-  //     // Calculate and update balance if needed
-  //     const balance = Big(
-  //       convertBalanceToReadableFormat(
-  //         Big(accountMetadata?.deposited_amount ?? 0).minus(
-  //           accountMetadata?.claimed_amount ?? 0
-  //         ),
-  //         ftMetadata?.decimals
-  //       )
-  //     )
-  //       .mul(ftMetadata?.price ?? 0)
-  //       .toFixed();
-
-  //     // You can add a callback here if needed
-  //     console.log("FT Lockup Balance:", balance);
-  //   }
-  // }, [accountMetadata, ftMetadata]);
-
   const FtAmountDetails = () => {
     return (
       <div

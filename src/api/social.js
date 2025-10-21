@@ -42,25 +42,6 @@ export const getProfilesFromSocialDb = async (accountIds) => {
   }
 };
 
-export const getPattern = async (pattern) => {
-  try {
-    logger.info("Social API call: getPattern", { pattern });
-    const result = await social.get({
-  keys: [
-   pattern,
-  ],
-  });
-
-    console.log({result});
-    // Placeholder - implement actual Social API call
-    // This would typically call social.near contract
-    return {};
-  } catch (error) {
-    logger.error("Error getting pattern:", error);
-    return {};
-  }
-};
-
 /**
  * Search and rank accounts based on term match
  * Uses profile names and account IDs from NEAR Social
