@@ -11,7 +11,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Open Dashboard for Treasury', () => {
   test('should successfully open dashboard for a valid DAO ID', async ({ page }) => {
     await page.goto("/");
-    await page.locator("input#daoId").fill("testing-astradao.sputnik-dao.near");
+    await page.locator("input#daoId").focus();
+    await page.locator("input#daoId").pressSequentially("testing-astradao.sputnik-dao.near");
     await page.getByRole('button', { name: 'Access Treasury' }).click();
     await page.waitForURL("/testing-astradao.sputnik-dao.near/dashboard");
     await expect(page.locator('div').filter({ hasText: /^Sputnik DAO$/ }).nth(0)).toBeVisible({timeout: 10_000});
