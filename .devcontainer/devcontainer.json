@@ -8,6 +8,15 @@
       
     }
   },
+  "forwardPorts": [6080,5901],
+  "portsAttributes": {
+    "6080": {
+      "label": "desktop"
+    },
+    "5901": {
+      "label": "vnc"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
