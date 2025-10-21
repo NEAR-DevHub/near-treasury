@@ -3,18 +3,19 @@ import { test, expect } from '@playwright/test';
 /**
  * Test: Open dashboard for a treasury
  *
- * This is a placeholder test that will be implemented to verify
- * that users can navigate to a treasury dashboard.
+ * Verifies that users can navigate to a treasury dashboard by:
+ * 1. Entering a valid DAO ID on the home page
+ * 2. Clicking the "Access Treasury" button
+ * 3. Confirming the dashboard loads with expected elements (DAO name, deposit button, NEAR Intents)
  */
 test.describe('Open Dashboard for Treasury', () => {
   test('should successfully open dashboard for a valid DAO ID', async ({ page }) => {
-    // TODO: Implement test
-    // 1. Navigate to home page
-    // 2. Enter DAO ID
-    // 3. Click "Access Treasury"
-    // 4. Verify dashboard loads
-    // 5. Verify key elements are visible
-
-    test.skip();
+    await page.goto("/");
+    await page.locator("input#daoId").fill("testing-astradao.sputnik-dao.near");
+    await page.getByRole('button', { name: 'Access Treasury' }).click();
+    await page.waitForURL("/testing-astradao.sputnik-dao.near/dashboard");
+    await expect(page.locator('div').filter({ hasText: /^Sputnik DAO$/ }).nth(0)).toBeVisible({timeout: 10_000});
+    await expect(page.getByTestId('deposit-btn')).toBeVisible();
+    await expect(page.getByText('NEAR Intents')).toBeVisible();
   });
 });
