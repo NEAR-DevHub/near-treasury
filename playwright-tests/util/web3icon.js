@@ -73,10 +73,15 @@ export async function getWeb3IconMaps() {
       }
       if (networkName) {
         networkNames[blockchain] = networkName;
+        // Also add mapping by full chain ID (layer1:layer2) for lookup
+        const chainId = `${layer1}:${layer2}`;
+        networkNames[chainId] = networkName;
       }
     }
   }
 
+  networkNames["near:mainnet"] = "Near";
+  networkNames["eth:42161"] = "Arbitrum";
   console.log("networkNames mapping:", networkNames);
   return { tokenIconMap, networkIconMap, networkNames };
 }

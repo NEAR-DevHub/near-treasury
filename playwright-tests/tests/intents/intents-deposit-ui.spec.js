@@ -344,60 +344,23 @@ INFO: Verifying asset: ${assetName}`);
           availableNetworks
         );
 
-        // Try to find the network - the UI might display it differently
-        // First try with human readable name, then try partial match
+        // Try to find the network by human readable name
         const humanReadableName = networkNames[network.id];
-        let networkOptionElement;
+        expect(humanReadableName, `Network ${network.id} should have a mapping in networkNames`).toBeTruthy();
 
-        if (humanReadableName) {
-          // Try to find by the human readable name (might be partial match)
-          networkOptionElement = modal
-            .locator(".dropdown-item")
-            .filter({
-              hasText: humanReadableName,
-            })
-            .first();
+        console.log(`    - Looking for network: ${humanReadableName} (${network.id})`);
 
-          // If not found, try to find any item containing the readable name
-          const count = await networkOptionElement.count();
-          if (count === 0) {
-            // Try partial match or look for the first available network if this is the only one
-            if (availableNetworks.length === 1) {
-              networkOptionElement = modal.locator(".dropdown-item").first();
-            } else {
-              // Skip this network if we can't find it
-              console.log(
-                `    WARNING: Could not find network ${humanReadableName} or ${network.id}, skipping`
-              );
-              // Close modal by clicking X or outside
-              await page.getByRole("button", { name: "Close" }).click();
-              await page.getByRole("button", { name: "Close" }).click();
-              await page.getByRole("button", { name: "Close" }).click();
-              await page.getByRole("button", { name: "Close" }).click();
-              await page.waitForTimeout(500);
-              continue;
-            }
-          }
-        } else {
-          // If only one network is available, just use it
-          if (availableNetworks.length === 1) {
-            networkOptionElement = modal.locator(".dropdown-item").first();
-          } else {
-            console.log(
-              `    WARNING: No mapping for network ${network.id} and multiple options available, skipping`
-            );
-            // Close modal by clicking X or outside
-            await page
-              .getByRole("heading", { name: "Select Network " })
-              .locator("i")
-              .click();
-            await page.waitForTimeout(500);
-            continue;
-          }
-        }
+        // Find the network option in the modal
+        const networkOptionElement = modal
+          .locator(".dropdown-item")
+          .filter({
+            hasText: humanReadableName,
+          })
+          .first();
 
         await expect(networkOptionElement).toBeVisible({ timeout: 10000 });
-        const visibleNetworkName = await networkOptionElement.innerText();
+        const selectedNetworkName = await networkOptionElement.innerText();
+        console.log(`    - Selecting network: ${selectedNetworkName}`);
         await networkOptionElement.click();
 
         // Fetch the deposit address directly from the API
@@ -704,10 +667,7 @@ INFO: Verifying asset: ${assetName}`);
       ).toBe(true);
 
       // Close the network modal by clicking the close button
-      await page
-        .getByRole("heading", { name: "Select Network " })
-        .locator("i")
-        .click(); // Click close button to close modal
+      await page.getByRole("button", { name: "Close" }).click();
       await page.waitForTimeout(200);
     }
   });
