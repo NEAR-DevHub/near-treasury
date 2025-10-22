@@ -82,18 +82,20 @@ const DropdownWithModal = ({
     return options.filter((option) => {
       // Handle object options
       if (typeof option === "object" && option !== null) {
-        const searchableText = (
-          option.title ||
-          option.pool_id ||
-          option.name ||
-          option.label ||
-          option.id ||
-          option.value ||
-          ""
-        )
-          .toString()
-          .toLowerCase();
-        return searchableText.includes(searchLower);
+        const searchableFields = [
+          option.title,
+          option.pool_id,
+          option.name,
+          option.label,
+          option.id,
+          option.value,
+          option.asset_name,  // For asset search (e.g., "USDC")
+          option.symbol,      // For token symbol search
+        ]
+          .filter(Boolean)  // Remove null/undefined
+          .map(field => field.toString().toLowerCase())
+          .join(' ');
+        return searchableFields.includes(searchLower);
       }
 
       // Handle string options
