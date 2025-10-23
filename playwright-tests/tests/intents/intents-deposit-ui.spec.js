@@ -383,12 +383,27 @@ INFO: Verifying asset: ${assetName}`);
         expect(apiData.result && apiData.result.address).toBeTruthy();
         const apiDepositAddress = apiData.result.address;
 
-        // Wait for the deposit address to appear - use last() to get the actual address element
-        const depositAddressElement = page
-          .locator(".text-truncate")
+        // The UI hides the address card while loading, so wait for the card to appear/stabilize
+        // The DepositAddress component is uniquely identified by having a copy-button
+        // Use .first() because there might be multiple cards during transitions
+        const depositAddressCard = page.locator(".card.card-body").filter({
+          has: page.locator('[data-testid="copy-button"]')
+        }).filter({
+          hasText: apiDepositAddress
+        }).first();
+
+        // Wait for the card to be visible with the correct address
+        await expect(depositAddressCard).toBeVisible({ timeout: 15000 });
+        const addressCard = depositAddressCard;
+
+        // Now find the address element within that card
+        // The address is in a .text-truncate div inside a parent that also has .text-truncate
+        // We need the inner div that has just the address, not the parent with "Address" label
+        const depositAddressElement = addressCard
+          .locator("div.d-flex.pe-1 > div.text-truncate")
           .filter({ hasText: apiDepositAddress })
-          .last();
-        await expect(depositAddressElement).toBeVisible({ timeout: 15000 });
+          .first();
+        await expect(depositAddressElement).toBeVisible({ timeout: 5000 });
         const uiDepositAddress = await depositAddressElement.innerText();
 
         // Verify the UI address matches the API address
@@ -417,8 +432,14 @@ INFO: Verifying asset: ${assetName}`);
         );
         expect(decodedQR?.data).toEqual(uiDepositAddress);
 
-        const intentsCopyButton = page.getByTestId("copy-button");
+        // Find the copy button within the deposit address card (already defined above)
+        const intentsCopyButton = depositAddressCard.getByTestId("copy-button");
         await expect(intentsCopyButton).toBeVisible();
+
+        // Double-check the address is still correct right before copying
+        const addressBeforeCopy = await depositAddressElement.innerText();
+        expect(addressBeforeCopy).toEqual(apiDepositAddress);
+
         await intentsCopyButton.click();
 
         const clipboardText = await page.evaluate(
