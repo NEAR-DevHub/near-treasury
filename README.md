@@ -24,6 +24,41 @@ To access the remote desktop:
 
 The remote desktop allows you to run `npm run test:e2e:ui` and interact with the Playwright UI directly.
 
+## Testing
+
+### End-to-End Tests
+
+This project uses [Playwright](https://playwright.dev/) for end-to-end testing.
+
+Available test commands:
+```bash
+npm run test:e2e              # Run all tests
+npm run test:e2e:ui           # Run tests in UI mode (requires remote desktop)
+npm run test:e2e:headed       # Run tests in headed mode
+npm run test:e2e:debug        # Run tests in debug mode
+npm run test:e2e:report       # View test report
+```
+
+### Creating Test Demo Videos
+
+After running tests, you can create a merged demo video of all test recordings:
+
+```bash
+npm run test:video-merge
+```
+
+This script:
+- Finds all test video recordings in `test-results/`
+- Overlays test titles on each video
+- Adds 1-second freeze frames between tests
+- Merges everything into `final_output.mp4`
+
+**Requirements:**
+- `ffmpeg` must be installed (included in the DevContainer)
+- Tests must be run with video recording enabled (automatic for local runs)
+
+The video merger reads test titles from `test-title.txt` files (automatically created by the test utility), or falls back to using the test directory name.
+
 ## Getting Started
 
 First, run the development server:
