@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+neardevhub-treasury-dashboard
+freeze_frames
+processed_videos
+final_output.mp4
+file_list.txt
