@@ -30,8 +30,11 @@ export default defineConfig({
     // Screenshot on failure
     screenshot: 'only-on-failure',
 
-    // Video on failure
-    video: 'retain-on-failure',
+    // Video recording: on locally, only on failure in CI
+    video: {
+      mode: process.env.CI ? 'retain-on-failure' : 'on',
+      size: { width: 1280, height: 800 },
+    },
   },
 
   // Configure projects for major browsers

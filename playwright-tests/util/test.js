@@ -1,7 +1,5 @@
 import { test as base } from "@playwright/test";
 import fs from "fs";
-import path from "path";
-import os from "os";
 
 export const test = base.extend({
   instanceAccount: ["treasury-devdao.near", { option: true }],
@@ -11,14 +9,15 @@ export const test = base.extend({
 });
 
 test.beforeEach(async ({ page }) => {
-  await cacheCDN(page);
+
 });
 test.afterEach(async ({ page }, testInfo) => {
-  await page.unrouteAll({ behavior: "ignoreErrors" });
   const video = await page.video();
+  console.log(`afterEach for "${testInfo.title}": video = ${video ? 'EXISTS' : 'NULL'}`);
   if (video) {
     const titleFile = testInfo.outputPath("test-title.txt");
     await fs.promises.writeFile(titleFile, testInfo.title);
+    console.log(`✓ Wrote test-title.txt for: ${testInfo.title}`);
   }
 });
 
@@ -65,64 +64,3 @@ export async function removeOverlayMessage(page) {
   await page.evaluate(() => window.removeOverlay());
 }
 
-/**
- * Call this to ensure that static cdn data is cached and not re-fetched on page reloads
- * Without this you may run into that the CDN will not serve files because of too many requests
- * @param {import('playwright').Page} page - Playwright page object
- */
-export async function cacheCDN(page) {
-  const cacheDir = path.join(os.tmpdir(), "cdn-cache");
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
-  }
-
-  const cacheRoute = async (url) => {
-    await page.route(url, async (route, request) => {
-      const urlHash = Buffer.from(request.url()).toString("base64");
-      const cacheFilePath = path.join(cacheDir, urlHash);
-
-      if (
-        fs.existsSync(cacheFilePath) &&
-        fs.existsSync(`${cacheFilePath}.type`)
-      ) {
-        const cachedContent = await fs.promises.readFile(cacheFilePath);
-        const contentType = await fs.promises.readFile(
-          `${cacheFilePath}.type`,
-          "utf-8"
-        );
-        try {
-          await route.fulfill({
-            body: cachedContent,
-            headers: { "Content-Type": contentType },
-          });
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        const response = await route.fetch();
-        const body = await response.body();
-        const contentType =
-          response.headers()["content-type"] || "application/octet-stream";
-
-        try {
-          await fs.promises.writeFile(cacheFilePath, body);
-          await fs.promises.writeFile(`${cacheFilePath}.type`, contentType);
-        } catch (e) {
-          console.warn(e);
-        }
-
-        try {
-          await route.fulfill({
-            body,
-            headers: response.headers(),
-          });
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    });
-  };
-
-  await cacheRoute("https://cdn.jsdelivr.net/**");
-  await cacheRoute("https://ga.jspm.io/**");
-}
