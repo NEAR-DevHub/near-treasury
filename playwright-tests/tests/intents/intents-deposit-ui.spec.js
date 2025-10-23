@@ -5,6 +5,9 @@ import jsQR from "jsqr";
 import { getWeb3IconMaps } from "../../util/web3icon.js";
 
 test.describe("Intents Deposit UI", () => {
+  // Only run on Chromium - clipboard permissions not supported in WebKit/Firefox
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Clipboard API only supported in Chromium');
+
   test.use({
     contextOptions: {
       permissions: ["clipboard-read", "clipboard-write"],
