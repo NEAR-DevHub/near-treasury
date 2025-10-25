@@ -337,6 +337,28 @@ test.describe("Payment Request UI Flow", () => {
 
     console.log("✓ Page loaded with authenticated user");
 
+    // Navigate to Dashboard first to verify initial balance
+    await page.getByRole("link", { name: "Dashboard" }).click();
+    await page.waitForTimeout(1000);
+
+    const initialBtcRowLocator = page
+      .getByTestId("intents-portfolio")
+      .locator(
+        'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("BTC"))'
+      );
+    const initialBtcAmountElement = initialBtcRowLocator.locator(
+      "div.d-flex.gap-2.align-items-center.justify-content-end div.d-flex.flex-column.align-items-end div.h6.mb-0"
+    );
+    await expect(initialBtcAmountElement).toBeAttached();
+    await initialBtcAmountElement.scrollIntoViewIfNeeded();
+    await expect(initialBtcAmountElement).toHaveText("320");
+    console.log("✓ Dashboard shows initial balance: 320 BTC");
+
+    // Navigate to Payments page
+    await page.getByRole("link", { name: "Payments" }).click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Navigated to Payments page");
+
     // Click Create Request button
     const createRequestButton = await page.getByText("Create Request");
     await createRequestButton.click();
@@ -451,10 +473,21 @@ test.describe("Payment Request UI Flow", () => {
     await page.waitForTimeout(2000);
     console.log("✓ Proposal detail sidebar opened");
 
-    // Verify proposal details in sidebar
-    await expect(page.getByText("btc proposal title")).toBeVisible();
-    await expect(page.getByText("describing the btc payment request proposal")).toBeVisible();
-    await expect(page.getByText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh")).toBeVisible();
+    // If sidebar is open, click the expand button to open full detail page
+    // This avoids duplicate elements (sidebar + table)
+    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
+    const isExpandButtonVisible = await expandButton.isVisible().catch(() => false);
+
+    if (isExpandButtonVisible) {
+      await expandButton.click();
+      await page.waitForTimeout(1000);
+      console.log("✓ Clicked expand button to open full detail page");
+    }
+
+    // Verify proposal details on detail page
+    await expect(page.getByRole("heading", { name: "btc proposal title" }).first()).toBeVisible();
+    await expect(page.getByText("describing the btc payment request proposal").first()).toBeVisible();
+    await expect(page.getByText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh").first()).toBeVisible();
     console.log("✓ Proposal details verified on detail page");
 
     // Verify balance before approval
