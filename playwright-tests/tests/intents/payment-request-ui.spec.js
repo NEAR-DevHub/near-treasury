@@ -244,9 +244,22 @@ test.describe("Payment Request UI Flow", () => {
     console.log("\n=== Setup Complete ===\n");
   });
 
+  test.afterEach(async ({ page }) => {
+    // Clean up page routes before closing
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.close();
+  });
+
   test.afterAll(async () => {
-    await sandbox.stop();
-    console.log("\n=== Sandbox Environment Stopped ===\n");
+    if (sandbox) {
+      console.log("Stopping sandbox...");
+      try {
+        await sandbox.stop();
+        console.log("\n=== Sandbox Environment Stopped ===\n");
+      } catch (error) {
+        console.error("Error stopping sandbox:", error);
+      }
+    }
   });
 
   test("should navigate to payment request creation", async ({ page }) => {
