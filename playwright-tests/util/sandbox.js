@@ -8,6 +8,7 @@ import {
   block,
   viewAccessKey,
   query,
+  viewFunctionAsJson,
 } from "@near-js/jsonrpc-client";
 import { readFile } from "fs/promises";
 
@@ -182,6 +183,9 @@ export class NearSandbox {
       throw new Error(`Failed to create account ${accountId}`);
     }
 
+    // Wait for block finalization before next transaction
+    await this.waitForBlock();
+
     return accountId;
   }
 
@@ -232,6 +236,9 @@ export class NearSandbox {
       console.error(`✗ Failed to deploy contract to ${accountId}:`, result.status.Failure);
       throw new Error(`Failed to deploy contract to ${accountId}`);
     }
+
+    // Wait for block finalization before next transaction
+    await this.waitForBlock();
 
     return result;
   }
@@ -285,32 +292,55 @@ export class NearSandbox {
       waitUntil: "FINAL",
     });
 
+    // Wait for block finalization before next transaction
+    await this.waitForBlock();
+
+    // Enhance result with helper methods and properties
+    return this._enhanceResult(result);
+  }
+
+  async waitForBlock(delayMs = 1000) {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+
+  _enhanceResult(result) {
+    // Collect all logs from receipts
+    const allLogs = [];
+    if (result.receipts_outcome) {
+      for (const receipt of result.receipts_outcome) {
+        if (receipt.outcome && receipt.outcome.logs) {
+          allLogs.push(...receipt.outcome.logs);
+        }
+      }
+    }
+
+    // Add helper methods
+    result.logs = allLogs;
+    result.logsContain = (pattern) => {
+      return allLogs.some(log => log.includes(pattern));
+    };
+    result.failed = result.status?.Failure !== undefined;
+
     return result;
   }
 
   async viewFunction(contractId, methodName, args = {}) {
-    const result = await query(this.rpcClient, {
-      request_type: "call_function",
+    return await viewFunctionAsJson(this.rpcClient, {
+      accountId: contractId,
+      methodName: methodName,
+      argsBase64: Buffer.from(JSON.stringify(args)).toString("base64"),
       finality: "final",
-      account_id: contractId,
-      method_name: methodName,
-      args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
     });
-
-    return JSON.parse(Buffer.from(result.result).toString());
   }
 
   async viewFunctionMainnet(contractId, methodName, args = {}) {
-    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.near.org");
-    const result = await query(mainnetRpcClient, {
-      request_type: "call_function",
+    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.fastnear.com");
+    return await viewFunctionAsJson(mainnetRpcClient, {
+      accountId: contractId,
+      methodName: methodName,
+      argsBase64: Buffer.from(JSON.stringify(args)).toString("base64"),
       finality: "final",
-      account_id: contractId,
-      method_name: methodName,
-      args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
     });
-
-    return JSON.parse(Buffer.from(result.result).toString());
   }
 
   async importMainnetContract(accountId, mainnetContractId) {
@@ -318,15 +348,18 @@ export class NearSandbox {
     await this.createAccount(accountId);
 
     // Fetch contract code from mainnet
-    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.near.org");
+    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.fastnear.com");
     const contractCode = await query(mainnetRpcClient, {
-      request_type: "view_code",
+      requestType: "view_code",
       finality: "final",
-      account_id: mainnetContractId,
+      accountId: mainnetContractId,
     });
 
     // Deploy the contract code to sandbox
-    const wasmCode = Buffer.from(contractCode.code_base64, "base64");
+    const wasmCode = contractCode.codeBase64 ? Buffer.from(contractCode.codeBase64, "base64") : null;
+    if (!wasmCode) {
+      throw new Error(`No contract code found for ${mainnetContractId}`);
+    }
     await this.deployContract(accountId, wasmCode);
 
     console.log(`✓ Imported and deployed ${mainnetContractId} to ${accountId}`);
