@@ -1,4 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
+import { mkdirSync, existsSync } from 'fs';
+
+/**
+ * Set temp directory to project-local folder for near-sandbox
+ * This is only needed when temp folder is on a different filesystem than node_modules.
+ * It ensures fs.rename works when moving binaries from temp to node_modules.
+ */
+const tmpDir = './.tmp';
+if (!existsSync(tmpDir)) {
+  mkdirSync(tmpDir, { recursive: true });
+}
+process.env.TMPDIR = tmpDir;
 
 /**
  * Playwright configuration for NEAR Treasury E2E tests
