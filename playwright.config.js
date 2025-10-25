@@ -1,6 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
+ * Set temp directory to project-local folder for near-sandbox
+ * This ensures fs.rename works when moving binaries from temp to node_modules
+ */
+process.env.TMPDIR = './.tmp';
+
+/**
  * Playwright configuration for NEAR Treasury E2E tests
  * @see https://playwright.dev/docs/test-configuration
  */
