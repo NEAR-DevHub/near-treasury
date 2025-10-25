@@ -327,12 +327,199 @@ test.describe("Payment Request UI Flow", () => {
     await selectIntentsWallet(page);
     console.log("✓ Selected NEAR Intents wallet");
 
-    // Take a screenshot for debugging
+    // Open tokens dropdown and verify BTC is available
+    await page.getByTestId("tokens-dropdown").locator("div").first().click();
+
+    // Wait for the token selection modal to appear
+    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible();
+
+    // Verify BTC is available with the balance
+    await expect(page.getByText("BTC", { exact: true })).toBeVisible();
+    await expect(page.getByText("320.00 through BTC")).toBeVisible();
+    console.log("✓ BTC token is available in dropdown");
+
+    // Select BTC token - try clicking on a more specific element
+    // Look for a clickable container that has both BTC text and the balance info
+    await page.locator('.modal-body').getByText("BTC", { exact: true }).click({ force: true });
+
+    // Wait for modal to close
+    await expect(page.getByRole('heading', { name: 'Select Token' })).not.toBeVisible({ timeout: 10000 });
+    console.log("✓ Selected BTC token");
+
+    // Wait for form to update after token selection
+    await page.waitForTimeout(1000);
+
+    // Fill in Title field
+    await page.getByRole('textbox', { name: 'Title' }).click();
+    await page.getByRole('textbox', { name: 'Title' }).fill("btc proposal title");
+    console.log("✓ Filled title");
+
+    // Fill in Summary field
+    await page.getByRole('textbox', { name: 'Summary' }).click();
+    await page.getByRole('textbox', { name: 'Summary' }).fill("describing the btc payment request proposal");
+    console.log("✓ Filled summary");
+
+    // Fill in BTC recipient address
+    await page.getByRole('textbox', { name: 'Enter BTC Address (e.g., bc1' }).click();
+    await page.getByRole('textbox', { name: 'Enter BTC Address (e.g., bc1' }).fill("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+    console.log("✓ Filled BTC recipient address");
+
+    // Fill in amount
+    await page.getByRole('spinbutton', { name: 'Total Amount' }).click();
+    await page.getByRole('spinbutton', { name: 'Total Amount' }).fill("2");
+    console.log("✓ Filled amount: 2 BTC");
+
+    // Verify no validation errors and submit button is enabled
+    await expect(
+      page.getByText("Please enter valid account ID")
+    ).not.toBeVisible();
+    await expect(page.getByRole("button", { name: "Submit" })).toBeEnabled();
+
+    // Take screenshot before submitting
     await page.screenshot({
-      path: "playwright-tests/screenshots/payment-request-form.png",
+      path: "playwright-tests/screenshots/payment-request-filled.png",
       fullPage: true
     });
 
-    console.log("✓ Payment request form loaded");
+    // Submit the form
+    await page.getByRole("button", { name: "Submit" }).click();
+    console.log("✓ Clicked Submit button");
+
+    // Verify transaction confirmation modal
+    await expect(page.getByText("Confirm Transaction")).toBeVisible();
+    console.log("✓ Transaction confirmation modal appeared");
+
+    // Verify transaction content
+    const transactionContent = JSON.stringify(
+      JSON.parse(await page.locator("pre div").innerText())
+    );
+    expect(transactionContent).toBe(
+      JSON.stringify({
+        proposal: {
+          description:
+            "* Title: btc proposal title <br>* Summary: describing the btc payment request proposal",
+          kind: {
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "ft_withdraw",
+                  args: Buffer.from(
+                    JSON.stringify({
+                      token: "btc.omft.near",
+                      receiver_id: "btc.omft.near",
+                      amount: "200000000", // 2 BTC (8 decimals)
+                      memo: "WITHDRAW_TO:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+                    })
+                  ).toString("base64"),
+                  deposit: 1n.toString(),
+                  gas: 30_000_000_000_000n.toString(),
+                },
+              ],
+            },
+          },
+        },
+      })
+    );
+    console.log("✓ Transaction content verified");
+
+    // Confirm the transaction
+    await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
+    await page.getByRole("button", { name: "Confirm" }).click();
+    console.log("✓ Confirmed transaction");
+
+    // Wait for proposal to appear in the table
+    await expect(page.getByRole("button", { name: "Confirm" })).not.toBeVisible();
+    console.log("✓ Transaction submitted successfully");
+
+    // Verify the proposal appears in the table
+    await page.waitForTimeout(2000);
+
+    // Take screenshot of the proposal in table
+    await page.screenshot({
+      path: "playwright-tests/screenshots/payment-request-created.png",
+      fullPage: true
+    });
+
+    console.log("✓ Payment request created successfully");
+
+    // Verify proposal details in the table
+    const proposalRow = page.locator('tbody tr').first();
+    await expect(proposalRow).toContainText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+    await expect(proposalRow).toContainText("BTC");
+    await expect(proposalRow).toContainText("2");
+    console.log("✓ Proposal details verified in table");
+
+    // Click on the proposal to open details
+    await proposalRow.click();
+    await page.waitForTimeout(2000);
+
+    // Verify balance before approval
+    const balanceBefore = await sandbox.viewFunction(
+      intentsContractId,
+      "mt_batch_balance_of",
+      {
+        account_id: daoAccountId,
+        token_ids: ["nep141:btc.omft.near"],
+      }
+    );
+    expect(balanceBefore).toEqual(["32000000000"]); // 320 BTC with 8 decimals
+    console.log("✓ Balance before approval: 320 BTC");
+
+    // Click Approve button
+    await page.getByRole("button", { name: "Approve" }).nth(1).click();
+    console.log("✓ Clicked Approve button");
+
+    // Confirm approval
+    await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
+    await page.getByRole("button", { name: "Confirm" }).click();
+    await expect(page.getByText("Confirm Transaction")).toBeVisible();
+    await page.getByRole("button", { name: "Confirm" }).click();
+    console.log("✓ Confirmed approval");
+
+    // Wait for success message
+    await expect(
+      page.getByText("The payment request has been successfully executed.")
+    ).toBeVisible({ timeout: 15_000 });
+    console.log("✓ Payment request executed successfully");
+
+    // Verify balance after approval (should be 318 BTC = 320 - 2)
+    await page.waitForTimeout(1000);
+    const balanceAfter = await sandbox.viewFunction(
+      intentsContractId,
+      "mt_batch_balance_of",
+      {
+        account_id: daoAccountId,
+        token_ids: ["nep141:btc.omft.near"],
+      }
+    );
+    expect(balanceAfter).toEqual(["31800000000"]); // 318 BTC with 8 decimals
+    console.log("✓ Balance after approval: 318 BTC");
+
+    // Navigate to Dashboard and verify balance
+    await page.getByRole("link", { name: "Dashboard" }).click();
+    await page.waitForTimeout(1000);
+
+    const btcRowLocator = page
+      .getByTestId("intents-portfolio")
+      .locator(
+        'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("BTC"))'
+      );
+    const btcAmountElement = btcRowLocator.locator(
+      "div.d-flex.gap-2.align-items-center.justify-content-end div.d-flex.flex-column.align-items-end div.h6.mb-0"
+    );
+    await expect(btcAmountElement).toBeAttached();
+    await btcAmountElement.scrollIntoViewIfNeeded();
+    // With intelligent formatting, 318 BTC displays as "318" (no trailing zeros)
+    await expect(btcAmountElement).toHaveText("318");
+    console.log("✓ Dashboard shows updated balance: 318 BTC");
+
+    // Take final screenshot
+    await page.screenshot({
+      path: "playwright-tests/screenshots/payment-request-completed.png",
+      fullPage: true
+    });
+
+    console.log("\n✓✓✓ Payment request flow completed successfully! ✓✓✓\n");
   });
 });
