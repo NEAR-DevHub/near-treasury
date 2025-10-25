@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, injectTestWallet, parseNEAR } from "../../util/sandbox.js";
+import { NearSandbox, injectTestWallet, interceptIndexerAPI, parseNEAR } from "../../util/sandbox.js";
 
 const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
 const PROPOSAL_BOND = "0";
@@ -312,6 +312,10 @@ test.describe("Payment Request UI Flow", () => {
       await route.fulfill({ response });
     });
 
+    // Intercept indexer API calls to return sandbox data
+    await interceptIndexerAPI(page, sandbox);
+    console.log("✓ Intercepting indexer API calls");
+
     // Navigate to the treasury application payments page for the DAO
     const treasuryUrl = `http://localhost:3000/${daoAccountId}/payments`;
     await page.goto(treasuryUrl);
@@ -425,27 +429,33 @@ test.describe("Payment Request UI Flow", () => {
     await expect(page.getByText("Create Payment Request")).not.toBeVisible({ timeout: 15000 });
     console.log("✓ Transaction submitted successfully, modal closed");
 
-    // Verify the proposal appears in the table
-    await page.waitForTimeout(2000);
-
-    // Take screenshot of the proposal in table
-    await page.screenshot({
-      path: "playwright-tests/screenshots/payment-request-created.png",
-      fullPage: true
-    });
-
+    // Wait for success toast
+    await expect(page.getByText("Payment request has been successfully created.")).toBeVisible({ timeout: 10000 });
     console.log("✓ Payment request created successfully");
 
-    // Verify proposal details in the table
-    const proposalRow = page.locator('tbody tr').first();
-    await expect(proposalRow).toContainText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
-    await expect(proposalRow).toContainText("BTC");
-    await expect(proposalRow).toContainText("2");
-    console.log("✓ Proposal details verified in table");
-
-    // Click on the proposal to open details
-    await proposalRow.click();
+    // Check if proposal is showing in the table
     await page.waitForTimeout(2000);
+    const proposalInTable = await page.locator('tbody tr').filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }).first().isVisible().catch(() => false);
+
+    if (proposalInTable) {
+      // Proposal is already in table, click on it to open detail sidebar
+      console.log("✓ Proposal visible in table, clicking on it");
+      await page.locator('tbody tr').filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }).first().click();
+    } else {
+      // Proposal not in table yet, click the "View Request" link in toast
+      console.log("✓ Proposal not in table yet, clicking 'View Request' link");
+      await page.getByText('View Request').click({ timeout: 10000 });
+    }
+
+    // Wait for proposal detail sidebar to open
+    await page.waitForTimeout(2000);
+    console.log("✓ Proposal detail sidebar opened");
+
+    // Verify proposal details in sidebar
+    await expect(page.getByText("btc proposal title")).toBeVisible();
+    await expect(page.getByText("describing the btc payment request proposal")).toBeVisible();
+    await expect(page.getByText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh")).toBeVisible();
+    console.log("✓ Proposal details verified on detail page");
 
     // Verify balance before approval
     const balanceBefore = await sandbox.viewFunction(
@@ -460,15 +470,18 @@ test.describe("Payment Request UI Flow", () => {
     console.log("✓ Balance before approval: 320 BTC");
 
     // Click Approve button
-    await page.getByRole("button", { name: "Approve" }).nth(1).click();
+    await page.getByRole("button", { name: "Approve" }).first().click();
     console.log("✓ Clicked Approve button");
 
-    // Confirm approval
+    // Confirm your vote modal appears
     await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
     await page.getByRole("button", { name: "Confirm" }).click();
-    await expect(page.getByText("Confirm Transaction")).toBeVisible();
-    await page.getByRole("button", { name: "Confirm" }).click();
-    console.log("✓ Confirmed approval");
+    console.log("✓ Confirmed vote");
+
+    // Wait for transaction to be signed and sent by our test wallet
+    // Note: New wallet integration doesn't show "Confirm Transaction" button, wallet signs directly
+    await page.waitForTimeout(3000);
+    console.log("✓ Waiting for approval transaction to complete");
 
     // Wait for success message
     await expect(

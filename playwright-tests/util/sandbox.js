@@ -592,3 +592,146 @@ export async function injectTestWallet(page, sandbox, accountId) {
     });
   }, { accountId });
 }
+
+/**
+ * Intercept indexer API calls and return sandbox data
+ * This allows the UI to show proposals from the sandbox DAO
+ */
+export async function interceptIndexerAPI(page, sandbox) {
+  await page.route("**/sputnik-indexer.fly.dev/**", async (route) => {
+    const url = route.request().url();
+    console.log(`Intercepting indexer API call: ${url}`);
+
+    try {
+      // Parse URL to determine endpoint
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/').filter(p => p);
+
+      // Extract dao ID from path: /proposals/{daoId}/...
+      if (pathParts[0] === 'proposals' && pathParts[1]) {
+        const requestedDaoId = pathParts[1];
+
+        // Handle different endpoints
+        if (pathParts.length === 2) {
+          // Main proposals endpoint: /proposals/{daoId}
+          const searchParams = new URLSearchParams(urlObj.search);
+          const page = parseInt(searchParams.get('page') || '0');
+          const pageSize = parseInt(searchParams.get('page_size') || '10');
+
+          // Query proposals from sandbox DAO
+          const proposalsData = await sandbox.viewFunction(requestedDaoId, 'get_proposals', {
+            from_index: page * pageSize,
+            limit: pageSize,
+          });
+
+          // Transform to indexer format
+          const proposals = (proposalsData || []).map((proposal, idx) => ({
+            id: proposal.id ?? (page * pageSize + idx),
+            proposer: proposal.proposer,
+            description: proposal.description,
+            kind: proposal.kind,
+            status: proposal.status,
+            vote_counts: proposal.vote_counts || { Vote: [0, 0, 0] },
+            votes: proposal.votes || {},
+            submission_time: proposal.submission_time || Date.now().toString() + '000000',
+            last_actions_log: null,
+          }));
+
+          const response = {
+            proposals,
+            total: proposals.length, // For sandbox, we'll use actual length
+            page,
+            page_size: pageSize,
+          };
+
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(response),
+          });
+          return;
+        }
+
+        if (pathParts[2] === 'approvers') {
+          // Approvers endpoint
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              approvers: [],
+              total: 0,
+            }),
+          });
+          return;
+        }
+
+        if (pathParts[2] === 'recipients') {
+          // Recipients endpoint
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              recipients: [],
+              total: 0,
+            }),
+          });
+          return;
+        }
+
+        if (pathParts[2] === 'proposers') {
+          // Proposers endpoint
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              proposers: [],
+              total: 0,
+            }),
+          });
+          return;
+        }
+
+        if (pathParts[2] === 'requested-tokens') {
+          // Requested tokens endpoint
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              requested_tokens: [],
+              total: 0,
+            }),
+          });
+          return;
+        }
+
+        if (pathParts[2] === 'validators') {
+          // Validators endpoint
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              validators: [],
+              total: 0,
+            }),
+          });
+          return;
+        }
+      }
+
+      // Default: return empty response
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Not implemented for sandbox' }),
+      });
+
+    } catch (error) {
+      console.error('Error intercepting indexer API:', error);
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: error.message }),
+      });
+    }
+  });
+}
