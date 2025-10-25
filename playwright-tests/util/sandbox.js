@@ -372,6 +372,10 @@ export class NearSandbox {
   getRpcUrl() {
     return this.sandbox.rpcUrl;
   }
+
+  getKeyPair(accountId) {
+    return this.accountKeys.get(accountId);
+  }
 }
 
 export async function parseNEAR(amount) {
@@ -382,4 +386,42 @@ export async function parseNEAR(amount) {
     ? BigInt(parts[1].padEnd(24, "0").slice(0, 24))
     : BigInt(0);
   return (whole + fractional).toString();
+}
+
+export async function setPageAuthSettings(page, accountId, keyPair) {
+  // Patch wallet selector to bypass signature checks
+  await page.route(
+    "https://ga.jspm.io/npm:@near-wallet-selector/my-near-wallet@9.4.0/index.js",
+    async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      const patchedBody = body.replace(
+        "storedKeyCanSign(r,e){",
+        "storedKeyCanSign(r,e){\nreturn true;"
+      );
+      await route.fulfill({ response, body: patchedBody });
+    }
+  );
+
+  // Set authentication in localStorage
+  await page.evaluate(
+    ({ accountId, publicKey, privateKey }) => {
+      localStorage.setItem(
+        "selected-wallet",
+        "mynearwallet"
+      );
+      localStorage.setItem(
+        "mynearwallet:signedAccountId",
+        accountId
+      );
+    },
+    {
+      accountId,
+      publicKey: keyPair.getPublicKey().toString(),
+      privateKey: keyPair.toString(),
+    }
+  );
+
+  // Reload to apply changes
+  await page.reload();
 }

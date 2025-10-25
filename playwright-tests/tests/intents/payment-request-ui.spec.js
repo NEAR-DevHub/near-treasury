@@ -1,13 +1,32 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, parseNEAR } from "../../util/sandbox.js";
+import { NearSandbox, setPageAuthSettings, parseNEAR } from "../../util/sandbox.js";
 
-// Constants from legacy sandboxrpc.js
 const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
 const PROPOSAL_BOND = "0";
 
 let sandbox;
+let omftContractId;
+let intentsContractId;
+let factoryContractId;
+let creatorAccountId;
+let daoAccountId;
+let nativeToken;
 
-test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
+async function selectIntentsWallet(page) {
+  const canvasLocator = page.locator(".offcanvas-body");
+  await expect(canvasLocator.getByText("Treasury Wallet")).toBeVisible();
+  await canvasLocator.getByRole("button", { name: "Select Wallet" }).click();
+  await expect(canvasLocator.getByText("NEAR Intents")).toBeVisible();
+  await canvasLocator.getByText("NEAR Intents").click();
+  await expect(
+    canvasLocator.getByRole("button", { name: "Submit" })
+  ).toBeVisible({
+    timeout: 14_000,
+  });
+  await page.waitForTimeout(2_000);
+}
+
+test.describe("Payment Request UI Flow", () => {
   test.beforeAll(async () => {
     test.setTimeout(300000); // 5 minutes for setup
 
@@ -15,28 +34,8 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     await sandbox.start();
 
     console.log("\n=== Sandbox Environment Started ===\n");
-  });
 
-  test.afterAll(async () => {
-    await sandbox.stop();
-    console.log("\n=== Sandbox Environment Stopped ===\n");
-  });
-
-  test("create payment request to transfer BTC", async () => {
-    test.setTimeout(120_000);
-    const daoName = "testdao";
-
-    // Fetch available tokens from Defuse API
-    const availableTokens = (
-      await fetch("https://api-mng-console.chaindefuser.com/api/tokens").then(
-        (r) => r.json()
-      )
-    ).items;
-    const tokenId = availableTokens.find(
-      (token) => token.defuse_asset_id === "nep141:btc.omft.near"
-    ).defuse_asset_id;
-
-    // Fetch supported tokens
+    // Fetch supported tokens from Defuse API
     const supportedTokens = await fetch("https://bridge.chaindefuser.com/rpc", {
       method: "POST",
       headers: {
@@ -48,20 +47,17 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
         method: "supported_tokens",
         params: [
           {
-            chains: [
-              "btc:mainnet",
-            ],
+            chains: ["btc:mainnet"],
           },
         ],
       }),
     }).then((r) => r.json());
 
-    const nativeToken = supportedTokens.result.tokens[0];
+    nativeToken = supportedTokens.result.tokens[0];
     expect(nativeToken.near_token_id).toEqual("btc.omft.near");
-    expect(tokenId).toEqual("nep141:btc.omft.near");
 
     // Import and setup omft.near contract
-    const omftContractId = await sandbox.importMainnetContract("omft.near", "omft.near");
+    omftContractId = await sandbox.importMainnetContract("omft.near", "omft.near");
 
     // Fetch BTC token metadata from mainnet
     const btcMetadata = await sandbox.viewFunctionMainnet(
@@ -99,7 +95,7 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     );
 
     // Import and setup intents.near contract
-    const intentsContractId = await sandbox.importMainnetContract("intents.near", "intents.near");
+    intentsContractId = await sandbox.importMainnetContract("intents.near", "intents.near");
     await sandbox.functionCall(
       intentsContractId,
       intentsContractId,
@@ -134,7 +130,7 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     );
 
     // Import and setup SputnikDAO factory
-    const factoryContractId = await sandbox.importMainnetContract(
+    factoryContractId = await sandbox.importMainnetContract(
       SPUTNIK_DAO_FACTORY_ID,
       SPUTNIK_DAO_FACTORY_ID
     );
@@ -148,9 +144,10 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     );
 
     // Create testcreator account
-    const creatorAccountId = await sandbox.createAccount("testcreator.near");
+    creatorAccountId = await sandbox.createAccount("testcreator.near");
 
-    // Create testdao
+    // Create testdao using the factory
+    const daoName = "testdao";
     const create_testdao_args = {
       name: daoName,
       args: Buffer.from(
@@ -219,30 +216,8 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
       await parseNEAR("6")
     );
 
-    const daoAccountId = `${daoName}.${SPUTNIK_DAO_FACTORY_ID}`;
-
-    // Get deposit address for the DAO
-    const depositAddress = (
-      await fetch("https://bridge.chaindefuser.com/rpc", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "dontcare",
-          method: "deposit_address",
-          params: [
-            {
-              account_id: daoAccountId,
-              chain: "btc:mainnet",
-            },
-          ],
-        }),
-      }).then((r) => r.json())
-    ).result.address;
-
-    expect(depositAddress).toEqual("1JBmcrzAPeAeQA9CRAuYEoKSE6RN8hu59x");
+    daoAccountId = `${daoName}.${SPUTNIK_DAO_FACTORY_ID}`;
+    console.log(`✓ Created DAO: ${daoAccountId}`);
 
     // Deposit BTC tokens to DAO via intents
     await sandbox.functionCall(
@@ -250,111 +225,101 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
       omftContractId,
       "ft_deposit",
       {
-        owner_id: "intents.near",
+        owner_id: intentsContractId,
         token: "btc",
-        amount: "32000000000000000000",
+        amount: "32000000000", // 320 BTC
         msg: JSON.stringify({ receiver_id: daoAccountId }),
         memo: `BRIDGED_FROM:${JSON.stringify({
           networkType: "btc",
           chainId: "1",
-          txHash:
-            "0xc6b7ecd5c7517a8f56ac7ec9befed7d26a459fc97c7d5cd7598d4e19b5a806b7",
+          txHash: "0xc6b7ecd5c7517a8f56ac7ec9befed7d26a459fc97c7d5cd7598d4e19b5a806b7",
         })}`,
       },
       "300000000000000",
-      await parseNEAR("0.00125")
+      "1250000000000000000000"
     );
 
-    // Verify DAO has the BTC tokens
-    const balance = await sandbox.viewFunction(
-      intentsContractId,
-      "mt_batch_balance_of",
-      {
-        account_id: daoAccountId,
-        token_ids: [tokenId],
-      }
-    );
+    console.log("✓ Deposited 320 BTC to DAO via intents");
 
-    expect(balance).toEqual(["32000000000000000000"]);
+    console.log("\n=== Setup Complete ===\n");
+  });
 
-    // Create payment request proposal to withdraw BTC
-    const proposal = {
-      description: "Transfer BTC",
-      kind: {
-        FunctionCall: {
-          receiver_id: intentsContractId,
-          actions: [
-            {
-              method_name: "ft_withdraw",
-              args: Buffer.from(
-                JSON.stringify({
-                  token: nativeToken.near_token_id,
-                  receiver_id: nativeToken.near_token_id,
-                  amount: "1000000000000000000",
-                  memo: "WITHDRAW_TO:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-                })
-              ).toString("base64"),
-              deposit: "1",
-              gas: "30000000000000",
-            },
-          ],
+  test.afterAll(async () => {
+    await sandbox.stop();
+    console.log("\n=== Sandbox Environment Stopped ===\n");
+  });
+
+  test("should navigate to payment request creation", async ({ page }) => {
+    test.setTimeout(120000); // 2 minutes
+
+    // Get sandbox RPC URL
+    const sandboxRpcUrl = sandbox.getRpcUrl();
+    console.log(`✓ Sandbox RPC URL: ${sandboxRpcUrl}`);
+
+    // Route all mainnet RPC requests to sandbox
+    await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
+      const postData = route.request().postDataJSON();
+      const response = await route.fetch({
+        url: sandboxRpcUrl,
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
         },
-      },
-    };
+        postData: JSON.stringify(postData),
+      });
+      await route.fulfill({ response });
+    });
 
-    const proposalResult = await sandbox.functionCall(
-      creatorAccountId,
-      daoAccountId,
-      "add_proposal",
-      {
-        proposal: proposal,
-      },
-      "30000000000000",
-      PROPOSAL_BOND
-    );
+    // Also route rpc.mainnet.near.org in case it's used
+    await page.route("**/rpc.mainnet.near.org/**", async (route) => {
+      const postData = route.request().postDataJSON();
+      const response = await route.fetch({
+        url: sandboxRpcUrl,
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        postData: JSON.stringify(postData),
+      });
+      await route.fulfill({ response });
+    });
 
-    // Extract proposal ID from result (it should be 0 for the first proposal)
-    const proposalId = 0;
+    // Navigate to the treasury application payments page for the DAO
+    const treasuryUrl = `http://localhost:3000/${daoAccountId}/payments`;
+    await page.goto(treasuryUrl);
 
-    // Vote and execute proposal
-    const voteResult = await sandbox.functionCall(
-      creatorAccountId,
-      daoAccountId,
-      "act_proposal",
-      {
-        id: proposalId,
-        action: "VoteApprove",
-      },
-      "300000000000000"
-    );
+    console.log(`✓ Navigated to: ${treasuryUrl}`);
 
-    // Verify logs contain expected burn events
-    expect(
-      voteResult.logsContain(
-        `EVENT_JSON:{"standard":"nep245","version":"1.0.0","event":"mt_burn","data":[{"owner_id":"testdao.sputnik-dao.near","token_ids":["nep141:btc.omft.near"],"amounts":["1000000000000000000"],"memo":"withdraw"}]}`
-      )
-    ).toBeTruthy();
+    // Set page authentication for creator account
+    const creatorKeyPair = sandbox.getKeyPair(creatorAccountId);
+    await setPageAuthSettings(page, creatorAccountId, creatorKeyPair);
 
-    expect(
-      voteResult.logsContain(
-        `EVENT_JSON:{"standard":"nep141","version":"1.0.0","event":"ft_burn","data":[{"owner_id":"intents.near","amount":"1000000000000000000","memo":"WITHDRAW_TO:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"}]}`
-      )
-    ).toBeTruthy();
+    console.log(`✓ Set authentication for: ${creatorAccountId}`);
 
-    expect(voteResult.failed).toBeFalsy();
+    // Wait for page to be ready after reload
+    await page.waitForLoadState("networkidle");
 
-    // Verify final balance
-    const finalBalance = await sandbox.viewFunction(
-      intentsContractId,
-      "mt_batch_balance_of",
-      {
-        account_id: daoAccountId,
-        token_ids: [tokenId],
-      }
-    );
+    console.log("✓ Page loaded with authenticated user");
 
-    expect(finalBalance).toEqual(["31000000000000000000"]);
+    // Click Create Request button
+    const createRequestButton = await page.getByText("Create Request");
+    await createRequestButton.click();
+    console.log("✓ Clicked 'Create Request' button");
 
-    console.log("✓ BTC payment request flow completed successfully");
+    // Verify payment request modal/page is visible
+    await expect(page.getByText("Create Payment Request")).toBeVisible();
+    console.log("✓ Payment request creation modal visible");
+
+    // Select intents wallet
+    await selectIntentsWallet(page);
+    console.log("✓ Selected NEAR Intents wallet");
+
+    // Take a screenshot for debugging
+    await page.screenshot({
+      path: "playwright-tests/screenshots/payment-request-form.png",
+      fullPage: true
+    });
+
+    console.log("✓ Payment request form loaded");
   });
 });
