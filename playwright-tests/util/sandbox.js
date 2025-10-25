@@ -10,7 +10,6 @@ import {
   query,
   viewFunctionAsJson,
 } from "@near-js/jsonrpc-client";
-import { readFile } from "fs/promises";
 
 export class NearSandbox {
   constructor() {
@@ -424,4 +423,172 @@ export async function setPageAuthSettings(page, accountId, keyPair) {
 
   // Reload to apply changes
   await page.reload();
+}
+
+/**
+ * Inject a test wallet for @hot-labs/near-connect
+ * This wallet will sign transactions using the sandbox keypair
+ */
+export async function injectTestWallet(page, sandbox, accountId) {
+  const keyPair = sandbox.getKeyPair(accountId);
+  const rpcUrl = sandbox.getRpcUrl();
+
+  // Verify imports
+  console.log('Injected wallet setup - transactions:', typeof transactions, 'utils:', typeof utils);
+
+  // Expose signing function to the page - this function executes in Node.js context
+  await page.exposeFunction('__testWalletSign', async (transaction) => {
+    console.log('__testWalletSign called, transactions available:', typeof transactions);
+    const client = new NearRpcClient({ endpoint: rpcUrl });
+
+    // Transform actions from wallet format to near-api-js format
+    const nearActions = transaction.actions.map(action => {
+      if (action.type === 'FunctionCall') {
+        // args is already a Uint8Array or buffer from the wallet
+        const args = action.params.args;
+        return transactions.functionCall(
+          action.params.methodName,
+          args,
+          BigInt(action.params.gas || '30000000000000'),
+          BigInt(action.params.deposit || '0')
+        );
+      }
+      // Add other action types as needed
+      throw new Error(`Unsupported action type: ${action.type}`);
+    });
+
+    // Get access key nonce
+    const accessKeyResult = await viewAccessKey(client, {
+      accountId,
+      publicKey: keyPair.getPublicKey().toString(),
+      finality: 'final',
+    });
+
+    const nonce = BigInt(accessKeyResult.nonce) + 1n;
+
+    // Get latest block hash
+    const blockResult = await block(client, { finality: 'final' });
+    const blockHash = utils.serialize.base_decode(blockResult.header.hash);
+
+    // Create transaction
+    const tx = transactions.createTransaction(
+      accountId,
+      keyPair.getPublicKey(),
+      transaction.receiverId,
+      nonce,
+      nearActions,
+      blockHash
+    );
+
+    // Sign transaction
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      tx
+    );
+
+    // Hash the serialized transaction
+    const hashBuffer = await crypto.subtle.digest('SHA-256', serializedTx);
+    const signature = keyPair.sign(new Uint8Array(hashBuffer));
+
+    const signedTx = new transactions.SignedTransaction({
+      transaction: tx,
+      signature: new transactions.Signature({
+        keyType: tx.publicKey.keyType,
+        data: signature.signature,
+      }),
+    });
+
+    // Broadcast transaction
+    const signedTxBase64 = Buffer.from(signedTx.encode()).toString('base64');
+    const result = await broadcastTxCommit(client, {
+      signedTxBase64,
+      waitUntil: 'EXECUTED',
+    });
+
+    return result;
+  });
+
+  // Inject the test wallet immediately before any scripts run
+  await page.addInitScript(({ accountId }) => {
+    // Create test wallet object
+    const testWallet = {
+      manifest: {
+        id: 'test-wallet',
+        name: 'Test Wallet',
+        description: 'Automated test wallet for sandbox',
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
+        type: 'injected',
+        features: {
+          signMessage: true,
+          signTransaction: true,
+          signAndSendTransaction: true,
+          signAndSendTransactions: true,
+        }
+      },
+
+      async isSignedIn() {
+        return true;
+      },
+
+      async getAddress() {
+        return accountId;
+      },
+
+      async getAccounts() {
+        return [{ accountId }];
+      },
+
+      async signIn() {
+        return { accounts: [{ accountId }] };
+      },
+
+      async signOut() {
+        // No-op for tests
+      },
+
+      async signAndSendTransaction({ receiverId, actions }) {
+        try {
+          const result = await window.__testWalletSign({
+            receiverId,
+            actions,
+          });
+          return result;
+        } catch (error) {
+          console.error('Test wallet sign error:', error);
+          throw error;
+        }
+      },
+
+      async signAndSendTransactions({ transactions }) {
+        const results = [];
+        for (const tx of transactions) {
+          const result = await this.signAndSendTransaction(tx);
+          results.push(result);
+        }
+        return results;
+      },
+    };
+
+    // Store in window for access
+    window.__testWallet = testWallet;
+
+    // Set localStorage
+    localStorage.setItem('selected-wallet', 'test-wallet');
+
+    // Inject wallet immediately when near-selector-ready fires
+    document.addEventListener('DOMContentLoaded', () => {
+      window.dispatchEvent(
+        new CustomEvent('near-wallet-injected', { detail: testWallet })
+      );
+      console.log('✓ Test wallet injected for:', accountId);
+    });
+
+    // Also listen for the selector ready event
+    window.addEventListener('near-selector-ready', () => {
+      window.dispatchEvent(
+        new CustomEvent('near-wallet-injected', { detail: testWallet })
+      );
+      console.log('✓ Test wallet injected (selector-ready) for:', accountId);
+    });
+  }, { accountId });
 }

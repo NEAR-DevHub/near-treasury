@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, setPageAuthSettings, parseNEAR } from "../../util/sandbox.js";
+import { NearSandbox, injectTestWallet, parseNEAR } from "../../util/sandbox.js";
 
 const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
 const PROPOSAL_BOND = "0";
@@ -265,6 +265,21 @@ test.describe("Payment Request UI Flow", () => {
   test("should navigate to payment request creation", async ({ page }) => {
     test.setTimeout(120000); // 2 minutes
 
+    // Listen for console errors
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        console.log('Browser console error:', msg.text());
+      }
+    });
+
+    page.on('pageerror', error => {
+      console.log('Browser page error:', error.message);
+    });
+
+    // Inject test wallet before navigation
+    await injectTestWallet(page, sandbox, creatorAccountId);
+    console.log(`✓ Injected test wallet for: ${creatorAccountId}`);
+
     // Get sandbox RPC URL
     const sandboxRpcUrl = sandbox.getRpcUrl();
     console.log(`✓ Sandbox RPC URL: ${sandboxRpcUrl}`);
@@ -303,14 +318,18 @@ test.describe("Payment Request UI Flow", () => {
 
     console.log(`✓ Navigated to: ${treasuryUrl}`);
 
-    // Set page authentication for creator account
-    const creatorKeyPair = sandbox.getKeyPair(creatorAccountId);
-    await setPageAuthSettings(page, creatorAccountId, creatorKeyPair);
+    // Set localStorage after page loads
+    await page.evaluate(() => {
+      localStorage.setItem('selected-wallet', 'test-wallet');
+    });
+    console.log("✓ Set localStorage selected-wallet");
 
-    console.log(`✓ Set authentication for: ${creatorAccountId}`);
-
-    // Wait for page to be ready after reload
+    // Reload to apply localStorage changes
+    await page.reload();
     await page.waitForLoadState("networkidle");
+
+    // Wait a moment for React to hydrate and wallet to connect
+    await page.waitForTimeout(3000);
 
     console.log("✓ Page loaded with authenticated user");
 
@@ -385,52 +404,26 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("button", { name: "Submit" }).click();
     console.log("✓ Clicked Submit button");
 
-    // Verify transaction confirmation modal
-    await expect(page.getByText("Confirm Transaction")).toBeVisible();
-    console.log("✓ Transaction confirmation modal appeared");
+    // Wait for transaction to be signed and sent by our test wallet
+    // Note: New UI doesn't have a confirmation modal, wallet signs directly
+    await page.waitForTimeout(3000);
+    console.log("✓ Waiting for transaction to complete");
 
-    // Verify transaction content
-    const transactionContent = JSON.stringify(
-      JSON.parse(await page.locator("pre div").innerText())
-    );
-    expect(transactionContent).toBe(
-      JSON.stringify({
-        proposal: {
-          description:
-            "* Title: btc proposal title <br>* Summary: describing the btc payment request proposal",
-          kind: {
-            FunctionCall: {
-              receiver_id: intentsContractId,
-              actions: [
-                {
-                  method_name: "ft_withdraw",
-                  args: Buffer.from(
-                    JSON.stringify({
-                      token: "btc.omft.near",
-                      receiver_id: "btc.omft.near",
-                      amount: "200000000", // 2 BTC (8 decimals)
-                      memo: "WITHDRAW_TO:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-                    })
-                  ).toString("base64"),
-                  deposit: 1n.toString(),
-                  gas: 30_000_000_000_000n.toString(),
-                },
-              ],
-            },
-          },
-        },
-      })
-    );
-    console.log("✓ Transaction content verified");
+    // Check if there's an error message
+    const hasError = await page.getByText("Failed to create payment request").isVisible().catch(() => false);
+    if (hasError) {
+      console.log("ERROR: Transaction failed to create payment request");
+      // Take screenshot of error
+      await page.screenshot({
+        path: "playwright-tests/screenshots/payment-request-error.png",
+        fullPage: true
+      });
+      throw new Error("Transaction signing failed - check screenshot");
+    }
 
-    // Confirm the transaction
-    await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
-    await page.getByRole("button", { name: "Confirm" }).click();
-    console.log("✓ Confirmed transaction");
-
-    // Wait for proposal to appear in the table
-    await expect(page.getByRole("button", { name: "Confirm" })).not.toBeVisible();
-    console.log("✓ Transaction submitted successfully");
+    // The modal should close after successful transaction
+    await expect(page.getByText("Create Payment Request")).not.toBeVisible({ timeout: 15000 });
+    console.log("✓ Transaction submitted successfully, modal closed");
 
     // Verify the proposal appears in the table
     await page.waitForTimeout(2000);
