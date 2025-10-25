@@ -304,12 +304,15 @@ export class NearSandbox {
   }
 
   _enhanceResult(result) {
-    // Collect all logs from receipts
+    // Collect all logs from receipts (try both snake_case and camelCase)
     const allLogs = [];
-    if (result.receipts_outcome) {
-      for (const receipt of result.receipts_outcome) {
-        if (receipt.outcome && receipt.outcome.logs) {
-          allLogs.push(...receipt.outcome.logs);
+    const receiptsOutcome = result.receipts_outcome || result.receiptsOutcome;
+
+    if (receiptsOutcome) {
+      for (const receipt of receiptsOutcome) {
+        const outcome = receipt.outcome;
+        if (outcome && outcome.logs) {
+          allLogs.push(...outcome.logs);
         }
       }
     }
