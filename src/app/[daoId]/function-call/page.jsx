@@ -7,21 +7,16 @@ import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
 import { Near } from "@/api/near";
 import { normalize } from "@/helpers/formatters";
-import Table from "./Table";
-import ProposalDetailsPage from "./ProposalDetailsPage";
-import CreateStakeRequest from "./CreateStakeRequest";
-import CreateUnstakeRequest from "./CreateUnstakeRequest";
-import CreateWithdrawRequest from "./CreateWithdrawRequest";
-import Filters from "./Filters";
+import Table from "@/app/[daoId]/function-call/Table";
+import ProposalDetailsPage from "@/app/[daoId]/function-call/ProposalDetailsPage";
+import CreateCustomFunctionCallRequest from "@/app/[daoId]/function-call/CreateCustomFunctionCallRequest";
 import ExportTransactions from "@/components/proposals/ExportTransactions";
 import OffCanvas from "@/components/ui/OffCanvas";
 import Pagination from "@/components/ui/Pagination";
 import SettingsDropdown from "@/components/dropdowns/SettingsDropdown";
-import StakeIcon from "@/components/icons/StakeIcon";
-import UnstakeIcon from "@/components/icons/UnstakeIcon";
-import WithdrawIcon from "@/components/icons/WithdrawIcon";
+import InsufficientBannerModal from "@/components/proposals/InsufficientBannerModal";
 
-const StakeDelegation = () => {
+const FunctionCall = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { accountId } = useNearWallet();
@@ -31,8 +26,7 @@ const StakeDelegation = () => {
   const id = searchParams.get("id");
 
   const [showCreateRequest, setShowCreateRequest] = useState(false);
-  const [createRequestType, setCreateRequestType] = useState("stake"); // 'stake', 'unstake', 'withdraw'
-  const [showProposalDetailsId, setShowProposalId] = useState(null);
+  const [showProposalDetailsId, setShowProposalDetailsId] = useState(null);
   const [showToastStatus, setToastStatus] = useState(false);
   const [voteProposalId, setVoteProposalId] = useState(null);
   // Derive current tab from URL
@@ -40,18 +34,13 @@ const StakeDelegation = () => {
     title: tab === "history" ? "History" : "Pending Requests",
   };
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilters, setActiveFilters] = useState({});
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortDirection, setSortDirection] = useState("desc");
-  const [amountValues, setAmountValues] = useState({
-    min: "",
-    max: "",
-    equal: "",
-    value: "between",
-  });
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const proposalDetailsPageId =
+    id || id === "0" || id === 0 ? parseInt(id) : null;
 
   const hasCreatePermission = hasPermission?.("call", "AddProposal");
 
@@ -62,7 +51,8 @@ const StakeDelegation = () => {
     isLoading,
     invalidateCategory,
   } = useProposals({
-    category: "stake-delegation",
+    daoId: treasuryDaoID,
+    proposalType: ["FunctionCall"],
     statuses:
       currentTab.title === "Pending Requests"
         ? ["InProgress"]
@@ -70,21 +60,15 @@ const StakeDelegation = () => {
     page,
     pageSize: rowsPerPage,
     sortDirection,
-    filters: activeFilters,
     search,
-    amountValues,
   });
-
-  const proposalDetailsPageId =
-    id || id === "0" || id === 0 ? parseInt(id) : null;
 
   // Reset page when tab changes
   useEffect(() => {
     setPage(0);
   }, [tab]);
 
-  function toggleCreatePage(type = "stake") {
-    setCreateRequestType(type);
+  function toggleCreatePage() {
     setShowCreateRequest(!showCreateRequest);
   }
 
@@ -140,27 +124,9 @@ const StakeDelegation = () => {
                 checkProposalStatus(proposalId);
               }
             } else if (transaction_method_name === "add_proposal") {
-              const description =
-                transaction?.result?.transaction?.actions[0]?.FunctionCall
-                  ?.args;
-              const decodedDescription = JSON.parse(
-                atob(description ?? "") ?? "{}"
-              );
               const proposalId = atob(transaction.result.status.SuccessValue);
               setVoteProposalId(proposalId);
-
-              // Determine toast message based on description
-              if (
-                decodedDescription?.proposal?.description?.includes("withdraw")
-              ) {
-                setToastStatus("WithdrawProposalAdded");
-              } else if (
-                decodedDescription?.proposal?.description?.includes("unstake")
-              ) {
-                setToastStatus("UnstakeProposalAdded");
-              } else {
-                setToastStatus("StakeProposalAdded");
-              }
+              setToastStatus("ProposalAdded");
               invalidateCategory();
             }
           }
@@ -184,31 +150,25 @@ const StakeDelegation = () => {
           "Your vote is counted" +
           (typeof proposalDetailsPageId === "number"
             ? "."
-            : ", the request is highlighted.");
+            : ", the function call request is highlighted.");
         break;
       case "Approved":
-        content = "The request has been successfully executed.";
+        content = "The function call request has been successfully executed.";
         break;
       case "Rejected":
-        content = "The request has been rejected.";
+        content = "The function call request has been rejected.";
         break;
       case "Removed":
-        content = "The request has been successfully deleted.";
+        content = "The function call request has been successfully deleted.";
         break;
-      case "StakeProposalAdded":
-        content = "Stake request has been successfully created.";
-        break;
-      case "UnstakeProposalAdded":
-        content = "Unstake request has been successfully created.";
-        break;
-      case "WithdrawProposalAdded":
-        content = "Withdraw request has been successfully created.";
+      case "ProposalAdded":
+        content = "Function call request has been successfully created.";
         break;
       case "ErrorAddingProposal":
-        content = "Failed to create request.";
+        content = "Failed to create function call request.";
         break;
       default:
-        content = `The request has ${showToastStatus}.`;
+        content = `The function call request is ${showToastStatus}.`;
         break;
     }
     return (
@@ -220,9 +180,7 @@ const StakeDelegation = () => {
           <div>
             {content}
             <br />
-            {(showToastStatus === "StakeProposalAdded" ||
-              showToastStatus === "UnstakeProposalAdded" ||
-              showToastStatus === "WithdrawProposalAdded") && (
+            {showToastStatus === "ProposalAdded" && (
               <a
                 className="text-underline cursor-pointer"
                 onClick={() => {
@@ -236,9 +194,7 @@ const StakeDelegation = () => {
             )}
             {showToastStatus !== "InProgress" &&
               showToastStatus !== "Removed" &&
-              showToastStatus !== "StakeProposalAdded" &&
-              showToastStatus !== "UnstakeProposalAdded" &&
-              showToastStatus !== "WithdrawProposalAdded" &&
+              showToastStatus !== "ProposalAdded" &&
               typeof proposalDetailsPageId !== "number" &&
               showToastStatus !== "ErrorAddingProposal" && (
                 <a
@@ -275,34 +231,6 @@ const StakeDelegation = () => {
     ) : null;
   };
 
-  const getCreateRequestTitle = () => {
-    switch (createRequestType) {
-      case "unstake":
-        return "Create Unstake Request";
-      case "withdraw":
-        return "Create Withdraw Request";
-      default:
-        return "Create Stake Request";
-    }
-  };
-
-  const renderCreateComponent = () => {
-    const commonProps = {
-      onCloseCanvas: () => setShowCreateRequest(false),
-      setToastStatus,
-      setVoteProposalId,
-    };
-
-    switch (createRequestType) {
-      case "unstake":
-        return <CreateUnstakeRequest {...commonProps} />;
-      case "withdraw":
-        return <CreateWithdrawRequest {...commonProps} />;
-      default:
-        return <CreateStakeRequest {...commonProps} />;
-    }
-  };
-
   return (
     <div className="w-100 h-100 flex-grow-1 d-flex flex-column">
       <VoteSuccessToast />
@@ -317,10 +245,14 @@ const StakeDelegation = () => {
         <div className="h-100 w-100 flex-grow-1 d-flex flex-column">
           <OffCanvas
             showCanvas={showCreateRequest}
-            onClose={() => setShowCreateRequest(false)}
-            title={getCreateRequestTitle()}
+            onClose={toggleCreatePage}
+            title="Create Function Call Request"
           >
-            {renderCreateComponent()}
+            <CreateCustomFunctionCallRequest
+              onCloseCanvas={toggleCreatePage}
+              setToastStatus={setToastStatus}
+              setVoteProposalId={setVoteProposalId}
+            />
           </OffCanvas>
 
           <div className="layout-flex-wrap flex-grow-1 align-items-start">
@@ -349,16 +281,7 @@ const StakeDelegation = () => {
                                   );
                                   params.set("tab", normalize(title));
                                   router.push(`?${params.toString()}`);
-                                  // Clear filters when switching tabs
-                                  setActiveFilters({});
-                                  setAmountValues({
-                                    min: "",
-                                    max: "",
-                                    equal: "",
-                                    value: "between",
-                                  });
                                   setSearch("");
-                                  setShowFilters(false);
                                 }}
                                 className={[
                                   "d-inline-flex gap-2 nav-link",
@@ -376,7 +299,7 @@ const StakeDelegation = () => {
                     </ul>
 
                     <div className="d-flex gap-2 align-items-center flex-wrap flex-sm-nowrap pb-2 pb-md-0 ps-2 ps-md-0 flex-grow-1 justify-content-start justify-content-md-end">
-                      {/* Search and Filters */}
+                      {/* Search */}
                       <div className="input-responsive">
                         <div className="input-group flex-grow-1">
                           <span className="input-group-text bg-transparent">
@@ -410,93 +333,37 @@ const StakeDelegation = () => {
                       {currentTab.title === "History" && (
                         <div style={{ minWidth: "fit-content" }}>
                           <ExportTransactions
-                            page="stake-delegation"
-                            activeFilters={activeFilters}
-                            amountValues={amountValues}
+                            page="function-call"
+                            activeFilters={{}}
+                            amountValues={{}}
                             search={search}
                           />
                         </div>
                       )}
 
-                      <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={`btn btn-outline-secondary ${
-                          showFilters ||
-                          Object.keys(activeFilters ?? {}).length > 0
-                            ? "active-filter"
-                            : ""
-                        }`}
-                      >
-                        <i className="bi bi-funnel"></i>
-                      </button>
-
                       <SettingsDropdown
-                        page="stake-delegation"
+                        page="function-call"
                         isPendingPage={currentTab.title === "Pending Requests"}
                       />
 
                       {hasCreatePermission && (
-                        <div
-                          className="dropdown"
-                          style={{ minWidth: "fit-content" }}
-                        >
-                          <button
-                            className="btn primary-button d-flex align-items-center gap-2 mb-0 dropdown-toggle"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                          >
-                            <i className="bi bi-plus-lg h5 mb-0"></i>
-                            <span className="responsive-text">
-                              Create Request
-                            </span>
-                          </button>
-                          <ul className="dropdown-menu dropdown-menu-end">
-                            <li>
-                              <a
-                                className="dropdown-item cursor-pointer d-flex align-items-center gap-2"
-                                onClick={() => toggleCreatePage("stake")}
-                              >
-                                <StakeIcon width={16} height={16} />
-                                Stake
-                              </a>
-                            </li>
-                            <li>
-                              <a
-                                className="dropdown-item cursor-pointer d-flex align-items-center gap-2"
-                                onClick={() => toggleCreatePage("unstake")}
-                              >
-                                <UnstakeIcon width={16} height={16} />
-                                Unstake
-                              </a>
-                            </li>
-                            <li>
-                              <a
-                                className="dropdown-item cursor-pointer d-flex align-items-center gap-2"
-                                onClick={() => toggleCreatePage("withdraw")}
-                              >
-                                <WithdrawIcon width={16} height={16} />
-                                Withdraw
-                              </a>
-                            </li>
-                          </ul>
+                        <div style={{ minWidth: "fit-content" }}>
+                          <InsufficientBannerModal
+                            ActionButton={() => (
+                              <button className="btn primary-button d-flex align-items-center gap-2 mb-0">
+                                <i className="bi bi-plus-lg h5 mb-0"></i>
+                                <span className="responsive-text">
+                                  Create Request
+                                </span>
+                              </button>
+                            )}
+                            checkForDeposit={true}
+                            callbackAction={() => setShowCreateRequest(true)}
+                          />
                         </div>
                       )}
                     </div>
                   </div>
-                  {showFilters && (
-                    <div className="border-bottom">
-                      <Filters
-                        isPendingRequests={
-                          currentTab.title === "Pending Requests"
-                        }
-                        activeFilters={activeFilters}
-                        setActiveFilters={setActiveFilters}
-                        amountValues={amountValues}
-                        setAmountValues={setAmountValues}
-                        setShowFilters={setShowFilters}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Content */}
@@ -506,7 +373,7 @@ const StakeDelegation = () => {
                   loading={isLoading}
                   sortDirection={sortDirection}
                   handleSortClick={handleSortClick}
-                  onSelectRequest={(id) => setShowProposalId(id)}
+                  onSelectRequest={(id) => setShowProposalDetailsId(id)}
                   highlightProposalId={voteProposalId}
                   setToastStatus={setToastStatus}
                   setVoteProposalId={setVoteProposalId}
@@ -539,7 +406,7 @@ const StakeDelegation = () => {
                 <ProposalDetailsPage
                   id={showProposalDetailsId}
                   isCompactVersion={true}
-                  onClose={() => setShowProposalId(null)}
+                  onClose={() => setShowProposalDetailsId(null)}
                   setToastStatus={setToastStatus}
                   setVoteProposalId={setVoteProposalId}
                   currentTab={currentTab}
@@ -553,4 +420,4 @@ const StakeDelegation = () => {
   );
 };
 
-export default StakeDelegation;
+export default FunctionCall;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useProposals } from "@/hooks/useProposals";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
@@ -37,7 +37,11 @@ const ProposalDetailsPage = ({
     lockupStakedPoolId,
     getApproversAndThreshold,
   } = useDao();
-  const queryClient = useQueryClient();
+  const { invalidateCategory } = useProposals({
+    daoId: treasuryDaoID,
+    category: "stake-delegation",
+    enabled: false,
+  });
 
   const [proposalData, setProposalData] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -135,7 +139,7 @@ const ProposalDetailsPage = ({
             submissionTime: item.submission_time,
             validatorAccount,
             action,
-            notes: customNotes || notes || "-",
+            notes: customNotes || notes,
             requestType,
             treasuryWallet,
             status,
@@ -167,10 +171,8 @@ const ProposalDetailsPage = ({
 
   function refreshData() {
     setProposalData(null);
-    // Invalidate all proposal-related queries
-    queryClient.invalidateQueries({
-      queryKey: ["proposals", treasuryDaoID, "stake-delegation"],
-    });
+    // Invalidate proposals cache
+    invalidateCategory();
   }
 
   function updateVoteSuccess(status, proposalId) {
@@ -191,31 +193,29 @@ const ProposalDetailsPage = ({
     }
   }
 
-  const requiredVotes = functionCallApproversGroup?.requiredVotes || 0;
-
   return (
     <ProposalDetails
-      {...{
-        id,
-        isCompactVersion,
-        proposalPeriod,
-        page: "stake-delegation",
-        VoteActions:
-          (hasVotingPermission || hasDeletePermission) &&
-          proposalData?.status === "InProgress" ? (
-            <VoteActions
-              votes={proposalData?.votes}
-              proposalId={proposalData?.id}
-              hasDeletePermission={hasDeletePermission}
-              hasVotingPermission={hasVotingPermission}
-              proposalCreator={proposalData?.proposer}
-              proposal={proposalData?.proposal}
-              checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
-              avoidCheckForBalance={true}
-              isProposalDetailsPage={true}
-            />
-          ) : null,
-        ProposalContent: proposalData && (
+      currentTab={currentTab}
+      proposalPeriod={proposalPeriod}
+      page="stake-delegation"
+      VoteActions={
+        (hasVotingPermission || hasDeletePermission) &&
+        proposalData?.status === "InProgress" ? (
+          <VoteActions
+            votes={proposalData?.votes}
+            proposalId={proposalData?.id}
+            hasDeletePermission={hasDeletePermission}
+            hasVotingPermission={hasVotingPermission}
+            proposalCreator={proposalData?.proposer}
+            proposal={proposalData?.proposal}
+            checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
+            avoidCheckForBalance={true}
+            isProposalDetailsPage={true}
+          />
+        ) : null
+      }
+      ProposalContent={
+        proposalData && (
           <div className="card card-body d-flex flex-column gap-2">
             {/* Request Type */}
             <div className="d-flex flex-column gap-2 mt-1">
@@ -260,13 +260,12 @@ const ProposalDetailsPage = ({
               </div>
             )}
           </div>
-        ),
-      }}
+        )
+      }
       proposalData={proposalData}
       isDeleted={isDeleted}
       isCompactVersion={isCompactVersion}
       approversGroup={functionCallApproversGroup}
-      deleteGroup={deleteGroup}
       proposalStatusLabel={{
         approved: `${proposalData?.requestType} Request Executed`,
         rejected: `${proposalData?.requestType} Request Rejected`,
@@ -274,7 +273,6 @@ const ProposalDetailsPage = ({
         failed: `${proposalData?.requestType} Request Failed`,
         expired: `${proposalData?.requestType} Request Expired`,
       }}
-      checkProposalStatus={checkProposalStatus}
       onClose={onClose}
     />
   );

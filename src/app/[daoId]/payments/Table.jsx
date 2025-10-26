@@ -20,7 +20,7 @@ import Votes from "@/components/proposals/Votes";
 import Approvers from "@/components/proposals/Approvers";
 import VoteActions from "@/components/proposals/VoteActions";
 import Tooltip from "@/components/ui/Tooltip";
-import Skeleton from "@/components/ui/Skeleton";
+import TableSkeleton from "@/components/ui/TableSkeleton";
 
 const Table = ({
   proposals,
@@ -193,35 +193,6 @@ const Table = ({
       ? ""
       : "display-none";
   }
-
-  const RowsSkeleton = ({ numberOfCols, numberOfRows, numberOfHiddenRows }) => {
-    const Row = ({ hidden }) => (
-      <tr>
-        {[...Array(numberOfCols)].map((_, i) => (
-          <td key={i}>
-            {hidden ? (
-              <div style={{ height: "30px", width: "100%" }} />
-            ) : (
-              <Skeleton
-                style={{ height: "30px", width: "100%" }}
-                className="rounded-3"
-              />
-            )}
-          </td>
-        ))}
-      </tr>
-    );
-    return (
-      <>
-        {[...Array(numberOfRows)].map((_, i) => (
-          <Row key={"row-" + i} />
-        ))}
-        {[...Array(numberOfHiddenRows)].map((_, i) => (
-          <Row key={"hidden-" + i} hidden />
-        ))}
-      </>
-    );
-  };
 
   const ProposalsComponent = () => {
     return (
@@ -572,7 +543,7 @@ const Table = ({
         daoPolicy === null ||
         !Array.isArray(proposals) ? (
           <tbody>
-            <RowsSkeleton
+            <TableSkeleton
               numberOfCols={isPendingRequests ? 14 : 13}
               numberOfRows={3}
               numberOfHiddenRows={4}

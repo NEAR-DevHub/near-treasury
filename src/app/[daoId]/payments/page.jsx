@@ -32,7 +32,10 @@ const PaymentsIndex = () => {
   const [showProposalDetailsId, setShowProposalId] = useState(null);
   const [showToastStatus, setToastStatus] = useState(false);
   const [voteProposalId, setVoteProposalId] = useState(null);
-  const [currentTab, setCurrentTab] = useState({ title: "Pending Requests" });
+  // Derive current tab from URL
+  const currentTab = {
+    title: tab === "history" ? "History" : "Pending Requests",
+  };
   const [isBulkImport, setIsBulkImport] = useState(false);
   const [bulkPreviewData, setBulkPreviewData] = useState(null);
   const [search, setSearch] = useState("");
@@ -74,16 +77,10 @@ const PaymentsIndex = () => {
   const proposalDetailsPageId =
     id || id === "0" || id === 0 ? parseInt(id) : null;
 
-  useEffect(() => {
-    if (tab === "history") {
-      setCurrentTab({ title: "History" });
-    }
-  }, [tab]);
-
   // Reset page when tab changes
   useEffect(() => {
     setPage(0);
-  }, [currentTab]);
+  }, [tab]);
 
   function toggleCreatePage() {
     setIsBulkImport(false);
@@ -343,7 +340,12 @@ const PaymentsIndex = () => {
                             <li key={title}>
                               <div
                                 onClick={() => {
-                                  setCurrentTab({ title });
+                                  // Update URL params
+                                  const params = new URLSearchParams(
+                                    searchParams
+                                  );
+                                  params.set("tab", normalize(title));
+                                  router.push(`?${params.toString()}`);
                                   // Clear filters when switching tabs since available filters change
                                   setActiveFilters({});
                                   setAmountValues({

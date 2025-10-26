@@ -39,6 +39,17 @@
   --bs-table-border-color: var(--border-color);
 }
 
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.invalid-feedback {
+  display: block;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
 /* Utility Classes */
 .bg-theme-color {
   background-color: var(--theme-color) !important;
@@ -449,8 +460,14 @@ a.primary-text-color:hover {
 }
 
 /* Markdown content styles */
-.markdown-content p {
+.markdown-content  {
+  p, ul, ol, li {
   margin-bottom: 0 !important;
+  
+  }
+  ul, ol {
+    padding-left: 1rem !important;
+  }
 }
 
 .primary-text-color.btn:hover {
@@ -670,9 +687,17 @@ fieldset:disabled:not(.no-transparent) {
 
 .warning-box {
   background: rgba(255, 158, 0, 0.1);
-  color: var(--other-warning);
+  color: var(--other-warning) !important;
   font-weight: 500;
   font-size: 13px;
+
+  i {
+    color: var(--other-warning) !important;
+  }
+
+  a {
+    color: var(--other-warning) !important;
+  }
 }
 
 /* FAQ Accordion Styles */
@@ -1055,4 +1080,13 @@ fieldset:disabled:not(.no-transparent) {
 
 .text-warning i.h5  {
   color: var(--other-warning) !important;
+}
+
+/* Code block styling for dark theme compatibility */
+.code-block {
+  background-color: var(--bg-system-color) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  font-size: 12px !important;
+  font-family: monospace !important;
 }
