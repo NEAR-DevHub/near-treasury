@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+.tmp
+.claude
 
 # debug
 npm-debug.log*
@@ -44,6 +46,7 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/playwright-tests/screenshots/
 
 neardevhub-treasury-dashboard
 freeze_frames
