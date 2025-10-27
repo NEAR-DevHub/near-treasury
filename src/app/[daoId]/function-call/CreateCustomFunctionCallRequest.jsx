@@ -195,7 +195,12 @@ const CreateCustomFunctionCallRequest = ({
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
         refetchLastProposalId().then((id) => {
-          invalidateCategory();
+          // Delay cache invalidation to give the indexer time to process the transaction
+          // This prevents a race condition where the refetch happens before indexing completes
+          setTimeout(() => {
+            invalidateCategory();
+          }, 2000); // 2 second delay to allow indexer to process
+
           setVoteProposalId(id);
           setToastStatus("ProposalAdded");
           setTxnCreated(false);

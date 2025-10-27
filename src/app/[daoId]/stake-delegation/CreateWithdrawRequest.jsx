@@ -206,10 +206,15 @@ const CreateWithdrawRequest = ({
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         refetchLastProposalId().then((id) => {
+          // Delay cache invalidation to give the indexer time to process the transaction
+          // This prevents a race condition where the refetch happens before indexing completes
+          setTimeout(() => {
+            invalidateCategory();
+          }, 2000); // 2 second delay to allow indexer to process
+
           setVoteProposalId(id);
           setToastStatus("WithdrawProposalAdded");
           setTxnCreated(false);
-          invalidateCategory();
           onCloseCanvas();
         });
       }
