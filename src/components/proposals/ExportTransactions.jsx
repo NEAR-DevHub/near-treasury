@@ -31,6 +31,10 @@ const ExportTransactions = ({ page, activeFilters, amountValues, search }) => {
         endpoint += `?category=lockup`;
         break;
       }
+      case "function-call": {
+        endpoint += `?proposal_types=FunctionCall`;
+        break;
+      }
       default: {
         break;
       }

@@ -2,6 +2,7 @@ export const NAVIGATION_LINKS = [
   { title: "Dashboard", href: "/dashboard" },
   { title: "Payments", href: "/payments" },
   { title: "Stake Delegation", href: "/stake-delegation" },
+  { title: "Function Call", href: "/function-call" },
   { title: "Asset Exchange", href: "/asset-exchange" },
   { title: "Settings", href: "/settings" },
 ];

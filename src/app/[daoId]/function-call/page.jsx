@@ -7,19 +7,16 @@ import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
 import { Near } from "@/api/near";
 import { normalize } from "@/helpers/formatters";
-import Table from "@/app/[daoId]/payments/Table";
-import ProposalDetailsPage from "@/app/[daoId]/payments/ProposalDetailsPage";
-import CreatePaymentRequest from "@/app/[daoId]/payments/CreatePaymentRequest";
-import BulkImportForm from "@/app/[daoId]/payments/BulkImportForm";
-import BulkImportPreviewTable from "@/app/[daoId]/payments/BulkImportPreviewTable";
-import Filters from "@/app/[daoId]/payments/Filters";
+import Table from "@/app/[daoId]/function-call/Table";
+import ProposalDetailsPage from "@/app/[daoId]/function-call/ProposalDetailsPage";
+import CreateCustomFunctionCallRequest from "@/app/[daoId]/function-call/CreateCustomFunctionCallRequest";
 import ExportTransactions from "@/components/proposals/ExportTransactions";
 import OffCanvas from "@/components/ui/OffCanvas";
 import Pagination from "@/components/ui/Pagination";
 import SettingsDropdown from "@/components/dropdowns/SettingsDropdown";
 import InsufficientBannerModal from "@/components/proposals/InsufficientBannerModal";
 
-const PaymentsIndex = () => {
+const FunctionCall = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { accountId } = useNearWallet();
@@ -29,30 +26,23 @@ const PaymentsIndex = () => {
   const id = searchParams.get("id");
 
   const [showCreateRequest, setShowCreateRequest] = useState(false);
-  const [showProposalDetailsId, setShowProposalId] = useState(null);
+  const [showProposalDetailsId, setShowProposalDetailsId] = useState(null);
   const [showToastStatus, setToastStatus] = useState(false);
   const [voteProposalId, setVoteProposalId] = useState(null);
   // Derive current tab from URL
   const currentTab = {
     title: tab === "history" ? "History" : "Pending Requests",
   };
-  const [isBulkImport, setIsBulkImport] = useState(false);
-  const [bulkPreviewData, setBulkPreviewData] = useState(null);
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilters, setActiveFilters] = useState({});
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortDirection, setSortDirection] = useState("desc");
-  const [amountValues, setAmountValues] = useState({
-    min: "",
-    max: "",
-    equal: "",
-    value: "between",
-  });
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const hasCreatePermission = hasPermission?.("transfer", "AddProposal");
+  const proposalDetailsPageId =
+    id || id === "0" || id === 0 ? parseInt(id) : null;
+
+  const hasCreatePermission = hasPermission?.("call", "AddProposal");
 
   // Use the proposals hook
   const {
@@ -61,7 +51,8 @@ const PaymentsIndex = () => {
     isLoading,
     invalidateCategory,
   } = useProposals({
-    category: "payments",
+    daoId: treasuryDaoID,
+    proposalType: ["FunctionCall"],
     statuses:
       currentTab.title === "Pending Requests"
         ? ["InProgress"]
@@ -69,13 +60,8 @@ const PaymentsIndex = () => {
     page,
     pageSize: rowsPerPage,
     sortDirection,
-    filters: activeFilters,
     search,
-    amountValues,
   });
-
-  const proposalDetailsPageId =
-    id || id === "0" || id === 0 ? parseInt(id) : null;
 
   // Reset page when tab changes
   useEffect(() => {
@@ -83,7 +69,6 @@ const PaymentsIndex = () => {
   }, [tab]);
 
   function toggleCreatePage() {
-    setIsBulkImport(false);
     setShowCreateRequest(!showCreateRequest);
   }
 
@@ -165,33 +150,25 @@ const PaymentsIndex = () => {
           "Your vote is counted" +
           (typeof proposalDetailsPageId === "number"
             ? "."
-            : ", the payment request is highlighted.");
+            : ", the function call request is highlighted.");
         break;
       case "Approved":
-        content = "The payment request has been successfully executed.";
+        content = "The function call request has been successfully executed.";
         break;
       case "Rejected":
-        content = "The payment request has been rejected.";
+        content = "The function call request has been rejected.";
         break;
       case "Removed":
-        content = "The payment request has been successfully deleted.";
+        content = "The function call request has been successfully deleted.";
         break;
       case "ProposalAdded":
-        content = "Payment request has been successfully created.";
+        content = "Function call request has been successfully created.";
         break;
-
       case "ErrorAddingProposal":
-        content = "Failed to create payment request.";
+        content = "Failed to create function call request.";
         break;
-
       default:
-        if (showToastStatus.startsWith("BulkProposalAdded")) {
-          content = `Successfully imported ${
-            showToastStatus.split(":")[1]
-          } payment requests.`;
-        } else {
-          content = `The payment request is ${showToastStatus}.`;
-        }
+        content = `The function call request is ${showToastStatus}.`;
         break;
     }
     return (
@@ -218,7 +195,6 @@ const PaymentsIndex = () => {
             {showToastStatus !== "InProgress" &&
               showToastStatus !== "Removed" &&
               showToastStatus !== "ProposalAdded" &&
-              !showToastStatus.startsWith("BulkProposalAdded") &&
               typeof proposalDetailsPageId !== "number" &&
               showToastStatus !== "ErrorAddingProposal" && (
                 <a
@@ -269,57 +245,16 @@ const PaymentsIndex = () => {
         </div>
       ) : (
         <div className="h-100 w-100 flex-grow-1 d-flex flex-column">
-          {bulkPreviewData && (
-            <BulkImportPreviewTable
-              proposals={bulkPreviewData}
-              closePreviewTable={() => setBulkPreviewData(null)}
-              setToastStatus={setToastStatus}
-            />
-          )}
-
           <OffCanvas
             showCanvas={showCreateRequest}
             onClose={toggleCreatePage}
-            title={
-              isBulkImport
-                ? "Import Payment Requests"
-                : "Create Payment Request"
-            }
+            title="Create Function Call Request"
           >
-            {isBulkImport ? (
-              <div>
-                <div className="mb-3" style={{ fontSize: "13px" }}>
-                  Create multiple payment requests at once by pasting data
-                  copied from our spreadsheet template. Review and submit your
-                  bulk requests with ease. You can add up to 10 requests at a
-                  time.
-                  <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="primary-text-color cursor-pointer"
-                    href="https://docs.neartreasury.com/payments/bulk-import"
-                  >
-                    {" "}
-                    View Step-by-Step Instructions
-                  </a>
-                </div>
-                <BulkImportForm
-                  onCloseCanvas={toggleCreatePage}
-                  showPreviewTable={(data) => {
-                    setBulkPreviewData(data);
-                    toggleCreatePage();
-                    setIsBulkImport(false);
-                  }}
-                />
-              </div>
-            ) : (
-              <CreatePaymentRequest
-                onCloseCanvas={toggleCreatePage}
-                setToastStatus={setToastStatus}
-                setVoteProposalId={setVoteProposalId}
-                setIsBulkImport={setIsBulkImport}
-              />
-            )}
+            <CreateCustomFunctionCallRequest
+              onCloseCanvas={toggleCreatePage}
+              setToastStatus={setToastStatus}
+              setVoteProposalId={setVoteProposalId}
+            />
           </OffCanvas>
 
           <div className="layout-flex-wrap flex-grow-1 align-items-start">
@@ -348,16 +283,7 @@ const PaymentsIndex = () => {
                                   );
                                   params.set("tab", normalize(title));
                                   router.push(`?${params.toString()}`);
-                                  // Clear filters when switching tabs since available filters change
-                                  setActiveFilters({});
-                                  setAmountValues({
-                                    min: "",
-                                    max: "",
-                                    equal: "",
-                                    value: "between",
-                                  });
                                   setSearch("");
-                                  setShowFilters(false);
                                 }}
                                 className={[
                                   "d-inline-flex gap-2 nav-link",
@@ -375,7 +301,7 @@ const PaymentsIndex = () => {
                     </ul>
 
                     <div className="d-flex gap-2 align-items-center flex-wrap flex-sm-nowrap pb-2 pb-md-0 ps-2 ps-md-0 flex-grow-1 justify-content-start justify-content-md-end">
-                      {/* Search and Filters */}
+                      {/* Search */}
                       <div className="input-responsive">
                         <div className="input-group flex-grow-1">
                           <span className="input-group-text bg-transparent">
@@ -387,9 +313,7 @@ const PaymentsIndex = () => {
                               search ? "border-end-0" : ""
                             }`}
                             placeholder={
-                              isSearchFocused
-                                ? "Search by id, title or summary"
-                                : "Search"
+                              isSearchFocused ? "Search by id, notes" : "Search"
                             }
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -411,28 +335,16 @@ const PaymentsIndex = () => {
                       {currentTab.title === "History" && (
                         <div style={{ minWidth: "fit-content" }}>
                           <ExportTransactions
-                            page="payments"
-                            activeFilters={activeFilters}
-                            amountValues={amountValues}
+                            page="function-call"
+                            activeFilters={{}}
+                            amountValues={{}}
                             search={search}
                           />
                         </div>
                       )}
 
-                      <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={`btn btn-outline-secondary ${
-                          showFilters ||
-                          Object.keys(activeFilters ?? {}).length > 0
-                            ? "active-filter"
-                            : ""
-                        }`}
-                      >
-                        <i className="bi bi-funnel"></i>
-                      </button>
-
                       <SettingsDropdown
-                        page="payments"
+                        page="function-call"
                         isPendingPage={currentTab.title === "Pending Requests"}
                       />
 
@@ -454,20 +366,6 @@ const PaymentsIndex = () => {
                       )}
                     </div>
                   </div>
-                  {showFilters && (
-                    <div className="border-bottom">
-                      <Filters
-                        isPendingRequests={
-                          currentTab.title === "Pending Requests"
-                        }
-                        activeFilters={activeFilters}
-                        setActiveFilters={setActiveFilters}
-                        amountValues={amountValues}
-                        setAmountValues={setAmountValues}
-                        setShowFilters={setShowFilters}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Content */}
@@ -477,7 +375,7 @@ const PaymentsIndex = () => {
                   loading={isLoading}
                   sortDirection={sortDirection}
                   handleSortClick={handleSortClick}
-                  onSelectRequest={(id) => setShowProposalId(id)}
+                  onSelectRequest={(id) => setShowProposalDetailsId(id)}
                   highlightProposalId={voteProposalId}
                   setToastStatus={setToastStatus}
                   setVoteProposalId={setVoteProposalId}
@@ -510,7 +408,7 @@ const PaymentsIndex = () => {
                 <ProposalDetailsPage
                   id={showProposalDetailsId}
                   isCompactVersion={true}
-                  onClose={() => setShowProposalId(null)}
+                  onClose={() => setShowProposalDetailsId(null)}
                   setToastStatus={setToastStatus}
                   setVoteProposalId={setVoteProposalId}
                   currentTab={currentTab}
@@ -524,4 +422,4 @@ const PaymentsIndex = () => {
   );
 };
 
-export default PaymentsIndex;
+export default FunctionCall;

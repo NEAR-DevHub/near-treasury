@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Approval from "@/components/icons/Approval";
 import Reject from "@/components/icons/Reject";
 import Tooltip from "@/components/ui/Tooltip";
@@ -13,6 +13,7 @@ const Approvers = ({
   maxShow = 1,
 }) => {
   const [profiles, setProfiles] = useState({});
+  const fetchedAccountsRef = useRef(new Set());
 
   // Memoize the accounts and sorted approvers to prevent unnecessary re-renders
   const accounts = useMemo(() => Object.keys(votes), [votes]);
@@ -20,39 +21,59 @@ const Approvers = ({
     () => [...approversGroup].sort((a, b) => a.localeCompare(b)),
     [approversGroup]
   );
+  const allAccounts = useMemo(() => {
+    return [...accounts, ...sortedApproversGroup];
+  }, [accounts, sortedApproversGroup]);
+
+  const allAccountsKey = allAccounts.join(",");
+
   const showHover = accounts?.length > maxShow;
   const maxIndex = 100;
 
   useEffect(() => {
     // Fetch profiles for all accounts
     const fetchProfiles = async () => {
-      const allAccounts = [...accounts, ...sortedApproversGroup];
-
-      // Only fetch profiles for accounts we don't already have
+      // Only fetch profiles for accounts we haven't fetched yet
       const accountsToFetch = allAccounts.filter(
-        (account) => !profiles[account]
+        (account) => !fetchedAccountsRef.current.has(account)
       );
 
       if (accountsToFetch.length === 0) {
-        return; // All profiles already cached
+        return; // All accounts already fetched
       }
 
+      // Mark these accounts as fetched
+      accountsToFetch.forEach((account) =>
+        fetchedAccountsRef.current.add(account)
+      );
+
       try {
-        // Fetch all profiles in a single API call
+        // Fetch all profiles in a single API call (API handles caching)
         const fetchedProfiles = await getProfilesFromSocialDb(accountsToFetch);
 
-        // Update profiles state with new data
-        setProfiles((prev) => ({
-          ...prev,
-          ...fetchedProfiles,
-        }));
+        // Only update state if we got profile data with names
+        setProfiles((prev) => {
+          const hasNewData = Object.keys(fetchedProfiles).some(
+            (accountId) => !prev[accountId]
+          );
+
+          if (!hasNewData) {
+            return prev; // Don't trigger re-render if we already have all this data
+          }
+
+          return {
+            ...prev,
+            ...fetchedProfiles,
+          };
+        });
       } catch (error) {
         console.error("Error fetching profiles:", error);
       }
     };
 
     fetchProfiles();
-  }, [accounts, sortedApproversGroup, profiles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allAccountsKey]);
 
   const getImage = (acc) => {
     return `https://i.near.social/magic/large/https://near.social/magic/img/account/${acc}`;

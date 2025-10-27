@@ -377,3 +377,30 @@ export const getUserDaos = async (accountId) => {
     return [];
   }
 };
+
+/**
+ * Get list of timezones
+ * @returns {Promise<Array>} Array of timezone objects
+ */
+export const getTimezones = async () => {
+  try {
+    logger.info("API call: getTimezones");
+    
+    const response = await fetch(`${BACKEND_API_BASE}/timezones`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+    return data || [];
+  } catch (error) {
+    logger.error("Error getting timezones:", error);
+    return [];
+  }
+};
