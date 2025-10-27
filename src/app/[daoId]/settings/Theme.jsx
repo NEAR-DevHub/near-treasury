@@ -46,19 +46,16 @@ const Theme = () => {
 
   const hasCreatePermission = hasPermission?.("config", "AddProposal");
 
-  // Initialize form with saved values
   useEffect(() => {
-    if (config?.metadata) {
-      const metadata = config.metadata;
-      const defaultImage =
-        metadata?.flagLogo ||
-        "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
-      const defaultColor = metadata?.primaryColor || "#01BF7A";
+    const metadata = config?.metadata;
+    const defaultImage =
+      metadata?.flagLogo ||
+      "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
+    const defaultColor = metadata?.primaryColor || "#01BF7A";
 
-      setValue("image", defaultImage);
-      setValue("color", defaultColor);
-      setLoadingConfig(false);
-    }
+    setValue("image", defaultImage);
+    setValue("color", defaultColor);
+    setLoadingConfig(false);
   }, [config, setValue]);
 
   const uploadImageToServer = async (file) => {
