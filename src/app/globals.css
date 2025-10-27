@@ -39,6 +39,17 @@
   --bs-table-border-color: var(--border-color);
 }
 
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.invalid-feedback {
+  display: block;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
 /* Utility Classes */
 .bg-theme-color {
   background-color: var(--theme-color) !important;
@@ -139,6 +150,14 @@ input[type="number"] {
   border-width: 1px !important;
   border-radius: 16px;
   background-color: var(--bg-page-color) !important;
+}
+
+.card-title {
+  color: var(--text-color) !important;
+  font-size: 18px;
+  font-weight: 600;
+  padding-block: 5px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* Dropdown styles */
@@ -449,8 +468,14 @@ a.primary-text-color:hover {
 }
 
 /* Markdown content styles */
-.markdown-content p {
+.markdown-content  {
+  p, ul, ol, li {
   margin-bottom: 0 !important;
+  
+  }
+  ul, ol {
+    padding-left: 1rem !important;
+  }
 }
 
 .primary-text-color.btn:hover {
@@ -459,13 +484,78 @@ a.primary-text-color:hover {
 
 /* Badge styles */
 .badge {
-  padding: 6px 8px;
-  background: var(--grey-035);
+  padding: 4px 10px;
+  background: var(--bg-page-color);
   color: var(--text-color);
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 12px;
+  border-radius: 20px;
+  font-weight: 400;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  margin-right: 5px;
+  padding: 7px 10px;
 }
+
+.badge i {
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+/* Member container styles */
+.member-container {
+  margin-bottom: 1rem;
+}
+
+.member-container {
+  background: var(--bg-page-color) !important;
+}
+
+.custom-header {
+  border: 1px solid var(--border-color);
+  border-bottom: 0;
+  height: 70px;
+  background-color: var(--grey-05);
+  z-index: 1;
+  position: relative;
+}
+
+/* Inward bottom curve */
+.custom-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 11px;
+  border-radius: 150rem 150rem 0 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-page-color) !important;
+}
+
+.text-red {
+  color: var(--other-red);
+
+  i {
+    color: var(--other-red);
+  }
+}
+
+.select-tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 14px;
+  background-color: var(--grey-04) !important;
+  cursor: pointer;
+  color: var(--text-color) !important;
+  i {
+    color: var(--text-color) !important;
+  }
+}
+
 
 .btn-outline-plain {
   height: 40px;
@@ -670,9 +760,98 @@ fieldset:disabled:not(.no-transparent) {
 
 .warning-box {
   background: rgba(255, 158, 0, 0.1);
-  color: var(--other-warning);
+  color: var(--other-warning) !important;
   font-weight: 500;
   font-size: 13px;
+
+  i {
+    color: var(--other-warning) !important;
+  }
+
+  a {
+    color: var(--other-warning) !important;
+  }
+}
+
+.error-box {
+  background:rgba(217, 92, 74, 0.1);
+  color: var(--other-red) ;
+  font-weight: 500;
+  font-size: 13px;
+  i {
+  color: var(--other-red) !important;
+  }
+  }
+
+/* Toggle Switch Styles */
+.form-switch {
+  display: inline-block;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.form-switch i {
+  position: relative;
+  display: inline-block;
+  margin-right: 0.5rem;
+  width: 46px;
+  height: 26px;
+  background-color: var(--bg-page-color);
+  border-radius: 23px;
+  vertical-align: text-bottom;
+  transition: all 0.3s linear;
+}
+
+.form-switch i::before {
+  top: -1px;
+  left: -1px;
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 42px;
+  height: 24px;
+  background-color: var(--grey-03);
+  border-radius: 11px;
+  transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
+  transition: all 0.25s linear;
+}
+
+.form-switch i::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  background-color: var(--border-color);
+  border-radius: 11px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.24);
+  transform: translate3d(2px, 2px, 0);
+  transition: all 0.2s ease-in-out;
+}
+
+.form-switch:active i::after {
+  width: 28px;
+  transform: translate3d(2px, 2px, 0);
+}
+
+.form-switch:active input:checked + i::after {
+  transform: translate3d(16px, 2px, 0);
+}
+
+.form-switch input {
+  display: none;
+}
+
+.form-switch input:checked + i {
+  background-color: var(--theme-color);
+}
+
+.form-switch input:checked + i::before {
+  transform: translate3d(18px, 2px, 0) scale3d(0, 0, 0);
+}
+
+.form-switch input:checked + i::after {
+  transform: translate3d(22px, 2px, 0);
 }
 
 /* FAQ Accordion Styles */
@@ -1055,4 +1234,135 @@ fieldset:disabled:not(.no-transparent) {
 
 .text-warning i.h5  {
   color: var(--other-warning) !important;
+}
+
+/* Code block styling for dark theme compatibility */
+.code-block {
+  background-color: var(--bg-system-color) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  font-size: 12px !important;
+  font-family: monospace !important;
+}
+
+.flex-5 {
+  flex: 5;
+}
+
+/* Profile header styling for settings proposals */
+.profile-header {
+  position: relative;
+}
+
+.profile-header .content {
+  border: 1px solid var(--border-color);
+  border-bottom: 0px;
+  height: 70px !important;
+  background-color: var(--grey-05);
+  position: relative;
+  padding-top: 11px;
+}
+
+/* Create the bottom inward curve */
+.profile-header .content::after {
+  content: "";
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  width: 100%;
+  height: 11px;
+  border-radius: 150rem 150rem 0px 0px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-page-color) !important;
+}
+
+/* Summary list styling for settings proposals */
+.summary-list {
+  list-style-type: disc;
+  padding-left: 1rem;
+  margin-bottom: 0;
+}
+
+/* Appearance logo for theme proposals */
+.appearance-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  vertical-align: middle;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+/* Appearance color box for theme proposals */
+.appearance-color-box {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  vertical-align: middle;
+  margin-left: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+/* Summary item styling */
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+}
+
+/* Markdown scroll styling */
+.markdown-scroll {
+  max-height: 400px;
+  width: 100%;
+  overflow: auto;
+}
+
+/* Member row styling for members table */
+.member-row {
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.member-row:hover {
+  background-color: var(--grey-04) !important;
+}
+
+.action-buttons {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.member-row:hover .action-buttons {
+  opacity: 1;
+}
+
+.action-btn {
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background-color: var(--grey-035);
+}
+
+/* Indeterminate checkbox styling */
+input[type="checkbox"].indeterminate {
+  background-color: var(--theme-color) !important;
+  position: relative;
+  border-color: var(--theme-color) !important;
+}
+
+input[type="checkbox"].indeterminate::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  width: 50%;
+  height: 2px;
+  background-color: white;
+  transform: translateY(-50%);
 }

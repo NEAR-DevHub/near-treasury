@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useProposals } from "@/hooks/useProposals";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
@@ -29,7 +29,11 @@ const ProposalDetailsPage = ({
     daoPolicy,
     getApproversAndThreshold,
   } = useDao();
-  const queryClient = useQueryClient();
+  const { invalidateCategory } = useProposals({
+    daoId: treasuryDaoID,
+    category: "payments",
+    enabled: false,
+  });
 
   const [proposalData, setProposalData] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -55,7 +59,7 @@ const ProposalDetailsPage = ({
     accountId
   );
 
-  const proposalPeriod = daoPolicy?.proposal_period;
+  const proposalPeriod = daoPolicy?.proposal_period || 0;
 
   useEffect(() => {
     const fetchProposalData = async () => {
@@ -458,10 +462,8 @@ const ProposalDetailsPage = ({
 
   function refreshData() {
     setProposalData(null);
-    // Invalidate all proposal-related queries
-    queryClient.invalidateQueries({
-      queryKey: ["proposals", treasuryDaoID, "payments"],
-    });
+    // Invalidate proposals cache
+    invalidateCategory();
   }
 
   function updateVoteSuccess(status, proposalId) {
@@ -665,7 +667,6 @@ const ProposalDetailsPage = ({
       isDeleted={isDeleted}
       isCompactVersion={isCompactVersion}
       approversGroup={transferApproversGroup}
-      deleteGroup={deleteGroup}
       proposalStatusLabel={{
         approved: "Payment Request Funded",
         rejected: "Payment Request Rejected",
@@ -673,7 +674,6 @@ const ProposalDetailsPage = ({
         failed: "Payment Request Failed",
         expired: "Payment Request Expired",
       }}
-      checkProposalStatus={checkProposalStatus}
       onClose={onClose}
     />
   );

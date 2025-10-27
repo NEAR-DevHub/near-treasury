@@ -5,6 +5,8 @@ import Profile from "@/components/ui/Profile";
 import TokenIcon from "@/components/proposals/TokenIcon";
 import HistoryStatus from "@/components/proposals/HistoryStatus";
 
+// TODO: fix clicking on search loses focus on the input
+// TODO: fix selecting one option from multiple options scrolls to top
 // Filters dropdown with include/exclude and multiple filter types
 const FiltersDropdown = ({
   label,

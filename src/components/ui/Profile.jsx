@@ -5,9 +5,6 @@ import Tooltip from "@/components/ui/Tooltip";
 import Copy from "@/components/ui/Copy";
 import { getProfilesFromSocialDb } from "@/api/social";
 
-// Cache for profile data to prevent re-fetching
-const profileCache = {};
-
 const Profile = ({
   accountId,
   displayName = true,
@@ -28,22 +25,14 @@ const Profile = ({
       return;
     }
 
-    // Check cache first
-    if (profileCache[accountId]) {
-      setProfile(profileCache[accountId]);
-      return;
-    }
-
-    // Fetch from API if not cached
+    // Fetch profile (API handles caching)
     getProfilesFromSocialDb(accountId)
       .then((profile) => {
         setProfile(profile);
-        profileCache[accountId] = profile; // Cache the result
       })
       .catch((error) => {
         console.error("Error fetching profile:", error);
         setProfile(null);
-        profileCache[accountId] = null; // Cache null to prevent retries
       });
   }, [accountId]);
 

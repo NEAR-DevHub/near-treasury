@@ -35,7 +35,10 @@ const StakeDelegation = () => {
   const [showProposalDetailsId, setShowProposalId] = useState(null);
   const [showToastStatus, setToastStatus] = useState(false);
   const [voteProposalId, setVoteProposalId] = useState(null);
-  const [currentTab, setCurrentTab] = useState({ title: "Pending Requests" });
+  // Derive current tab from URL
+  const currentTab = {
+    title: tab === "history" ? "History" : "Pending Requests",
+  };
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
@@ -75,16 +78,10 @@ const StakeDelegation = () => {
   const proposalDetailsPageId =
     id || id === "0" || id === 0 ? parseInt(id) : null;
 
-  useEffect(() => {
-    if (tab === "history") {
-      setCurrentTab({ title: "History" });
-    }
-  }, [tab]);
-
   // Reset page when tab changes
   useEffect(() => {
     setPage(0);
-  }, [currentTab]);
+  }, [tab]);
 
   function toggleCreatePage(type = "stake") {
     setCreateRequestType(type);
@@ -310,12 +307,14 @@ const StakeDelegation = () => {
     <div className="w-100 h-100 flex-grow-1 d-flex flex-column">
       <VoteSuccessToast />
       {typeof proposalDetailsPageId === "number" ? (
-        <ProposalDetailsPage
-          id={proposalDetailsPageId}
-          setToastStatus={setToastStatus}
-          setVoteProposalId={setVoteProposalId}
-          currentTab={currentTab}
-        />
+        <div className="mt-4">
+          <ProposalDetailsPage
+            id={proposalDetailsPageId}
+            setToastStatus={setToastStatus}
+            setVoteProposalId={setVoteProposalId}
+            currentTab={currentTab}
+          />
+        </div>
       ) : (
         <div className="h-100 w-100 flex-grow-1 d-flex flex-column">
           <OffCanvas
@@ -346,7 +345,12 @@ const StakeDelegation = () => {
                             <li key={title}>
                               <div
                                 onClick={() => {
-                                  setCurrentTab({ title });
+                                  // Update URL params
+                                  const params = new URLSearchParams(
+                                    searchParams
+                                  );
+                                  params.set("tab", normalize(title));
+                                  router.push(`?${params.toString()}`);
                                   // Clear filters when switching tabs
                                   setActiveFilters({});
                                   setAmountValues({
@@ -386,9 +390,7 @@ const StakeDelegation = () => {
                               search ? "border-end-0" : ""
                             }`}
                             placeholder={
-                              isSearchFocused
-                                ? "Search by id, title or summary"
-                                : "Search"
+                              isSearchFocused ? "Search by id, notes" : "Search"
                             }
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}

@@ -3,6 +3,9 @@ const { Social } = require('@builddao/near-social-js');
 
 const social = new Social();
 
+// Cache for profile data to prevent redundant API calls
+const profileCache = {};
+
 /**
  * Get profile data from NEAR Social
  * Accepts either a single account ID or multiple account IDs
@@ -11,33 +14,54 @@ const social = new Social();
  * @returns {Promise<Object>} Profile data - single profile object or object with multiple profiles
  */
 export const getProfilesFromSocialDb = async (accountIds) => {
+  const accounts = Array.isArray(accountIds) ? accountIds : [accountIds];
+  
+  // Check cache first
+  const uncachedAccounts = accounts.filter(accountId => profileCache[accountId] === undefined);
+  
+  if (uncachedAccounts.length === 0) {
+    console.log("✅ All profiles in cache, returning cached data");
+    // Return cached data
+    if (Array.isArray(accountIds)) {
+      return Object.fromEntries(accounts.map(accountId => [accountId, profileCache[accountId] || {}]));
+    } else {
+      return profileCache[accountIds] || {};
+    }
+  }
+  
+  console.log("🚨 getProfilesFromSocialDb API call for:", uncachedAccounts);
+  
   try {
     // Handle both single account ID and array of account IDs
-    const accounts = Array.isArray(accountIds) ? accountIds : [accountIds];
-    
-    logger.info("Social API call: getProfilesFromSocialDb", { accountIds: accounts });
-    
-    // Build keys array for all accounts
-    const keys = accounts.map(accountId => `${accountId}/profile/*`);
+    const keys = uncachedAccounts.map(accountId => `${accountId}/profile/*`);
     
     const result = await social.get({
       keys: keys,
     });
     
+    // Cache the results
+    uncachedAccounts.forEach(accountId => {
+      profileCache[accountId] = result?.[accountId]?.profile || {};
+    });
+    
     // If single account ID was passed, return single profile
     if (!Array.isArray(accountIds)) {
-      return result?.[accountIds]?.profile || {};
+      return profileCache[accountIds] || {};
     }
     
     // If multiple account IDs were passed, return object with all profiles
     const profiles = {};
     accounts.forEach(accountId => {
-      profiles[accountId] = result?.[accountId]?.profile || {};
+      profiles[accountId] = profileCache[accountId] || {};
     });
     
     return profiles;
   } catch (error) {
     logger.error("Error getting profiles:", error);
+    // Cache null to prevent retries
+    uncachedAccounts.forEach(accountId => {
+      profileCache[accountId] = {};
+    });
     return Array.isArray(accountIds) ? {} : {};
   }
 };
