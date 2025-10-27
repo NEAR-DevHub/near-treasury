@@ -27,7 +27,7 @@ const Modal = ({ isOpen, heading, children, footer, onClose, size = null }) => {
         className={`modal-dialog modal-dialog-centered ${sizeClass}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-content">
+        <div className="modal-content text-color">
           <div className="modal-header">
             <h5 className="modal-title">{heading}</h5>
             <button

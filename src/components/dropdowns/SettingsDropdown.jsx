@@ -63,6 +63,16 @@ const SettingsDropdown = ({ page, isPendingPage = false }) => {
           { title: "Approvers", show: true },
           { title: "Expiring Date", show: true },
         ];
+      case "settings":
+        return [
+          { title: "Created Date", show: true },
+          { title: "Title", show: true },
+          { title: "Creator", show: true },
+          { title: "Required Votes", show: true },
+          { title: "Votes", show: true },
+          { title: "Approvers", show: true },
+          { title: "Expiring Date", show: true },
+        ];
       default:
         return [];
     }

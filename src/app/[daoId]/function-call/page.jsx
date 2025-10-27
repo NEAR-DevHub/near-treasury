@@ -235,12 +235,14 @@ const FunctionCall = () => {
     <div className="w-100 h-100 flex-grow-1 d-flex flex-column">
       <VoteSuccessToast />
       {typeof proposalDetailsPageId === "number" ? (
-        <ProposalDetailsPage
-          id={proposalDetailsPageId}
-          setToastStatus={setToastStatus}
-          setVoteProposalId={setVoteProposalId}
-          currentTab={currentTab}
-        />
+        <div className="mt-4">
+          <ProposalDetailsPage
+            id={proposalDetailsPageId}
+            setToastStatus={setToastStatus}
+            setVoteProposalId={setVoteProposalId}
+            currentTab={currentTab}
+          />
+        </div>
       ) : (
         <div className="h-100 w-100 flex-grow-1 d-flex flex-column">
           <OffCanvas

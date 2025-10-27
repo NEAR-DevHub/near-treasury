@@ -24,6 +24,7 @@
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.0",
     "js-sha256": "^0.11.1",
+    "lodash": "^4.17.21",
     "next": "15.5.4",
     "qrcode.react": "^4.2.0",
     "radix-ui": "^1.4.3",

@@ -115,13 +115,14 @@ const ProposalDetails = ({
           isInProgress={proposalData?.status === "InProgress"}
         />
         {VoteActions}
-        {Object.keys(proposalData?.votes ?? {}).length > 0 && (
+        {/* TODO: Fix the issue with the approvers list refetching every second */}
+        {/* {Object.keys(proposalData?.votes ?? {}).length > 0 && (
           <Approvers
             votes={proposalData?.votes}
             approversGroup={approversGroup?.approverAccounts}
             showApproversList={true}
           />
-        )}
+        )} */}
       </div>
     );
   };
@@ -157,7 +158,7 @@ const ProposalDetails = ({
     };
 
     return !isCompactVersion ? (
-      <div className="d-flex justify-content-between gap-2 align-items-center mt-4">
+      <div className="d-flex justify-content-between gap-2 align-items-center">
         <button
           onClick={handleBackClick}
           className="btn btn-outline-secondary d-flex gap-1 align-items-center"
