@@ -19,7 +19,7 @@ const CreateCustomFunctionCallRequest = ({
 }) => {
   const { daoId: treasuryDaoID, daoPolicy, refetchLastProposalId } = useDao();
 
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     proposalType: ["FunctionCall"],
     enabled: false,
@@ -194,8 +194,8 @@ const CreateCustomFunctionCallRequest = ({
         result.length > 0 &&
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
-        refetchLastProposalId().then((id) => {
-          invalidateCategory();
+        refetchLastProposalId().then(async (id) => {
+          await invalidateCategoryAfterTransaction();
           setVoteProposalId(id);
           setToastStatus("ProposalAdded");
           setTxnCreated(false);

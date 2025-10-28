@@ -158,15 +158,15 @@ const CreatePaymentRequest = ({
     });
   }
 
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     category: "payments",
     enabled: false,
   });
 
-  function refreshData() {
-    // Invalidate proposals cache
-    invalidateCategory();
+  async function refreshData() {
+    // Invalidate proposals cache with delay for indexer processing
+    await invalidateCategoryAfterTransaction();
     if (setVoteProposalId) setVoteProposalId(lastProposalId);
     if (setToastStatus) setToastStatus("ProposalAdded");
   }

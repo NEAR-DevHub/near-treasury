@@ -38,7 +38,7 @@ const CreateStakeRequest = ({
     refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     category: "stake-delegation",
     enabled: false,
@@ -258,8 +258,8 @@ const CreateStakeRequest = ({
       console.log("Stake request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
-          invalidateCategory();
+        refetchLastProposalId().then(async (id) => {
+          await invalidateCategoryAfterTransaction();
           setVoteProposalId(id);
           setToastStatus("StakeProposalAdded");
           setTxnCreated(false);

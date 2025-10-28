@@ -34,7 +34,7 @@ const CreateWithdrawRequest = ({
     refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     category: "stake-delegation",
     enabled: false,
@@ -205,11 +205,11 @@ const CreateWithdrawRequest = ({
       console.log("Withdraw request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
+        refetchLastProposalId().then(async (id) => {
           setVoteProposalId(id);
           setToastStatus("WithdrawProposalAdded");
           setTxnCreated(false);
-          invalidateCategory();
+          await invalidateCategoryAfterTransaction();
           onCloseCanvas();
         });
       }

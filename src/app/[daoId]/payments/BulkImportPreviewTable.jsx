@@ -73,17 +73,17 @@ const BulkImportPreviewTable = ({
     setSelectedMap(newMap);
   }, [selectedMap, allSelected]);
 
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     category: "payments",
     enabled: false,
   });
 
-  function refreshData() {
+  async function refreshData() {
     if (setToastStatus) {
       setToastStatus(`BulkProposalAdded: ${selectedCount}`);
     }
-    // Invalidate proposals cache
-    invalidateCategory();
+    // Invalidate proposals cache with delay for indexer processing
+    await invalidateCategoryAfterTransaction();
   }
 
   // Monitor transaction completion

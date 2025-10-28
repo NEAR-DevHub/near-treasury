@@ -179,7 +179,12 @@ const VoteActions = ({
         result.length > 0 &&
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
-        checkProposalStatus?.();
+        // Delay cache invalidation to give the indexer time to process the transaction
+        // This prevents a race condition where the refetch happens before indexing completes
+        setTimeout(() => {
+          checkProposalStatus?.();
+        }, 2000); // 2 second delay to allow indexer to process
+
         setTxnCreated(false);
         refreshDaoBalances();
         refreshLockupBalances();

@@ -455,19 +455,40 @@ test.describe("Payment Request UI Flow", () => {
     await expect(page.getByText("Payment request has been successfully created.")).toBeVisible({ timeout: 10000 });
     console.log("✓ Payment request created successfully");
 
-    // Check if proposal is showing in the table
-    await page.waitForTimeout(2000);
-    const proposalInTable = await page.locator('tbody tr').filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }).first().isVisible().catch(() => false);
+    // Verify the "View Request" link is present in the toast
+    const viewRequestLink = page.getByText('View Request');
+    await expect(viewRequestLink).toBeVisible();
+    console.log("✓ 'View Request' link is visible in toast");
 
-    if (proposalInTable) {
-      // Proposal is already in table, click on it to open detail sidebar
-      console.log("✓ Proposal visible in table, clicking on it");
-      await page.locator('tbody tr').filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }).first().click();
-    } else {
-      // Proposal not in table yet, click the "View Request" link in toast
-      console.log("✓ Proposal not in table yet, clicking 'View Request' link");
-      await page.getByText('View Request').click({ timeout: 10000 });
-    }
+    // Wait for proposal to appear in table (with the fix, it should appear immediately after the 2s delay)
+    await page.waitForTimeout(2500); // Wait slightly longer than the 2s cache invalidation delay
+
+    // Hard expectation: Proposal MUST be visible in the table
+    const proposalRow = page.locator('tbody tr').filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }).first();
+    await expect(proposalRow).toBeVisible({ timeout: 3000 });
+    console.log("✓ Proposal is visible in table (fix verified!)");
+
+    // Extract the proposal ID from the table row to verify "View Request" link points to it
+    const proposalIdInTable = await proposalRow.locator('td').first().textContent();
+    console.log(`✓ Proposal ID in table: ${proposalIdInTable}`);
+
+    // Verify the "View Request" link points to the same proposal by clicking it
+    // This will navigate to the proposal detail page with the ID in the URL
+    await viewRequestLink.click();
+    await page.waitForTimeout(1000);
+
+    // Check that the URL contains the proposal ID (format: ?id=0)
+    const currentUrl = page.url();
+    expect(currentUrl).toContain(`id=${proposalIdInTable}`);
+    console.log(`✓ 'View Request' link correctly points to proposal ${proposalIdInTable}`);
+
+    // Navigate back to the payments page
+    await page.goBack();
+    await page.waitForTimeout(1000);
+
+    // Now click the proposal row to open detail sidebar
+    await proposalRow.click();
+    console.log("✓ Clicked on proposal in table");
 
     // Wait for proposal detail sidebar to open
     await page.waitForTimeout(2000);
