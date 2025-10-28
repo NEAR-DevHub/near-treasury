@@ -111,6 +111,19 @@ export function useProposals({
     });
   };
 
+  // Helper function to invalidate category with delay for indexer processing
+  // This should be used after add_proposal or act_proposal transactions
+  const invalidateCategoryAfterTransaction = () => {
+    return new Promise((resolve) => {
+      // Delay cache invalidation to give the indexer time to process the transaction
+      // This prevents a race condition where the refetch happens before indexing completes
+      setTimeout(() => {
+        invalidateCategory();
+        resolve();
+      }, 2000); // 2 second delay to allow indexer to process
+    });
+  };
+
   // Helper function to invalidate all proposals for this DAO
   const invalidateAll = () => {
     queryClient.invalidateQueries({
@@ -129,6 +142,7 @@ export function useProposals({
     refetch: query.refetch,
     invalidate,
     invalidateCategory,
+    invalidateCategoryAfterTransaction,
     invalidateAll,
   };
 }

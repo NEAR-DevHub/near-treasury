@@ -34,7 +34,7 @@ const CreateWithdrawRequest = ({
     refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     category: "stake-delegation",
     enabled: false,
@@ -205,16 +205,11 @@ const CreateWithdrawRequest = ({
       console.log("Withdraw request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
-          // Delay cache invalidation to give the indexer time to process the transaction
-          // This prevents a race condition where the refetch happens before indexing completes
-          setTimeout(() => {
-            invalidateCategory();
-          }, 2000); // 2 second delay to allow indexer to process
-
+        refetchLastProposalId().then(async (id) => {
           setVoteProposalId(id);
           setToastStatus("WithdrawProposalAdded");
           setTxnCreated(false);
+          await invalidateCategoryAfterTransaction();
           onCloseCanvas();
         });
       }

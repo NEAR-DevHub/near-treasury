@@ -73,20 +73,17 @@ const BulkImportPreviewTable = ({
     setSelectedMap(newMap);
   }, [selectedMap, allSelected]);
 
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     category: "payments",
     enabled: false,
   });
 
-  function refreshData() {
+  async function refreshData() {
     if (setToastStatus) {
       setToastStatus(`BulkProposalAdded: ${selectedCount}`);
     }
-    // Delay cache invalidation to give the indexer time to process the transaction
-    // This prevents a race condition where the refetch happens before indexing completes
-    setTimeout(() => {
-      invalidateCategory();
-    }, 2000); // 2 second delay to allow indexer to process
+    // Invalidate proposals cache with delay for indexer processing
+    await invalidateCategoryAfterTransaction();
   }
 
   // Monitor transaction completion

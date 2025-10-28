@@ -158,19 +158,15 @@ const CreatePaymentRequest = ({
     });
   }
 
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     category: "payments",
     enabled: false,
   });
 
-  function refreshData() {
-    // Delay cache invalidation to give the indexer time to process the transaction
-    // This prevents a race condition where the refetch happens before indexing completes
-    setTimeout(() => {
-      invalidateCategory();
-    }, 2000); // 2 second delay to allow indexer to process
-
+  async function refreshData() {
+    // Invalidate proposals cache with delay for indexer processing
+    await invalidateCategoryAfterTransaction();
     if (setVoteProposalId) setVoteProposalId(lastProposalId);
     if (setToastStatus) setToastStatus("ProposalAdded");
   }

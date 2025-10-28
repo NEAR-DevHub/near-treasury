@@ -19,7 +19,7 @@ const CreateCustomFunctionCallRequest = ({
 }) => {
   const { daoId: treasuryDaoID, daoPolicy, refetchLastProposalId } = useDao();
 
-  const { invalidateCategory } = useProposals({
+  const { invalidateCategoryAfterTransaction } = useProposals({
     daoId: treasuryDaoID,
     proposalType: ["FunctionCall"],
     enabled: false,
@@ -194,13 +194,8 @@ const CreateCustomFunctionCallRequest = ({
         result.length > 0 &&
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
-        refetchLastProposalId().then((id) => {
-          // Delay cache invalidation to give the indexer time to process the transaction
-          // This prevents a race condition where the refetch happens before indexing completes
-          setTimeout(() => {
-            invalidateCategory();
-          }, 2000); // 2 second delay to allow indexer to process
-
+        refetchLastProposalId().then(async (id) => {
+          await invalidateCategoryAfterTransaction();
           setVoteProposalId(id);
           setToastStatus("ProposalAdded");
           setTxnCreated(false);
