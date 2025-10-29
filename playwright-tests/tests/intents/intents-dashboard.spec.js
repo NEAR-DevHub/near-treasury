@@ -81,11 +81,15 @@ test.describe("Intents Dashboard Display", () => {
   test("should display aggregated USDC balance across multiple chains", async ({ page }) => {
     const daoId = TEST_DAO_ID;
 
-    // Mock RPC with USDC on multiple chains (Base, Arbitrum, Ethereum)
+    // Mock RPC with USDC on multiple chains (NEAR, Base, Ethereum)
     // This is a common real-world scenario for DAO treasuries
     const mockData = createMockIntentsTokens([
+      {
+        symbol: "USDC",
+        tokenId: "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", // USDC on NEAR
+        balance: "1000000", // 1 USDC (6 decimals)
+      },
       MOCK_TOKENS.USDC_BASE,    // 1 USDC on Base
-      MOCK_TOKENS.USDC_ARB,     // 1 USDC on Arbitrum
       {
         symbol: "USDC",
         tokenId: "eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near", // USDC on Ethereum
