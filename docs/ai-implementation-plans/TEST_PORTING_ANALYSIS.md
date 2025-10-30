@@ -12,6 +12,38 @@ This document maps the functionality implemented in the new `near-treasury` repo
 
 ---
 
+## Porting Status (Updated: 2025-10-30)
+
+### Intents Tests: 7/21 Ported (33%)
+
+**Completed** (7 tests covering 13 legacy test scenarios):
+1. ✅ `intents-payment-request-ui.spec.js` - 3 payment flows (BTC, USDC, wNEAR)
+2. ✅ `intents-deposit-ui.spec.js` - Deposit UI with QR codes
+3. ✅ `intents-dashboard.spec.js` - 3 dashboard scenarios (empty, loaded, multi-chain)
+4. ✅ `payment-request-detail.spec.js` - 4 detail page tests (ETH, wNEAR, regular, failed)
+5. ✅ `token-amount.spec.js` - Component validation
+6. ✅ `other-chain-account-input.spec.js` - Address validation
+7. ✅ `sandbox/btc-payment-request.spec.js` - Integration test (covers `intents-payment-request.spec.js`)
+
+**Covered by Other Tests** (6 legacy tests):
+- `intents-deposit-near.spec.js` → Covered by `intents-deposit-ui.spec.js`
+- `intents-deposit-other-chain.spec.js` → Covered by `intents-deposit-ui.spec.js`
+- `intents-wnear-withdrawal.spec.js` → Covered by `payment-request-ui.spec.js`
+- `qrcode-generator.spec.js` → Covered by `intents-deposit-ui.spec.js`
+- `usdc-eth-payment-showcase.spec.js` → Covered by `payment-request-ui.spec.js`
+- `intents-payment-request.spec.js` → Covered by `sandbox/btc-payment-request.spec.js`
+
+**Skipped** (1 test):
+- `asset-exchange-icons.spec.js` - Non-critical icon rendering
+
+**Blocked** (7 tests):
+- Exchange-related tests (5) - Feature not implemented
+- BOS-specific tests (2) - Architecture change
+
+**Result**: All critical Intents tests ported. Exchange features not in scope.
+
+---
+
 ## Test Coverage Analysis by Feature Area
 
 ### 1. Dashboard Tests (5 tests in legacy)
@@ -85,29 +117,35 @@ This document maps the functionality implemented in the new `near-treasury` repo
 
 **Legacy Tests Location**: `/playwright-tests/tests/intents/`
 
-| Test File | Status | Notes |
-|-----------|--------|-------|
-| `intents-payment-request-ui.spec.js` | ✅ Ready | Payment request form with Intents wallet selector |
-| `intents-deposit-ui.spec.js` | ✅ Ready | Deposit UI with Sputnik DAO and NEAR Intents options |
-| `intents-dashboard.spec.js` | ✅ Ready | IntentsPortfolio component in dashboard |
-| `intents-deposit-near.spec.js` | ⚠️ Partial | Deposit UI exists, full flow needs verification |
-| `intents-deposit-other-chain.spec.js` | ⚠️ Partial | Cross-chain deposit UI implemented, needs testing |
-| `intents-payment-request.spec.js` | ✅ Ready | Payment request with Intents tokens |
-| `intents-payment-request-detail.spec.js` | ✅ Ready | Proposal details support Intents payments |
-| `intents-wnear-withdrawal.spec.js` | ⚠️ Partial | wNEAR support exists, withdrawal flow needs verification |
-| `intents-usdc-swap-withdrawal.spec.js` | ❌ Not Implemented | Swap functionality not yet in new repo |
-| `intents-asset-exchange-detail.spec.js` | ❌ Not Implemented | Asset exchange page is placeholder |
-| `create-1click-exchange-request.spec.js` | ❌ Not Implemented | One-click exchange not implemented |
-| `oneclick-exchange-form.spec.js` | ❌ Not Implemented | Exchange form not implemented |
-| `oneclick-exchange-details.spec.js` | ❌ Not Implemented | Exchange details not implemented |
-| `vote-on-expired-quote.spec.js` | ❌ Not Implemented | Exchange-related functionality |
-| `vote-on-expired-quote-table.spec.js` | ❌ Not Implemented | Exchange-related functionality |
-| `asset-exchange-icons.spec.js` | ✅ Ready | Token icons implemented |
-| `token-amount.spec.js` | ✅ Ready | Token amount validation in forms |
-| `qrcode-generator.spec.js` | ⚠️ Partial | QRCode component exists, generation needs testing |
-| `web3-icon-fetcher-bos.spec.js` | 🔄 Architecture Change | BOS-specific, needs adaptation for Next.js |
-| `usdc-eth-payment-showcase.spec.js` | ⚠️ Partial | USDC/ETH payment possible, showcase needs verification |
-| `other-chain-account-input.spec.js` | ✅ Ready | OtherChainAccountInput component implemented |
+| Test File | Status | Ported | Testing Approach | Notes |
+|-----------|--------|--------|------------------|-------|
+| `intents-payment-request-ui.spec.js` | ✅ Ready | ✅ | Integration (Sandbox) | 3 tests: BTC, USDC (BASE), wNEAR payment flows |
+| `intents-deposit-ui.spec.js` | ✅ Ready | ✅ | Integration (Sandbox) | Deposit UI with QR codes, address generation |
+| `intents-dashboard.spec.js` | ✅ Ready | ✅ | Read-Only (RPC Mock) | 3 tests: empty state, token display, multi-chain aggregation |
+| `intents-payment-request.spec.js` | ✅ Ready | ✅ | Integration (Sandbox) | Covered by `sandbox/btc-payment-request.spec.js` |
+| `intents-payment-request-detail.spec.js` | ✅ Ready | ✅ | Read-Only (Mainnet) | 4 tests using historical proposals from mainnet |
+| `token-amount.spec.js` | ✅ Ready | ✅ | Component Test | Amount formatting and validation |
+| `other-chain-account-input.spec.js` | ✅ Ready | ✅ | Component Test | BTC, ETH, SOL address validation |
+| `intents-deposit-near.spec.js` | ⚠️ Partial | 🔄 | - | Covered by `intents-deposit-ui.spec.js` |
+| `intents-deposit-other-chain.spec.js` | ⚠️ Partial | 🔄 | - | Covered by `intents-deposit-ui.spec.js` |
+| `intents-wnear-withdrawal.spec.js` | ⚠️ Partial | 🔄 | - | Covered by `payment-request-ui.spec.js` wNEAR test |
+| `asset-exchange-icons.spec.js` | ✅ Ready | ⛔ | - | Skipped - non-critical icon rendering test |
+| `qrcode-generator.spec.js` | ⚠️ Partial | 🔄 | - | Covered by `intents-deposit-ui.spec.js` QR tests |
+| `usdc-eth-payment-showcase.spec.js` | ⚠️ Partial | 🔄 | - | Covered by `payment-request-ui.spec.js` USDC test |
+| `intents-usdc-swap-withdrawal.spec.js` | ❌ Not Implemented | ❌ | - | Swap functionality not in new repo |
+| `intents-asset-exchange-detail.spec.js` | ❌ Not Implemented | ❌ | - | Asset exchange page is placeholder |
+| `create-1click-exchange-request.spec.js` | ❌ Not Implemented | ❌ | - | One-click exchange not implemented |
+| `oneclick-exchange-form.spec.js` | ❌ Not Implemented | ❌ | - | Exchange form not implemented |
+| `oneclick-exchange-details.spec.js` | ❌ Not Implemented | ❌ | - | Exchange details not implemented |
+| `vote-on-expired-quote.spec.js` | ❌ Not Implemented | ❌ | - | Exchange-related functionality |
+| `vote-on-expired-quote-table.spec.js` | ❌ Not Implemented | ❌ | - | Exchange-related functionality |
+| `web3-icon-fetcher-bos.spec.js` | 🔄 Architecture Change | ❌ | - | BOS-specific, not applicable to Next.js |
+
+**Legend for Ported Column:**
+- ✅ **Ported** - Test successfully ported to new repo
+- 🔄 **Covered** - Functionality covered by other ported tests
+- ⛔ **Skipped** - Intentionally not ported (non-critical)
+- ❌ **Not Ported** - Not yet ported or blocked by missing features
 
 **Porting Priority**: MEDIUM - Core Intents functionality ready, exchange features missing
 
@@ -504,45 +542,452 @@ This document maps the functionality implemented in the new `near-treasury` repo
 
 ---
 
-## Test Infrastructure Adaptations Required
+## Ported Test Examples by Testing Approach
+
+During porting, we established four testing approaches. Refer to `playwright-tests/README.md` for details on when to use each approach. These are the ported examples:
+
+### 1. Integration Tests with Sandbox
+- `tests/intents/payment-request-ui.spec.js` - BTC, USDC, wNEAR payment creation
+- `tests/intents/intents-deposit-ui.spec.js` - Deposit flows with QR codes
+- `tests/sandbox/btc-payment-request.spec.js` - Pure contract testing
+
+### 2. Read-Only Tests with Mainnet Data
+- `tests/intents/payment-request-detail.spec.js` - Historical proposals from mainnet
+
+### 3. Read-Only Tests with RPC Mocking
+- `tests/intents/intents-dashboard.spec.js` - Portfolio display with mocked balances
+
+### 4. Component Tests
+- `tests/components/token-amount.spec.js` - Amount formatting and validation
+- `tests/components/other-chain-account-input.spec.js` - BTC/ETH/SOL address validation
+
+---
+
+## Critical Technical Differences: Legacy BOS vs New Next.js
 
 ### 1. URL Structure Changes
-**Legacy**: `/${instanceAccount}/widget/app?page=...`
-**New**: `/[daoId]/dashboard`, `/[daoId]/payments`, etc.
 
-**Impact**: All navigation and URL assertions need updating
+**Legacy BOS**:
+```javascript
+`/${instanceAccount}/widget/app?page=payments&tab=history&id=2`
+`/${instanceAccount}/widget/app?page=dashboard`
+```
 
----
+**New Next.js**:
+```javascript
+`/${daoId}/payments?tab=history&id=2`
+`/${daoId}/dashboard`
+```
 
-### 2. Authentication Flow
-**Legacy**: BOS wallet connection
-**New**: Next.js with NEAR wallet selector
-
-**Impact**: Authentication setup in tests needs adaptation
-
----
-
-### 3. Data Mocking Strategy
-**Legacy**: RPC mocking for BOS widgets
-**New**: Mock both Next.js API routes AND RPC calls
-
-**Impact**: Mock infrastructure needs expansion
+**Migration Pattern**:
+- Remove `/widget/app` from all URLs
+- `page=` query param → route segment
+- Keep other query params (tab, id, etc.)
 
 ---
 
-### 4. Test Configuration
-**Legacy**: Multiple test projects (treasury-dashboard, infinex, treasury-testing)
-**New**: Single Next.js app, can maintain multiple test projects
+### 2. DOM Selectors Are Completely Different
 
-**Impact**: Minimal - can keep similar structure
+**⚠️ CRITICAL**: Even though the UI looks identical, the DOM structure is completely different.
+
+**Legacy BOS** (rendered inside widget iframe):
+```javascript
+// BOS widgets use data attributes
+page.locator('[data-component="ProposalCard"]')
+page.locator('[data-testid="payment-amount"]')
+
+// Nested in widget container
+page.frameLocator('iframe[name="bos-component"]')
+```
+
+**New Next.js** (standard React/Next.js):
+```javascript
+// Use semantic selectors
+page.getByRole('button', { name: 'Approve' })
+page.getByText('Payment Request Funded')
+page.locator('tbody tr').filter({ hasText: 'bc1qxy...' })
+
+// Standard DOM, no iframes
+// Use Playwright's built-in locators
+```
+
+**Migration Strategy**:
+1. ❌ **DON'T** copy selectors from legacy tests
+2. ✅ **DO** inspect the new app's DOM and write new selectors
+3. ✅ **Prefer**: `getByRole()`, `getByText()`, `getByLabel()`
+4. ✅ **Fallback**: `locator()` with specific CSS selectors
+5. ✅ **Use**: `.first()` for duplicate elements (sidebar + table)
 
 ---
 
-### 5. Page Load Detection
-**Legacy**: Wait for BOS widget to load and render
-**New**: Wait for Next.js page hydration and components
+### 3. Transaction Confirmation Flow
 
-**Impact**: Different selectors and wait conditions
+**Legacy BOS**:
+```javascript
+// BOS shows modal for EVERY transaction
+await page.click('button:has-text("Submit")');
+await page.click('button:has-text("Confirm")'); // Modal
+await page.waitForTimeout(3000);
+```
+
+**New Next.js**:
+```javascript
+// NO confirmation modal - wallet handles it directly
+await page.getByRole('button', { name: 'Submit' }).click();
+// Transaction signed immediately in injected test wallet
+await page.waitForTimeout(3000); // Just wait for blockchain
+```
+
+**⚠️ CRITICAL DIFFERENCE**:
+- Legacy had 2-step process (Submit → Confirm in modal)
+- New has 1-step process (Submit → wallet signs automatically)
+- **Don't look for confirmation modal** - it doesn't exist
+- Tests with `page.click('button:has-text("Confirm")')` will fail
+
+---
+
+### 4. Authentication & Login State
+
+**Legacy BOS**:
+```javascript
+// BOS stored wallet state in specific localStorage keys
+await page.evaluate(() => {
+  localStorage.setItem('near-wallet-selector:selectedWalletId', 'my-near-wallet');
+  localStorage.setItem('near-wallet-selector:recentlySignedInWallets', '...');
+});
+```
+
+**New Next.js**:
+```javascript
+// Different localStorage keys and structure
+await page.evaluate(() => {
+  localStorage.setItem('selected-wallet', 'test-wallet');
+  // Simpler structure in new app
+});
+
+// For sandbox tests: use injectTestWallet helper
+await injectTestWallet(page, sandbox, accountId);
+```
+
+**Storage State Variables**:
+
+| Purpose | Legacy BOS | New Next.js |
+|---------|-----------|-------------|
+| Selected wallet | `near-wallet-selector:selectedWalletId` | `selected-wallet` |
+| Account ID | In wallet selector state | Managed by test wallet injection |
+| Network | Part of wallet config | Handled by RPC routing |
+
+**Migration Pattern**:
+```javascript
+// OLD (Legacy)
+await page.evaluate(() => {
+  localStorage.setItem('near-wallet-selector:selectedWalletId', 'my-near-wallet');
+  const accounts = [{ accountId: 'test.near', publicKey: '...' }];
+  localStorage.setItem('near-wallet-selector:contract', JSON.stringify({
+    accounts,
+    selectedAccount: accounts[0]
+  }));
+});
+
+// NEW (Next.js)
+// For mainnet/mocked tests (no blockchain interaction)
+await page.evaluate(() => {
+  localStorage.setItem('selected-wallet', 'test-wallet');
+});
+await page.reload();
+
+// For sandbox tests (with blockchain interaction)
+await injectTestWallet(page, sandbox, 'testcreator.near');
+// This injects full wallet implementation
+```
+
+---
+
+### 5. Wallet Injection for Sandbox Tests
+
+**Legacy BOS**:
+```javascript
+// BOS had complex wallet selector integration
+// Required mocking entire NEAR wallet selector
+```
+
+**New Next.js**:
+```javascript
+// We have a helper function that does everything
+import { injectTestWallet } from '../../util/sandbox.js';
+
+await injectTestWallet(page, sandbox, accountId);
+
+// This injects a test wallet that:
+// 1. Signs transactions using sandbox keypairs
+// 2. Routes RPC calls to sandbox
+// 3. Handles account info queries
+// 4. No confirmation modals needed
+```
+
+**⚠️ Key Difference**: The test wallet is injected into `window.__testWallet`, not through the NEAR wallet selector.
+
+---
+
+### 6. RPC Call Routing
+
+**Legacy BOS**:
+```javascript
+// BOS made RPC calls internally
+// Had to intercept at widget level
+```
+
+**New Next.js**:
+```javascript
+// Intercept at network level
+await page.route('**/rpc.mainnet.fastnear.com/**', async (route) => {
+  const postData = route.request().postDataJSON();
+
+  // For sandbox tests: redirect to sandbox
+  const response = await route.fetch({
+    url: sandbox.getRpcUrl(),
+    method: 'POST',
+    postData: JSON.stringify(postData),
+  });
+
+  // For mocked tests: return mock data
+  if (postData.params?.method_name === 'mt_tokens_for_owner') {
+    const result = Array.from(
+      new TextEncoder().encode(JSON.stringify(mockData))
+    );
+    await route.fulfill({
+      status: 200,
+      body: JSON.stringify({ result: { result } }),
+    });
+  }
+});
+```
+
+**Critical Detail**: Use `TextEncoder`, not `Buffer.from().toString('base64')`
+
+---
+
+### 7. Page Load & Hydration
+
+**Legacy BOS**:
+```javascript
+// Wait for BOS widget to load
+await page.waitForSelector('[data-component="App"]');
+await page.waitForTimeout(2000); // Widget render time
+```
+
+**New Next.js**:
+```javascript
+// Wait for Next.js hydration
+await page.goto(url, { waitUntil: 'networkidle' });
+await page.waitForLoadState('networkidle');
+
+// For dynamic content, wait for indicators
+await expect(page.getByText('Payment Request Funded')).toBeVisible({ timeout: 15000 });
+```
+
+**Key Differences**:
+- Next.js pages hydrate faster than BOS widgets
+- Use `waitUntil: 'networkidle'` consistently
+- Wait for actual content, not arbitrary timeouts
+- Longer timeouts (15s) for mainnet data fetching
+
+---
+
+### 8. Indexer API Calls
+
+**Legacy BOS**:
+```javascript
+// BOS called indexer directly from widget
+```
+
+**New Next.js**:
+```javascript
+// Intercept indexer API calls
+await page.route('**/sputnik-indexer.fly.dev/**', async (route) => {
+  const url = route.request().url();
+
+  if (url.includes('/proposals/')) {
+    // For sandbox: return sandbox proposal data
+    await route.fulfill({
+      status: 200,
+      body: JSON.stringify([/* sandbox proposals */]),
+    });
+  } else {
+    await route.continue();
+  }
+});
+```
+
+**Helper Function Available**:
+```javascript
+import { interceptIndexerAPI } from '../../util/sandbox.js';
+await interceptIndexerAPI(page, sandbox);
+```
+
+---
+
+### 9. Form Interactions
+
+**Legacy BOS**:
+```javascript
+// BOS had custom form components
+await page.fill('input[data-field="amount"]', '100');
+await page.click('button[data-action="submit"]');
+```
+
+**New Next.js**:
+```javascript
+// Use semantic selectors
+await page.getByRole('spinbutton', { name: 'Amount' }).fill('100');
+await page.getByRole('button', { name: 'Submit' }).click();
+
+// Or accessible labels
+await page.getByLabel('Amount').fill('100');
+```
+
+**Migration Tips**:
+- Inspect the actual HTML in new app
+- Use browser DevTools → Accessibility tab
+- Prefer `getByRole()` for better semantics
+- Test accessibility as you go
+
+---
+
+### 10. Navigation Flow
+
+**Legacy BOS**:
+```javascript
+// BOS used query params for navigation
+await page.goto(`/${daoId}/widget/app?page=payments`);
+await page.click('a[href*="page=dashboard"]');
+```
+
+**New Next.js**:
+```javascript
+// Next.js uses proper routing
+await page.goto(`/${daoId}/payments`);
+await page.getByRole('link', { name: 'Dashboard' }).click();
+await expect(page).toHaveURL(`/${daoId}/dashboard`);
+```
+
+**Navigation Patterns**:
+- Home → DAO selector → Dashboard/Payments/etc.
+- Use `page.getByRole('link')` for navigation
+- Verify URL changes with `expect(page).toHaveURL()`
+
+---
+
+### 11. Proposal State Display
+
+**Legacy BOS**:
+```javascript
+// Different status badge styling
+await page.waitForSelector('.badge-success');
+```
+
+**New Next.js**:
+```javascript
+// Use text content, not CSS classes
+await expect(page.getByText('Payment Request Funded')).toBeVisible();
+await expect(page.getByText('Payment Request Failed')).toBeVisible();
+await expect(page.getByText('Rejected 0')).toBeVisible();
+```
+
+**Why**: CSS classes may change, text content is stable.
+
+---
+
+### 12. Multi-Chain Account Display
+
+**Legacy BOS**:
+```javascript
+// BOS showed addresses in specific format
+```
+
+**New Next.js**:
+```javascript
+// Check actual rendered text
+await expect(page.getByText('0xa029Ca6D14b97749889702eE16E7d168a1094aFE')).toBeVisible();
+await expect(page.getByText('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh')).toBeVisible();
+
+// Addresses shown in full, may have copy button
+await page.getByRole('button', { name: 'Copy Address' }).click();
+```
+
+---
+
+### 13. Error Handling & Validation
+
+**Legacy BOS**:
+```javascript
+// BOS showed errors in specific containers
+await page.waitForSelector('.error-message');
+```
+
+**New Next.js**:
+```javascript
+// Look for actual error text
+await expect(page.getByText('Invalid Bitcoin address')).toBeVisible();
+await expect(page.getByText('Insufficient balance')).toBeVisible();
+
+// Or use ARIA live regions
+await expect(page.getByRole('alert')).toContainText('Error');
+```
+
+---
+
+### 14. Test Data & Constants
+
+**Legacy BOS**:
+```javascript
+const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
+const PROPOSAL_BOND = "100000000000000000000000"; // 0.1 NEAR
+```
+
+**New Next.js** (Same constants, different imports):
+```javascript
+// Import from util/sandbox.js or define in test
+import { parseNEAR } from "../../util/sandbox.js";
+const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
+const PROPOSAL_BOND = "0"; // Can be 0 in sandbox
+```
+
+---
+
+## Quick Migration Checklist
+
+When porting a legacy test, update:
+
+- [ ] ✅ URL structure (remove `/widget/app`, move `page=` to route)
+- [ ] ✅ All selectors (inspect new DOM, write new selectors)
+- [ ] ✅ Remove transaction confirmation modal clicks
+- [ ] ✅ Update localStorage keys for wallet state
+- [ ] ✅ Use `injectTestWallet()` for sandbox tests
+- [ ] ✅ Update RPC mocking (use TextEncoder)
+- [ ] ✅ Use `waitUntil: 'networkidle'` for page loads
+- [ ] ✅ Update indexer API interception if needed
+- [ ] ✅ Use semantic selectors (`getByRole`, `getByText`)
+- [ ] ✅ Remove BOS-specific waits and delays
+- [ ] ✅ Test cross-browser (Firefox timing issues)
+- [ ] ✅ Add TODO comments for missing features
+
+---
+
+## Common Pitfalls to Avoid
+
+1. **❌ Copying selectors from legacy tests** → Will fail, DOM is different
+2. **❌ Looking for confirmation modal** → Doesn't exist in new app
+3. **❌ Using base64 for RPC mocks** → Use TextEncoder
+4. **❌ Old localStorage keys** → Update to new keys
+5. **❌ Not using `.first()` for duplicates** → Strict mode errors
+6. **❌ Short timeouts for mainnet data** → Use 15s timeouts
+7. **❌ Conditional logic in assertions** → Use hard expectations
+8. **❌ Not waiting for `networkidle`** → Race conditions
+
+---
+
+## Test Infrastructure Adaptations Required
 
 ---
 
