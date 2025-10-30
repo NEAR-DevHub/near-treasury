@@ -113,12 +113,19 @@ export class NearSandbox {
     }
   }
 
+  async waitForBlockchainState(delayMs = 100) {
+    // Small delay to ensure blockchain state is consistent
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+
   async getLatestBlockHash() {
+    await this.waitForBlockchainState();
     const result = await block(this.rpcClient, { finality: "final" });
     return result.header.hash;
   }
 
   async getAccessKeyNonce(accountId, publicKey) {
+    await this.waitForBlockchainState();
     const result = await viewAccessKey(this.rpcClient, {
       accountId,
       publicKey,
@@ -286,10 +293,16 @@ export class NearSandbox {
 
     const signedTxBytes = signedTx.encode();
     const signedTxBase64 = Buffer.from(signedTxBytes).toString("base64");
-    const result = await broadcastTxCommit(this.rpcClient, {
-      signedTxBase64: signedTxBase64,
-      waitUntil: "FINAL",
-    });
+    let result;
+    try {
+      result = await broadcastTxCommit(this.rpcClient, {
+        signedTxBase64: signedTxBase64,
+        waitUntil: "FINAL",
+      });
+    } catch(e) {
+      console.error(JSON.stringify(e));
+      throw(e);
+    }
 
     // Wait for block finalization before next transaction
     await this.waitForBlock();
@@ -502,7 +515,7 @@ export async function injectTestWallet(page, sandbox, accountId) {
     const signedTxBase64 = Buffer.from(signedTx.encode()).toString('base64');
     const result = await broadcastTxCommit(client, {
       signedTxBase64,
-      waitUntil: 'EXECUTED',
+      waitUntil: 'FINAL',
     });
 
     return result;
