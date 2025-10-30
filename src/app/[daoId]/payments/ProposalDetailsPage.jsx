@@ -214,8 +214,22 @@ const ProposalDetailsPage = ({
         const address = proposalData.intentsTokenInfo.tokenContract;
 
         try {
-          const data = await fetchTokenMetadataByDefuseAssetId(address);
-          const intentsToken = Array.isArray(data) ? data[0] : data;
+          // Call bridge RPC directly to get complete token metadata including withdrawal_fee
+          const response = await fetch("https://bridge.chaindefuser.com/rpc", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "supportedTokensFetchAll",
+              jsonrpc: "2.0",
+              method: "supported_tokens",
+              params: [{}],
+            }),
+          });
+
+          const bridgeData = await response.json();
+          const intentsToken = bridgeData.result?.tokens?.find(
+            (token) => token.near_token_id === address
+          );
 
           if (intentsToken) {
             const defuse_asset_identifier_parts =
@@ -229,6 +243,38 @@ const ProposalDetailsPage = ({
               blockchain,
               symbol: intentsToken.asset_name || intentsToken.symbol,
             }));
+
+            // Fetch blockchain name and icon using the blockchain identifier
+            // Extract just the network name (e.g., "eth" from "eth:1")
+            if (blockchain) {
+              try {
+                const networkName = blockchain.split(":")[0];
+                console.log(`Fetching blockchain metadata for: ${networkName}`);
+                const networkResults = await fetchBlockchainByNetwork(
+                  [networkName],
+                  "light" // TODO: Use theme context when available
+                );
+                console.log("Blockchain metadata result:", networkResults);
+                const networkData = Array.isArray(networkResults)
+                  ? networkResults[0]
+                  : networkResults;
+
+                if (networkData && networkData.error) {
+                  console.error("Backend API error:", networkData.error);
+                } else if (networkData && networkData.name) {
+                  console.log(`Setting network name to: ${networkData.name}`);
+                  setNetworkInfo((prev) => ({
+                    ...prev,
+                    name: networkData.name,
+                    blockchainIcon: networkData.icon,
+                  }));
+                } else {
+                  console.log("No network data or name found", networkData);
+                }
+              } catch (error) {
+                console.error("Failed to fetch blockchain metadata:", error);
+              }
+            }
 
             // Extract withdrawal fee information
             if (intentsToken.withdrawal_fee && intentsToken.decimals) {
