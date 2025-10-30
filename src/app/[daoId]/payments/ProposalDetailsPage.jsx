@@ -6,7 +6,7 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
-import { fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
+import { fetchBlockchainByNetwork } from "@/api/backend";
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
