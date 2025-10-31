@@ -449,14 +449,253 @@ test.describe("Create Payment Request", () => {
     console.log("✅ Full workflow test passed!");
   });
 
-  // TODO: Add fungible token payment test
-  // Currently the UI doesn't support entering custom FT contract addresses in sandbox mode.
-  // The token dropdown only shows NEAR by default, and there's no "Other" option to enter
-  // a custom FT contract address. To test FT payments properly, we would need to either:
-  // 1. Mock the Pikespeak API to return our sandbox FT tokens in the token list
-  // 2. Add UI support for custom token entry in the payment request form
-  // 3. Use a mainnet FT that's already in the token list
-  //
-  // For now, the NEAR payment tests above provide comprehensive coverage of the
-  // payment workflow including balance verification.
+  test("create, approve, and verify fungible token (FT) payment with balance changes", async ({ page }) => {
+    test.setTimeout(300000); // 5 minutes for FT setup and test
+
+    console.log("\n=== Starting FT Payment Test ===\n");
+
+    // Deploy wNEAR (wrap.near) as our test FT contract
+    const ftContractId = await sandbox.importMainnetContract("wrap.near", "wrap.near");
+    console.log(`FT contract deployed: ${ftContractId}`);
+
+    // Initialize the FT contract
+    await sandbox.functionCall(
+      ftContractId,
+      ftContractId,
+      "new",
+      {},
+      "300000000000000"
+    );
+    console.log("✓ FT contract initialized");
+
+    // Register accounts with the FT contract
+    await sandbox.functionCall(
+      creatorAccountId,
+      ftContractId,
+      "storage_deposit",
+      { account_id: creatorAccountId },
+      "300000000000000",
+      "1250000000000000000000" // 0.00125 NEAR for storage
+    );
+
+    await sandbox.functionCall(
+      creatorAccountId,
+      ftContractId,
+      "storage_deposit",
+      { account_id: daoAccountId },
+      "300000000000000",
+      "1250000000000000000000"
+    );
+    console.log("✓ Registered creator and DAO with FT contract");
+
+    // Mint some wNEAR to creator by depositing NEAR
+    await sandbox.functionCall(
+      creatorAccountId,
+      ftContractId,
+      "near_deposit",
+      {},
+      "300000000000000",
+      await parseNEAR("50") // Deposit 50 NEAR
+    );
+    console.log("✓ Minted 50 wNEAR to creator");
+
+    // Transfer wNEAR from creator to DAO treasury
+    await sandbox.functionCall(
+      creatorAccountId,
+      ftContractId,
+      "ft_transfer",
+      {
+        receiver_id: daoAccountId,
+        amount: "30000000000000000000000000", // 30 wNEAR (24 decimals)
+        memo: "Initial funding for DAO"
+      },
+      "300000000000000",
+      "1" // 1 yoctoNEAR for ft_transfer
+    );
+    console.log("✓ Transferred 30 wNEAR to DAO treasury");
+
+    // Create a recipient account and register it with FT
+    const recipientAccountId = await sandbox.createAccount("ft-recipient.near", "1000000000000000000000000");
+    await sandbox.functionCall(
+      creatorAccountId,
+      ftContractId,
+      "storage_deposit",
+      { account_id: recipientAccountId },
+      "300000000000000",
+      "1250000000000000000000"
+    );
+    console.log(`✓ Created and registered recipient: ${recipientAccountId}`);
+
+    // Get initial FT balances
+    const initialRecipientBalance = await sandbox.viewFunction(
+      ftContractId,
+      "ft_balance_of",
+      { account_id: recipientAccountId }
+    );
+    const initialDaoBalance = await sandbox.viewFunction(
+      ftContractId,
+      "ft_balance_of",
+      { account_id: daoAccountId }
+    );
+    console.log(`Initial recipient FT balance: ${initialRecipientBalance}`);
+    console.log(`Initial DAO FT balance: ${initialDaoBalance}`);
+
+    // Inject test wallet and intercept API calls
+    await injectTestWallet(page, sandbox, creatorAccountId);
+    await interceptIndexerAPI(page, sandbox);
+
+    // Intercept RPC calls to mainnet and redirect to sandbox
+    await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
+      const request = route.request();
+      const sandboxRpcUrl = sandbox.getRpcUrl();
+      const response = await page.request.post(sandboxRpcUrl, {
+        headers: request.headers(),
+        data: request.postDataJSON(),
+      });
+      route.fulfill({
+        status: response.status(),
+        headers: response.headers(),
+        body: await response.body(),
+      });
+    });
+
+    // Intercept backend API call for FT tokens and return our sandbox wNEAR
+    await page.route("**/ref-sdk-test-cold-haze-1300-2.fly.dev/api/ft-tokens**", async (route) => {
+      console.log("Intercepting FT tokens API call");
+
+      // Return our sandbox wNEAR token
+      const ftTokensResponse = {
+        fts: [
+          {
+            contract: ftContractId,
+            amount: "30000000000000000000000000", // 30 wNEAR
+            ft_meta: {
+              symbol: "wNEAR",
+              decimals: 24,
+              icon: null
+            }
+          }
+        ]
+      };
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(ftTokensResponse)
+      });
+    });
+
+    // Navigate to payments page
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
+
+    // Create FT payment request
+    await page.getByRole("button", { name: "Create Request" }).click();
+    const offcanvas = page.locator(".offcanvas-body");
+    await expect(offcanvas).toBeVisible({ timeout: 10000 });
+
+    // Select wallet
+    const walletDropdown = offcanvas.locator('div.dropdown').first();
+    await walletDropdown.click();
+    await page.waitForTimeout(500);
+    await page.locator('text="SputnikDAO"').last().click();
+    await page.waitForTimeout(2000);
+
+    // Fill form fields
+    const titleInput = offcanvas.locator('input[type="text"]').first();
+    await titleInput.fill("wNEAR Payment for recipient");
+    const summaryInput = offcanvas.locator('textarea').first();
+    await summaryInput.fill("Testing FT payment workflow with wNEAR");
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
+    await recipientInput.fill(recipientAccountId);
+    await page.waitForTimeout(500);
+
+    // Select wNEAR token from dropdown
+    const tokenDropdown = offcanvas.getByText("Select token");
+    await tokenDropdown.click();
+    await page.waitForTimeout(500);
+
+    // Click on wNEAR option
+    await page.getByText("wNEAR").click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Selected wNEAR token");
+
+    // Enter amount (5 wNEAR)
+    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    await amountInput.fill("5");
+    await page.waitForTimeout(500);
+
+    // Submit
+    const submitBtn = offcanvas.getByRole("button", { name: "Submit" });
+    await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+    await submitBtn.scrollIntoViewIfNeeded({ timeout: 10000 });
+    await page.waitForTimeout(1000);
+    await submitBtn.click();
+    console.log("✓ Submitted FT payment request");
+
+    // Wait for success
+    await expect(
+      page.getByText("Payment request has been successfully created.")
+    ).toBeVisible({ timeout: 45000 });
+    console.log("✓ FT payment request created");
+
+    // Wait for form to close
+    await expect(offcanvas).toBeHidden({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+
+    // Approve the proposal
+    console.log("\n=== Approving FT Payment Request ===\n");
+
+    const approveButton = page.getByRole("button", { name: "Approve" }).first();
+    await expect(approveButton).toBeVisible({ timeout: 10000 });
+    await approveButton.click();
+    console.log("✓ Clicked Approve button");
+
+    // Handle confirmation modal if it appears
+    try {
+      const confirmButton = page.getByRole("button", { name: "Confirm" });
+      await expect(confirmButton).toBeVisible({ timeout: 5000 });
+      await confirmButton.click();
+      console.log("✓ Confirmed approval");
+    } catch (e) {
+      console.log("⚠ No confirmation modal");
+    }
+
+    // Wait for approval to complete
+    await page.waitForTimeout(10000);
+
+    // Verify FT balances changed
+    console.log("\n=== Verifying FT Balance Changes ===\n");
+
+    const finalRecipientBalance = await sandbox.viewFunction(
+      ftContractId,
+      "ft_balance_of",
+      { account_id: recipientAccountId }
+    );
+    const finalDaoBalance = await sandbox.viewFunction(
+      ftContractId,
+      "ft_balance_of",
+      { account_id: daoAccountId }
+    );
+
+    console.log(`Final recipient FT balance: ${finalRecipientBalance}`);
+    console.log(`Final DAO FT balance: ${finalDaoBalance}`);
+
+    // Recipient should have received 5 wNEAR
+    const recipientIncrease = BigInt(finalRecipientBalance) - BigInt(initialRecipientBalance);
+    const expectedAmount = BigInt("5000000000000000000000000"); // 5 wNEAR (24 decimals)
+
+    console.log(`Recipient FT balance increased by: ${recipientIncrease}`);
+
+    expect(recipientIncrease).toBe(expectedAmount);
+    console.log("✓ Recipient FT balance increased correctly");
+
+    // DAO balance should have decreased by 5 wNEAR
+    const daoDecrease = BigInt(initialDaoBalance) - BigInt(finalDaoBalance);
+    expect(daoDecrease).toBe(expectedAmount);
+    console.log("✓ DAO FT balance decreased correctly");
+
+    console.log("✅ FT payment workflow test passed!");
+  });
 });
