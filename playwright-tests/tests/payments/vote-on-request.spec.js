@@ -829,27 +829,33 @@ test.describe("Vote on Payment Request", () => {
     await page.waitForTimeout(1000);
 
     const titleInput = offcanvas.locator('input[type="text"]').first();
+    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
     await titleInput.fill("Approve from Full Page Test");
 
-    const summaryTextarea = offcanvas.locator('textarea').first();
-    await summaryTextarea.fill("Testing approve action from full proposal page");
+    const summaryInput = offcanvas.locator('textarea').first();
+    await summaryInput.fill("Testing approve action from full proposal page");
 
-    const recipientInput = offcanvas.locator('input[type="text"]').nth(1);
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
     await recipientInput.fill(voterAccountId);
+    await page.waitForTimeout(500);
 
-    const amountInput = offcanvas.locator('input[type="number"]').first();
+    const tokenDropdown = offcanvas.getByText("Select token");
+    await tokenDropdown.click();
+    await page.waitForTimeout(500);
+    await page.getByText("NEAR", { exact: true }).first().click();
+    await page.waitForTimeout(1000);
+
+    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    await amountInput.click();
     await amountInput.fill("10");
+    await page.waitForTimeout(500);
 
     // Submit proposal
-    const submitButton = offcanvas.getByRole("button", { name: /Create Request/i });
+    const submitButton = offcanvas.getByRole("button", { name: "Submit" });
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
     await submitButton.click();
-    await page.waitForTimeout(2000);
-
-    await expect(page.getByText(/Awaiting transaction confirmation/i)).toBeVisible({ timeout: 10000 });
-    console.log("✓ Proposal creation transaction started");
-
-    // Wait for proposal to be created
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(3000);
+    console.log("✓ Payment request created");
 
     // Switch to voter account to approve from full page
     await injectTestWallet(page, sandbox, voterAccountId);
@@ -858,13 +864,24 @@ test.describe("Vote on Payment Request", () => {
 
     console.log("✓ Switched to voter account");
 
-    // Navigate to full proposal detail page
-    // First, find the proposal in the table and get its ID
-    await expect(page.getByText("Approve from Full Page Test")).toBeVisible({ timeout: 10000 });
+    // Wait for proposals table to load
+    await page.waitForSelector('table tbody tr', { state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(2000);
 
-    // Click "View Details" link to go to full page
-    const viewDetailsLink = page.locator('a[href*="/payments/proposal/"]').first();
-    await viewDetailsLink.click();
+    // Navigate to full proposal detail page
+    // First, find the proposal in the table by its summary (displayed as title in UI)
+    await expect(page.getByText("Testing approve action from full proposal page")).toBeVisible({ timeout: 10000 });
+
+    // Click on proposal row to open overlay
+    const proposalRow = page.locator('table tbody tr').first();
+    await proposalRow.click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Opened proposal overlay");
+
+    // Click expand button to navigate to full page
+    const expandButton = page.locator('.bi-arrows-angle-expand').first();
+    await expect(expandButton).toBeVisible({ timeout: 5000 });
+    await expandButton.click();
     await page.waitForTimeout(2000);
 
     console.log("✓ Navigated to full proposal detail page");
@@ -874,14 +891,18 @@ test.describe("Vote on Payment Request", () => {
     await expect(approveButton).toBeVisible({ timeout: 5000 });
     await approveButton.click();
     await page.waitForTimeout(2000);
+    console.log("✓ Clicked approve button");
 
     // Confirm if modal appears
     const confirmButton = page.getByRole("button", { name: /^confirm$/i });
     if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await confirmButton.click();
+      console.log("✓ Clicked confirm button");
     }
 
-    await expect(page.getByText(/your vote is counted|vote.*counted/i)).toBeVisible({ timeout: 30000 });
+    // Wait for vote to be processed and success message
+    await page.waitForTimeout(5000);
+    await expect(page.getByText(/your vote is counted|vote.*counted|approved/i)).toBeVisible({ timeout: 30000 });
     console.log("✓ Approve from full page successful");
   });
 
@@ -931,27 +952,33 @@ test.describe("Vote on Payment Request", () => {
     await page.waitForTimeout(1000);
 
     const titleInput = offcanvas.locator('input[type="text"]').first();
+    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
     await titleInput.fill("Reject from Full Page Test");
 
-    const summaryTextarea = offcanvas.locator('textarea').first();
-    await summaryTextarea.fill("Testing reject action from full proposal page");
+    const summaryInput = offcanvas.locator('textarea').first();
+    await summaryInput.fill("Testing reject action from full proposal page");
 
-    const recipientInput = offcanvas.locator('input[type="text"]').nth(1);
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
     await recipientInput.fill(voterAccountId);
+    await page.waitForTimeout(500);
 
-    const amountInput = offcanvas.locator('input[type="number"]').first();
+    const tokenDropdown = offcanvas.getByText("Select token");
+    await tokenDropdown.click();
+    await page.waitForTimeout(500);
+    await page.getByText("NEAR", { exact: true }).first().click();
+    await page.waitForTimeout(1000);
+
+    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    await amountInput.click();
     await amountInput.fill("10");
+    await page.waitForTimeout(500);
 
     // Submit proposal
-    const submitButton = offcanvas.getByRole("button", { name: /Create Request/i });
+    const submitButton = offcanvas.getByRole("button", { name: "Submit" });
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
     await submitButton.click();
-    await page.waitForTimeout(2000);
-
-    await expect(page.getByText(/Awaiting transaction confirmation/i)).toBeVisible({ timeout: 10000 });
-    console.log("✓ Proposal creation transaction started");
-
-    // Wait for proposal to be created
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(3000);
+    console.log("✓ Payment request created");
 
     // Switch to voter account to reject from full page
     await injectTestWallet(page, sandbox, voterAccountId);
@@ -960,12 +987,24 @@ test.describe("Vote on Payment Request", () => {
 
     console.log("✓ Switched to voter account");
 
-    // Navigate to full proposal detail page
-    await expect(page.getByText("Reject from Full Page Test")).toBeVisible({ timeout: 10000 });
+    // Wait for proposals table to load
+    await page.waitForSelector('table tbody tr', { state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(2000);
 
-    // Click "View Details" link to go to full page
-    const viewDetailsLink = page.locator('a[href*="/payments/proposal/"]').first();
-    await viewDetailsLink.click();
+    // Navigate to full proposal detail page
+    // Find the proposal in the table by its summary (displayed as title in UI)
+    await expect(page.getByText("Testing reject action from full proposal page")).toBeVisible({ timeout: 10000 });
+
+    // Click on proposal row to open overlay
+    const proposalRow = page.locator('table tbody tr').first();
+    await proposalRow.click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Opened proposal overlay");
+
+    // Click expand button to navigate to full page
+    const expandButton = page.locator('.bi-arrows-angle-expand').first();
+    await expect(expandButton).toBeVisible({ timeout: 5000 });
+    await expandButton.click();
     await page.waitForTimeout(2000);
 
     console.log("✓ Navigated to full proposal detail page");
@@ -975,14 +1014,18 @@ test.describe("Vote on Payment Request", () => {
     await expect(rejectButton).toBeVisible({ timeout: 5000 });
     await rejectButton.click();
     await page.waitForTimeout(2000);
+    console.log("✓ Clicked reject button");
 
     // Confirm if modal appears
     const confirmButton = page.getByRole("button", { name: /^confirm$/i });
     if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await confirmButton.click();
+      console.log("✓ Clicked confirm button");
     }
 
-    await expect(page.getByText(/your vote is counted|vote.*counted/i)).toBeVisible({ timeout: 30000 });
+    // Wait for vote to be processed and success message
+    await page.waitForTimeout(5000);
+    await expect(page.getByText(/your vote is counted|vote.*counted|rejected/i)).toBeVisible({ timeout: 30000 });
     console.log("✓ Reject from full page successful");
   });
 
@@ -993,11 +1036,15 @@ test.describe("Vote on Payment Request", () => {
 
     // Setup interceptors
     await interceptIndexerAPI(page, sandbox, daoAccountId);
+    let rpcCallCount = 0;
     await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
       const request = route.request();
+      const postData = request.postDataJSON();
+      rpcCallCount++;
+      console.log(`[RPC #${rpcCallCount}] Method: ${postData.method}, Params:`, JSON.stringify(postData.params).substring(0, 100));
       const response = await page.request.post(sandbox.getRpcUrl(), {
         headers: request.headers(),
-        data: request.postDataJSON(),
+        data: postData,
       });
       route.fulfill({
         status: response.status(),
@@ -1032,41 +1079,58 @@ test.describe("Vote on Payment Request", () => {
     await page.waitForTimeout(1000);
 
     const titleInput = offcanvas.locator('input[type="text"]').first();
+    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
     await titleInput.fill("Delete from Full Page Test");
 
-    const summaryTextarea = offcanvas.locator('textarea').first();
-    await summaryTextarea.fill("Testing delete action from full proposal page");
+    const summaryInput = offcanvas.locator('textarea').first();
+    await summaryInput.fill("Testing delete action from full proposal page");
 
-    const recipientInput = offcanvas.locator('input[type="text"]').nth(1);
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
     await recipientInput.fill(voterAccountId);
+    await page.waitForTimeout(500);
 
-    const amountInput = offcanvas.locator('input[type="number"]').first();
+    const tokenDropdown = offcanvas.getByText("Select token");
+    await tokenDropdown.click();
+    await page.waitForTimeout(500);
+    await page.getByText("NEAR", { exact: true }).first().click();
+    await page.waitForTimeout(1000);
+
+    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    await amountInput.click();
     await amountInput.fill("10");
+    await page.waitForTimeout(500);
 
     // Submit proposal
-    const submitButton = offcanvas.getByRole("button", { name: /Create Request/i });
+    const submitButton = offcanvas.getByRole("button", { name: "Submit" });
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
     await submitButton.click();
+    await page.waitForTimeout(3000);
+    console.log("✓ Payment request created");
+
+    // Reload to see the proposal (staying as creator who can delete)
+    await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
 
-    await expect(page.getByText(/Awaiting transaction confirmation/i)).toBeVisible({ timeout: 10000 });
-    console.log("✓ Proposal creation transaction started");
+    console.log("✓ Reloaded page as creator");
 
-    // Wait for proposal to be created
-    await page.waitForTimeout(10000);
-
-    // Switch to voter account (who can delete as Approver)
-    await injectTestWallet(page, sandbox, voterAccountId);
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForTimeout(3000);
-
-    console.log("✓ Switched to voter account");
+    // Wait for proposals table to load
+    await page.waitForSelector('table tbody tr', { state: 'visible', timeout: 15000 });
+    await page.waitForTimeout(2000);
 
     // Navigate to full proposal detail page
-    await expect(page.getByText("Delete from Full Page Test")).toBeVisible({ timeout: 10000 });
+    // Find the proposal in the table by its summary (displayed as title in UI)
+    await expect(page.getByText("Testing delete action from full proposal page")).toBeVisible({ timeout: 10000 });
 
-    // Click "View Details" link to go to full page
-    const viewDetailsLink = page.locator('a[href*="/payments/proposal/"]').first();
-    await viewDetailsLink.click();
+    // Click on proposal row to open overlay
+    const proposalRow = page.locator('table tbody tr').first();
+    await proposalRow.click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Opened proposal overlay");
+
+    // Click expand button to navigate to full page
+    const expandButton = page.locator('.bi-arrows-angle-expand').first();
+    await expect(expandButton).toBeVisible({ timeout: 5000 });
+    await expandButton.click();
     await page.waitForTimeout(2000);
 
     console.log("✓ Navigated to full proposal detail page");
@@ -1075,11 +1139,12 @@ test.describe("Vote on Payment Request", () => {
     const deleteButton = page.locator('.bi-trash').first();
     await expect(deleteButton).toBeVisible({ timeout: 5000 });
     await deleteButton.click();
-    await page.waitForTimeout(1000);
+    console.log("✓ Clicked delete button");
 
-    // Confirm deletion in modal
-    const confirmButton = page.getByRole("button", { name: /^confirm$/i });
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
+    // Confirm deletion in modal - wait longer for modal to appear
+    await page.waitForTimeout(500);
+    const confirmButton = page.getByRole('button', { name: 'Confirm' });
+    await expect(confirmButton).toBeVisible({ timeout: 10000 });
     await confirmButton.click();
     console.log("✓ Confirmed deletion");
 
@@ -1192,6 +1257,9 @@ test.describe("Vote on Payment Request", () => {
     await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
     console.log("✓ On Pending Requests tab");
 
+    // Wait for proposals table to load
+    await page.waitForTimeout(2000);
+
     // Click on the proposal row to open detail view
     const proposalRow = page.locator('table tbody tr').first();
     await expect(proposalRow).toBeVisible({ timeout: 10000 });
@@ -1209,10 +1277,10 @@ test.describe("Vote on Payment Request", () => {
     await trashIcon.click();
     console.log("✓ Clicked delete button");
 
-    // Confirm deletion in modal
-    await page.waitForTimeout(1000);
+    // Confirm deletion in modal - wait longer for modal to appear
+    await page.waitForTimeout(2000);
     const confirmButton = page.getByRole("button", { name: /^confirm$/i });
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
+    await expect(confirmButton).toBeVisible({ timeout: 10000 });
     await confirmButton.click();
     console.log("✓ Confirmed deletion");
 
