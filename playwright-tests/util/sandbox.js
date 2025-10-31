@@ -578,11 +578,13 @@ export async function injectTestWallet(page, sandbox, accountId) {
       },
 
       async signAndSendTransaction({ receiverId, actions }) {
+        console.log('signAndSendTransaction called for:', receiverId, 'with', actions.length, 'actions');
         try {
           const result = await window.__testWalletSign({
             receiverId,
             actions,
           });
+          console.log('Transaction result:', result?.transaction?.hash);
           return result;
         } catch (error) {
           console.error('Test wallet sign error:', error);
@@ -591,11 +593,13 @@ export async function injectTestWallet(page, sandbox, accountId) {
       },
 
       async signAndSendTransactions({ transactions }) {
+        console.log('signAndSendTransactions called with', transactions.length, 'transactions');
         const results = [];
         for (const tx of transactions) {
           const result = await this.signAndSendTransaction(tx);
           results.push(result);
         }
+        console.log('All transactions completed:', results.length);
         return results;
       },
     };
@@ -778,6 +782,12 @@ export async function interceptRPC(page, sandbox) {
     const request = route.request();
     const postData = request.postDataJSON();
 
+    // Log RPC method calls for debugging
+    const method = postData?.params?.method_name || postData?.method || 'unknown';
+    if (method === 'get_last_proposal_id' || method.includes('proposal')) {
+      console.log(`RPC: ${method} for ${postData?.params?.account_id || 'unknown'}`);
+    }
+
     try {
       // Forward the request to sandbox RPC
       const response = await fetch(sandboxRpcUrl, {
@@ -789,6 +799,11 @@ export async function interceptRPC(page, sandbox) {
       });
 
       const responseData = await response.json();
+
+      // Log response for proposal-related calls
+      if (method === 'get_last_proposal_id') {
+        console.log(`get_last_proposal_id response:`, responseData?.result);
+      }
 
       await route.fulfill({
         status: response.status,

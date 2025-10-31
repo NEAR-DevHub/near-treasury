@@ -200,13 +200,21 @@ Bulk Payment 3\tThird bulk payment\t${creatorAccountId}\tnear\t30\tBulk test 3`;
     ).toBeVisible({ timeout: 10000 });
     console.log("✓ Transaction submission started");
 
-    // Wait for transactions to complete - bulk import creates multiple proposals
-    await page.waitForTimeout(30000);
+    // Wait to see if transactions actually execute
+    await page.waitForTimeout(15000);
 
-    // Hard expectation: Modal should close after successful import
+    // Check if modal is still visible or closed
     const importModal = page.locator(".offcanvas").filter({ hasText: "Import Payment Requests" });
-    await expect(importModal).not.toBeVisible({ timeout: 30000 });
-    console.log("✓ Import modal closed after successful submission");
+    const modalVisible = await importModal.isVisible();
+    console.log(`Import modal visible: ${modalVisible}`);
+
+    // If modal is still visible, wait for it to close
+    if (modalVisible) {
+      await expect(importModal).not.toBeVisible({ timeout: 60000 });
+      console.log("✓ Import modal closed after successful submission");
+    } else {
+      console.log("✓ Import modal already closed");
+    }
 
     // Hard expectation: All 3 proposals must be visible in Pending Requests table
     // Wait for the table to update with new proposals
