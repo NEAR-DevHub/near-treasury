@@ -9,6 +9,7 @@ import {
   viewAccessKey,
   query,
   viewFunctionAsJson,
+  viewAccount as rpcViewAccount,
 } from "@near-js/jsonrpc-client";
 
 export class NearSandbox {
@@ -379,6 +380,15 @@ export class NearSandbox {
 
     console.log(`✓ Imported and deployed ${mainnetContractId} to ${accountId}`);
     return accountId;
+  }
+
+  async viewAccount(accountId) {
+    await this.waitForBlockchainState();
+    const result = await rpcViewAccount(this.rpcClient, {
+      accountId: accountId,
+      finality: "final",
+    });
+    return result;
   }
 
   getRpcUrl() {

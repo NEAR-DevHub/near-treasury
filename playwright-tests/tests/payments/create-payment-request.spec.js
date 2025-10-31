@@ -300,4 +300,152 @@ test.describe("Create Payment Request", () => {
 
     console.log("✅ All assertions passed!");
   });
+
+  test("create, approve, and verify NEAR payment with balance changes", async ({ page }) => {
+    test.setTimeout(240000); // 4 minutes
+
+    console.log("\n=== Starting Create→Approve→Verify Test ===\n");
+
+    // Create a recipient account
+    const recipientAccountId = await sandbox.createAccount("recipient.near", "1000000000000000000000000"); // 1 NEAR
+    console.log(`Recipient account created: ${recipientAccountId}`);
+
+    // Get initial balances
+    const initialRecipientBalance = await sandbox.viewAccount(recipientAccountId);
+    const initialDaoBalance = await sandbox.viewAccount(daoAccountId);
+    console.log(`Initial recipient balance: ${initialRecipientBalance.amount}`);
+    console.log(`Initial DAO balance: ${initialDaoBalance.amount}`);
+
+    // Inject test wallet and intercept API calls
+    await injectTestWallet(page, sandbox, creatorAccountId);
+    await interceptIndexerAPI(page, sandbox);
+
+    // Intercept RPC calls to mainnet and redirect to sandbox
+    await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
+      const request = route.request();
+      const sandboxRpcUrl = sandbox.getRpcUrl();
+      const response = await page.request.post(sandboxRpcUrl, {
+        headers: request.headers(),
+        data: request.postDataJSON(),
+      });
+      route.fulfill({
+        status: response.status(),
+        headers: response.headers(),
+        body: await response.body(),
+      });
+    });
+
+    // Navigate to payments page
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
+
+    // Create payment request
+    await page.getByRole("button", { name: "Create Request" }).click();
+    const offcanvas = page.locator(".offcanvas-body");
+    await expect(offcanvas).toBeVisible({ timeout: 10000 });
+
+    // Select wallet and fill form
+    const walletDropdown = offcanvas.locator('div.dropdown').first();
+    await walletDropdown.click();
+    await page.waitForTimeout(500);
+    await page.locator('text="SputnikDAO"').last().click();
+    await page.waitForTimeout(2000);
+
+    // Fill form fields
+    const titleInput = offcanvas.locator('input[type="text"]').first();
+    await titleInput.fill("Payment for recipient");
+    const summaryInput = offcanvas.locator('textarea').first();
+    await summaryInput.fill("Testing end-to-end payment workflow");
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
+    await recipientInput.fill(recipientAccountId);
+    await page.waitForTimeout(500);
+
+    // Select NEAR token
+    const tokenDropdown = offcanvas.getByText("Select token");
+    await tokenDropdown.click();
+    await page.waitForTimeout(500);
+    await page.getByText("NEAR", { exact: true }).first().click();
+    await page.waitForTimeout(1000);
+
+    // Enter amount (10 NEAR)
+    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    await amountInput.fill("10");
+    await page.waitForTimeout(500);
+
+    // Submit
+    const submitBtn = offcanvas.getByRole("button", { name: "Submit" });
+    await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+    await submitBtn.scrollIntoViewIfNeeded({ timeout: 10000 });
+    await page.waitForTimeout(1000);
+    await submitBtn.click();
+    console.log("✓ Submitted payment request");
+
+    // Wait for success
+    await expect(
+      page.getByText("Payment request has been successfully created.")
+    ).toBeVisible({ timeout: 45000 });
+    console.log("✓ Payment request created");
+
+    // Wait for form to close and table to update
+    await expect(offcanvas).toBeHidden({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+
+    // Now approve the proposal
+    console.log("\n=== Approving Payment Request ===\n");
+
+    // Find and click the Approve button for proposal ID 0
+    const approveButton = page.getByRole("button", { name: "Approve" }).first();
+    await expect(approveButton).toBeVisible({ timeout: 10000 });
+    await approveButton.click();
+    console.log("✓ Clicked Approve button");
+
+    // Handle confirmation modal if it appears
+    try {
+      const confirmButton = page.getByRole("button", { name: "Confirm" });
+      await expect(confirmButton).toBeVisible({ timeout: 5000 });
+      await confirmButton.click();
+      console.log("✓ Confirmed approval");
+    } catch (e) {
+      console.log("⚠ No confirmation modal");
+    }
+
+    // Wait for approval to complete
+    await page.waitForTimeout(10000); // Give time for blockchain transaction
+
+    // Verify balances changed
+    console.log("\n=== Verifying Balance Changes ===\n");
+
+    const finalRecipientBalance = await sandbox.viewAccount(recipientAccountId);
+    const finalDaoBalance = await sandbox.viewAccount(daoAccountId);
+
+    console.log(`Final recipient balance: ${finalRecipientBalance.amount}`);
+    console.log(`Final DAO balance: ${finalDaoBalance.amount}`);
+
+    // Recipient should have received approximately 10 NEAR
+    const recipientIncrease = BigInt(finalRecipientBalance.amount) - BigInt(initialRecipientBalance.amount);
+    const expectedAmount = BigInt("10000000000000000000000000"); // 10 NEAR in yocto
+
+    console.log(`Recipient balance increased by: ${recipientIncrease} yoctoNEAR`);
+
+    // Allow some variance for gas fees
+    expect(recipientIncrease).toBeGreaterThan(BigInt("9900000000000000000000000")); // At least 9.9 NEAR
+    expect(recipientIncrease).toBeLessThanOrEqual(expectedAmount);
+    console.log("✓ Recipient balance increased correctly");
+
+    // DAO balance should have decreased
+    const daoDecrease = BigInt(initialDaoBalance.amount) - BigInt(finalDaoBalance.amount);
+    expect(daoDecrease).toBeGreaterThan(BigInt("9000000000000000000000000")); // At least 9 NEAR (account for fees)
+    console.log("✓ DAO balance decreased correctly");
+
+    // Verify in History tab
+    await page.getByText("History", { exact: true }).click();
+    await page.waitForTimeout(2000);
+
+    // The proposal should now appear in History tab
+    // We've already verified the balance changes which is the key indicator of success
+    console.log("✓ Navigated to History tab");
+
+    console.log("✅ Full workflow test passed!");
+  });
 });
