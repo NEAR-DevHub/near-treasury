@@ -766,3 +766,38 @@ export async function interceptIndexerAPI(page, sandbox) {
     }
   });
 }
+
+/**
+ * Intercept mainnet RPC calls and redirect to sandbox
+ * This ensures balance checks and other RPC calls go to sandbox instead of mainnet
+ */
+export async function interceptRPC(page, sandbox) {
+  const sandboxRpcUrl = sandbox.getRpcUrl();
+
+  await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
+    const request = route.request();
+    const postData = request.postDataJSON();
+
+    try {
+      // Forward the request to sandbox RPC
+      const response = await fetch(sandboxRpcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const responseData = await response.json();
+
+      await route.fulfill({
+        status: response.status,
+        contentType: 'application/json',
+        body: JSON.stringify(responseData),
+      });
+    } catch (error) {
+      console.error('Error intercepting RPC:', error);
+      await route.abort();
+    }
+  });
+}
