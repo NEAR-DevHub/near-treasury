@@ -448,4 +448,15 @@ test.describe("Create Payment Request", () => {
 
     console.log("✅ Full workflow test passed!");
   });
+
+  // TODO: Add fungible token payment test
+  // Currently the UI doesn't support entering custom FT contract addresses in sandbox mode.
+  // The token dropdown only shows NEAR by default, and there's no "Other" option to enter
+  // a custom FT contract address. To test FT payments properly, we would need to either:
+  // 1. Mock the Pikespeak API to return our sandbox FT tokens in the token list
+  // 2. Add UI support for custom token entry in the payment request form
+  // 3. Use a mainnet FT that's already in the token list
+  //
+  // For now, the NEAR payment tests above provide comprehensive coverage of the
+  // payment workflow including balance verification.
 });
