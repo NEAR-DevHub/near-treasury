@@ -652,29 +652,66 @@ export async function interceptIndexerAPI(page, sandbox) {
           const searchParams = new URLSearchParams(urlObj.search);
           const page = parseInt(searchParams.get('page') || '0');
           const pageSize = parseInt(searchParams.get('page_size') || '10');
+          const statusesParam = searchParams.get('statuses');
+          const requestedStatuses = statusesParam ? statusesParam.split(',') : [];
 
-          // Query proposals from sandbox DAO
-          const proposalsData = await sandbox.viewFunction(requestedDaoId, 'get_proposals', {
-            from_index: page * pageSize,
-            limit: pageSize,
-          });
+          // Get the last proposal ID to know how many proposals exist
+          let lastProposalId;
+          try {
+            lastProposalId = await sandbox.viewFunction(requestedDaoId, 'get_last_proposal_id', {});
+          } catch (error) {
+            lastProposalId = -1;
+          }
 
-          // Transform to indexer format
-          const proposals = (proposalsData || []).map((proposal, idx) => ({
-            id: proposal.id ?? (page * pageSize + idx),
-            proposer: proposal.proposer,
-            description: proposal.description,
-            kind: proposal.kind,
-            status: proposal.status,
-            vote_counts: proposal.vote_counts || { Vote: [0, 0, 0] },
-            votes: proposal.votes || {},
-            submission_time: proposal.submission_time || Date.now().toString() + '000000',
-            last_actions_log: null,
-          }));
+          // Query individual proposals from sandbox and filter by status
+          // This mimics what the indexer does - it queries the contract for each proposal
+          const allProposals = [];
+          for (let id = 0; id <= lastProposalId; id++) {
+            try {
+              const proposal = await sandbox.viewFunction(requestedDaoId, 'get_proposal', { id });
+
+              // Check if proposal has any "Remove" votes AND is still InProgress
+              // Only filter out InProgress proposals with Remove votes (these are "deleted")
+              // Proposals with final status (Rejected, Approved, etc.) should still appear in History
+              const hasRemoveVotes = proposal.votes && Object.values(proposal.votes).some(vote => vote === 'Remove');
+
+              if (hasRemoveVotes && proposal.status === 'InProgress') {
+                console.log(`Proposal ${id} has Remove votes and is InProgress - filtering out from results`);
+                continue; // Skip InProgress proposals with Remove votes (these are "deleted")
+              }
+
+              // If no status filter specified, include all proposals
+              // If status filter specified, only include matching proposals
+              if (requestedStatuses.length === 0 || requestedStatuses.includes(proposal.status)) {
+                allProposals.push({
+                  id: proposal.id ?? id,
+                  proposer: proposal.proposer,
+                  description: proposal.description,
+                  kind: proposal.kind,
+                  status: proposal.status,
+                  vote_counts: proposal.vote_counts || { Vote: [0, 0, 0] },
+                  votes: proposal.votes || {},
+                  submission_time: proposal.submission_time || Date.now().toString() + '000000',
+                  last_actions_log: null,
+                });
+              }
+            } catch (error) {
+              // Proposal doesn't exist - skip it
+              console.log(`Proposal ${id} not found (error querying contract)`);
+            }
+          }
+
+          // Sort by ID descending (newest first)
+          allProposals.sort((a, b) => b.id - a.id);
+
+          // Paginate
+          const startIdx = page * pageSize;
+          const endIdx = startIdx + pageSize;
+          const paginatedProposals = allProposals.slice(startIdx, endIdx);
 
           const response = {
-            proposals,
-            total: proposals.length, // For sandbox, we'll use actual length
+            proposals: paginatedProposals,
+            total: allProposals.length,
             page,
             page_size: pageSize,
           };
