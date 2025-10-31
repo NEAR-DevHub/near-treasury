@@ -460,7 +460,9 @@ export async function injectTestWallet(page, sandbox, accountId) {
   console.log('Injected wallet setup - transactions:', typeof transactions, 'utils:', typeof utils);
 
   // Expose signing function to the page - this function executes in Node.js context
-  await page.exposeFunction('__testWalletSign', async (transaction) => {
+  // Check if function is already exposed to avoid errors on multiple calls
+  try {
+    await page.exposeFunction('__testWalletSign', async (transaction) => {
     console.log('__testWalletSign called, transactions available:', typeof transactions);
     const client = new NearRpcClient({ endpoint: rpcUrl });
 
@@ -530,6 +532,12 @@ export async function injectTestWallet(page, sandbox, accountId) {
 
     return result;
   });
+  } catch (error) {
+    // Function already exposed, silently ignore - this allows multiple calls to injectTestWallet
+    if (!error.message.includes('has been already registered')) {
+      throw error;
+    }
+  }
 
   // Inject the test wallet immediately before any scripts run
   await page.addInitScript(({ accountId }) => {
