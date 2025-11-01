@@ -228,17 +228,8 @@ const CreateWithdrawRequest = ({
   };
 
   const WarningMessage = ({ message }) => (
-    <div
-      className="d-flex gap-2 align-items-center rounded-2 p-3"
-      style={{
-        backgroundColor: "rgba(255, 149, 0, 0.1)",
-        color: "var(--other-warning)",
-      }}
-    >
-      <i
-        className="bi bi-exclamation-triangle mb-0 h5"
-        style={{ color: "var(--other-warning)" }}
-      ></i>
+    <div className="warning-box d-flex gap-2 align-items-center rounded-2 p-3">
+      <i className="bi bi-exclamation-triangle mb-0 h5"></i>
       {message}
     </div>
   );

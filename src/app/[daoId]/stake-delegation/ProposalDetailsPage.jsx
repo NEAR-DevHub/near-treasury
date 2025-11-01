@@ -229,13 +229,12 @@ const ProposalDetailsPage = ({
             {proposalData.amount && proposalData.amount !== 0 && (
               <div className="d-flex flex-column gap-2 mt-1">
                 <label className="border-top proposal-label">Amount</label>
-                <h5 className="mb-0" style={{ width: "fit-content" }}>
-                  <TokenAmount
-                    amountWithoutDecimals={proposalData.amount}
-                    address=""
-                    showUSDValue={false}
-                  />
-                </h5>
+                <TokenAmount
+                  amountWithoutDecimals={proposalData.amount}
+                  address=""
+                  showUSDValue={false}
+                  isProposalDetails={true}
+                />
               </div>
             )}
 

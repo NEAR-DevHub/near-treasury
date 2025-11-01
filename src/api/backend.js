@@ -404,3 +404,73 @@ export const getTimezones = async () => {
     return [];
   }
 };
+
+/**
+ * Fetch a real proposal quote from treasury oneclick-quote endpoint
+ * @param {Object} params - Quote parameters
+ * @param {string} params.treasuryDaoID - Treasury DAO ID
+ * @param {Object} params.inputToken - Input token object with id, symbol, decimals, network
+ * @param {Object} params.outputToken - Output token object with symbol, network, decimals
+ * @param {string} params.amountIn - Amount to send in smallest units
+ * @param {number} params.slippageTolerance - Slippage tolerance in basis points
+ * @param {string} params.networkOut - Output network label
+ * @param {string} params.tokenOutSymbol - Output token symbol
+ * @returns {Promise<Object>} Quote result with proposalPayload
+ */
+export const fetchTreasuryOneClickQuote = async ({
+  treasuryDaoID,
+  inputToken,
+  outputToken,
+  amountIn,
+  slippageTolerance,
+  networkOut,
+  tokenOutSymbol,
+}) => {
+  try {
+    if (!treasuryDaoID || !inputToken || !outputToken || !amountIn) {
+      logger.warn("fetchTreasuryOneClickQuote called with missing parameters");
+      throw new Error("Missing required parameters");
+    }
+
+    const requestBody = {
+      treasuryDaoID,
+      inputToken,
+      outputToken,
+      amountIn,
+      slippageTolerance,
+      networkOut,
+      tokenOutSymbol,
+    };
+
+    const response = await fetch(`${BACKEND_API_BASE}/treasury/oneclick-quote`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      logger.error("Backend error response:", text);
+      throw new Error(
+        `Backend error (${response.status}): ${text || response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    if (!data.success || !data.proposalPayload) {
+      throw new Error("Invalid response from backend");
+    }
+
+    return data;
+  } catch (error) {
+    logger.error("Error fetching treasury oneclick quote:", error);
+    throw error;
+  }
+};

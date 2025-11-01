@@ -1,4 +1,5 @@
 import { logger } from "@/helpers/logger";
+import Big from "big.js";
 
 const CHAINDEFUSER_BRIDGE_RPC_URL = "https://bridge.chaindefuser.com/rpc";
 
@@ -122,3 +123,76 @@ export const fetchWithdrawalStatus = async (withdrawalHash) => {
   }
 };
 
+/**
+ * Fetch a DRY quote from 1Click API to estimate receive amount and rate
+ * @param {Object} params - Quote parameters
+ * @param {string} params.treasuryDaoID - Treasury DAO ID
+ * @param {Object} params.daoPolicy - DAO policy with proposal_period
+ * @param {Object} params.sendNetwork - Send token network object with id and decimals
+ * @param {Object} params.receiveNetwork - Receive token network object with id
+ * @param {number} params.amount - Amount to send (in human-readable format)
+ * @param {number} params.slippagePct - Slippage tolerance percentage
+ * @returns {Promise<Object>} Quote result with amountOut, rate, etc.
+ */
+export const fetchDryQuote = async ({
+  treasuryDaoID,
+  daoPolicy,
+  sendNetwork,
+  receiveNetwork,
+  amount,
+  slippagePct,
+}) => {
+  try {
+    if (!sendNetwork || !receiveNetwork || !amount) {
+      logger.warn("fetchDryQuote called with missing parameters");
+      return { error: "Missing required parameters" };
+    }
+
+    const decimals = sendNetwork.decimals || 18;
+    const amountInSmallestUnit = Big(amount || 0)
+      .mul(Big(10).pow(decimals))
+      .toFixed(0);
+    const deadline = new Date();
+    const proposalPeriodMs = Number(daoPolicy?.proposal_period || 0) / 1_000_000; // ns → ms
+    deadline.setTime(deadline.getTime() + proposalPeriodMs);
+
+    const quoteRequest = {
+      dry: true,
+      swapType: "EXACT_INPUT",
+      slippageTolerance: Number(slippagePct || 1) * 100,
+      originAsset: sendNetwork.id?.startsWith("nep141:")
+        ? sendNetwork.id
+        : `nep141:${sendNetwork.id}`,
+      depositType: "INTENTS",
+      destinationAsset: receiveNetwork.id,
+      refundTo: treasuryDaoID,
+      refundType: "INTENTS",
+      recipient: treasuryDaoID,
+      recipientType: "INTENTS",
+      deadline: deadline.toISOString(),
+      amount: amountInSmallestUnit,
+    };
+
+    logger.info("API call: fetchDryQuote", {
+      treasuryDaoID,
+      amount: amountInSmallestUnit,
+    });
+
+    const response = await fetch("https://1click.chaindefuser.com/v0/quote", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(quoteRequest),
+    });
+
+    if (!response.ok) {
+      const text = await response.json();
+      throw new Error(text.message || "Unable to fetch quote");
+    }
+
+    const data = await response.json();
+    return data
+  } catch (error) {
+    logger.error("Error fetching dry quote:", error);
+    return { error: error.message || "Unable to fetch quote", result: null };
+  }
+};

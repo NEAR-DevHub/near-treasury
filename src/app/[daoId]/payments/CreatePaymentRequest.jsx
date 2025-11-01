@@ -871,17 +871,8 @@ const CreatePaymentRequest = ({
                   amount &&
                   parseFloat(selectedTokensAvailable) <
                     parseFloat(amount ? amount : 0) && (
-                    <div
-                      className="d-flex gap-3 align-items-center px-3 py-2 rounded-3"
-                      style={{
-                        backgroundColor: "rgba(255, 158, 0, 0.1)",
-                        color: "var(--other-warning)",
-                      }}
-                    >
-                      <i
-                        className="bi bi-exclamation-triangle h5"
-                        style={{ color: "var(--other-warning) !important" }}
-                      ></i>
+                    <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3">
+                      <i className="bi bi-exclamation-triangle h5"></i>
                       <div>
                         The treasury balance is insufficient to cover the
                         payment. You can create the request, but it won't be

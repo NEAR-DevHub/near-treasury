@@ -287,6 +287,14 @@ input[type="number"] {
   box-shadow: 0 0 0 0.2rem rgba(1, 191, 122, 0.25) !important;
 }
 
+/* Utility: remove focus outline and shadow where applied */
+.no-focus:focus,
+.no-focus:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
 .form-control::placeholder {
   color: var(--text-secondary-color) !important;
 }
