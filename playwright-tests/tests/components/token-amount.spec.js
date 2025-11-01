@@ -22,6 +22,11 @@ const TEST_DAO_ID = "testing-astradao.sputnik-dao.near";
 test.describe("TokenAmount component in payment requests", () => {
   test.use({ storageState: "playwright-tests/util/logged-in-state.json" });
 
+  test.afterEach(async ({ page }) => {
+    // Clean up route handlers to avoid interference between tests
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
   test("displays token amounts with proper formatting in create request form", async ({ page }) => {
     const daoId = TEST_DAO_ID;
 
