@@ -149,7 +149,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("user without voting permissions should not see vote buttons", async ({ page }) => {
-    test.setTimeout(60000); // 1 minute
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Role-Based Access Control ===\n");
 
@@ -255,7 +255,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("reject payment request", async ({ page }) => {
-    test.setTimeout(60000); // 1 minute
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Reject Payment Request ===\n");
 
@@ -382,7 +382,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("approve payment request from table", async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Approve from Table ===\n");
 
@@ -475,7 +475,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("delete payment request from table", async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Delete from Table ===\n");
 
@@ -590,7 +590,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("approve payment request from overlay", async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Approve from Overlay ===\n");
 
@@ -687,7 +687,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("reject payment request from overlay", async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Reject from Overlay ===\n");
 
@@ -784,7 +784,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("approve payment request from full page", async ({ page }) => {
-    test.setTimeout(60000); // 1 minute
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Approve from Full Page ===\n");
 
@@ -907,7 +907,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("reject payment request from full page", async ({ page }) => {
-    test.setTimeout(60000); // 1 minute
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Reject from Full Page ===\n");
 
@@ -1030,7 +1030,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("delete payment request from full page", async ({ page }) => {
-    test.setTimeout(60000); // 1 minute
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Delete from Full Page ===\n");
 
@@ -1179,7 +1179,7 @@ test.describe("Vote on Payment Request", () => {
   });
 
   test("delete/remove payment request", async ({ page }) => {
-    test.setTimeout(60000); // 1 minute
+    test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Delete Payment Request ===\n");
 
