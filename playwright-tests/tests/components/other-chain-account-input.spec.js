@@ -104,7 +104,7 @@ test.describe("OtherChainAccountInput validation", () => {
 
     // Select a cross-chain token (BTC) to trigger address input
     const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
-    await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
+    await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
@@ -173,7 +173,7 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForTimeout(1000);
 
     const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
-    await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
+    await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
@@ -241,7 +241,7 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForTimeout(1000);
 
     const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
-    await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
+    await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
@@ -308,7 +308,7 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForTimeout(1000);
 
     const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
-    await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
+    await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 

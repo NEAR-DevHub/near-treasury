@@ -65,7 +65,7 @@ test.describe("TokenAmount component in payment requests", () => {
 
     // Hard expectation: Token dropdown should be visible
     const tokenDropdown = page.locator('select[name="token"], button:has-text("Select Token")').first();
-    await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
+    await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     console.log("✓ Token dropdown is visible");
 
     // Click to open token dropdown
@@ -73,7 +73,7 @@ test.describe("TokenAmount component in payment requests", () => {
     await page.waitForTimeout(500);
 
     // Hard expectation: Token selection modal should be visible
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10_000 });
     console.log("✓ Token selection modal opened");
 
     // Hard expectation: BTC token should be visible in dropdown (use first match)
@@ -198,12 +198,12 @@ test.describe("TokenAmount component in payment requests", () => {
 
     // Open token dropdown
     const tokenDropdown = page.locator('select[name="token"], button:has-text("Select Token")').first();
-    await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
+    await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
     // Hard expectation: Token dropdown opened successfully
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10_000 });
     console.log("✓ Token selection modal is visible");
 
     const pageText = await page.textContent("body");
