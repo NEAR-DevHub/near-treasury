@@ -54,6 +54,7 @@ export function createMockIntentsTokens(tokens) {
  * await mockIntentsRpc(page, mockData, "testing-astradao.sputnik-dao.near");
  */
 export async function mockIntentsRpc(page, mockData, accountId) {
+  // Set up route handlers
   await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
     const postData = route.request().postDataJSON();
 
@@ -219,6 +220,10 @@ export async function mockIntentsRpc(page, mockData, accountId) {
     // For all other requests, continue normally
     await route.continue();
   });
+
+  // Wait a moment to ensure route handlers are fully registered
+  // This prevents race conditions where balance lookups happen before mocks are ready
+  await page.waitForTimeout(100);
 }
 
 /**

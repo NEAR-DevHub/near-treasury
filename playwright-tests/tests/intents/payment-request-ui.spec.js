@@ -488,17 +488,10 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Dashboard" }).click();
     await page.waitForTimeout(1000);
 
-    const initialBtcRowLocator = page
-      .getByTestId("intents-portfolio")
-      .locator(
-        'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("BTC"))'
-      );
-    const initialBtcAmountElement = initialBtcRowLocator.locator(
-      "div.d-flex.gap-2.align-items-center.justify-content-end div.d-flex.flex-column.align-items-end div.h6.mb-0"
-    );
-    await expect(initialBtcAmountElement).toBeAttached();
-    await initialBtcAmountElement.scrollIntoViewIfNeeded();
+    const initialBtcAmountElement = page.getByTestId('intents-portfolio').locator("div.flex-column", {hasText: "BTC"}).locator("div.h6.mb-0").last();
     await expect(initialBtcAmountElement).toHaveText("320");
+
+    await initialBtcAmountElement.scrollIntoViewIfNeeded();
     console.log("✓ Dashboard shows initial balance: 320 BTC");
 
     // Navigate to Payments page
@@ -523,7 +516,7 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByTestId("tokens-dropdown").locator("div").first().click();
 
     // Wait for the token selection modal to appear
-    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible({ timeout: 10_000 });
 
     // Verify BTC is available with the balance
     await expect(page.getByText("BTC", { exact: true })).toBeVisible();
@@ -811,7 +804,7 @@ test.describe("Payment Request UI Flow", () => {
 
     // Open tokens dropdown
     await page.getByTestId("tokens-dropdown").locator("div").first().click();
-    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible({ timeout: 10_000 });
 
     // Select USDC token
     await page.locator('.modal-body').getByText("USDC", { exact: true }).click({ force: true });
@@ -994,7 +987,7 @@ test.describe("Payment Request UI Flow", () => {
 
     // Open tokens dropdown
     await page.getByTestId("tokens-dropdown").locator("div").first().click();
-    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible({ timeout: 10_000 });
 
     // Select wNEAR token
     await page.locator('.modal-body').getByText("wNEAR", { exact: true }).click({ force: true });

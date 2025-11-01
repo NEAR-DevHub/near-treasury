@@ -11,7 +11,13 @@ export const useDebounce = (value, delay) => {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedValue(value);
+      setDebouncedValue((prev) => {
+        // Only update if the value has actually changed
+        // Use JSON.stringify for deep comparison of objects/arrays
+        const prevStr = JSON.stringify(prev);
+        const valueStr = JSON.stringify(value);
+        return prevStr === valueStr ? prev : value;
+      });
     }, delay);
 
     return () => {

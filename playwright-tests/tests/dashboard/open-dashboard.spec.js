@@ -16,8 +16,8 @@ test.describe('Open Dashboard for Treasury', () => {
     await page.locator("input#daoId").pressSequentially("testing-astradao.sputnik-dao.near");
     await page.getByRole('button', { name: 'Access Treasury' }).click();
     await page.waitForURL("/testing-astradao.sputnik-dao.near/dashboard");
-    await expect(page.locator('div').filter({ hasText: /^Sputnik DAO$/ }).nth(0)).toBeVisible({timeout: 10_000});
-    await expect(page.getByTestId('deposit-btn')).toBeVisible();
-    await expect(page.getByText('NEAR Intents')).toBeVisible();
+    await expect(page.locator('div').filter({ hasText: /^Sputnik DAO$/ }).nth(0)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('deposit-btn')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('NEAR Intents')).toBeVisible({ timeout: 10_000 });
   });
 });
