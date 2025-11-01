@@ -192,16 +192,18 @@ Bulk Payment 3\tThird bulk payment\t${creatorAccountId}\tnear\t30\tBulk test 3`;
     // Click submit - bulk import submits directly without confirmation modal
     const submitBtn = page.getByRole("button", { name: /Submit 3 Request/ });
     await submitBtn.click();
-    await page.waitForTimeout(2000);
 
     // Hard expectation: Transaction toast must appear
     await expect(
       page.getByText(/Awaiting transaction confirmation/i)
     ).toBeVisible({ timeout: 10000 });
-    console.log("✓ Transaction submission started");
+    console.log("✓ Transaction submission started - awaiting confirmation");
 
-    // Wait to see if transactions actually execute
-    await page.waitForTimeout(15000);
+    // Wait for success message after transaction confirmation
+    await expect(
+      page.getByText('Successfully imported 3')
+    ).toBeVisible();
+    console.log("✓ Successfully imported 3 payment requests");
 
     // Check if modal is still visible or closed
     const importModal = page.locator(".offcanvas").filter({ hasText: "Import Payment Requests" });
