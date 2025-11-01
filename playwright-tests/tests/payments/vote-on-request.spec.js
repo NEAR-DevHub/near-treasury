@@ -142,7 +142,10 @@ test.describe("Vote on Payment Request", () => {
     console.log("✓ Funded DAO treasury with 100 NEAR");
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    // Clean up route handlers before closing page
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+
     if (sandbox) {
       await sandbox.stop();
     }
