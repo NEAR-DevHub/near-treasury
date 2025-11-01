@@ -488,17 +488,10 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Dashboard" }).click();
     await page.waitForTimeout(1000);
 
-    const initialBtcRowLocator = page
-      .getByTestId("intents-portfolio")
-      .locator(
-        'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("BTC"))'
-      );
-    const initialBtcAmountElement = initialBtcRowLocator.locator(
-      "div.d-flex.gap-2.align-items-center.justify-content-end div.d-flex.flex-column.align-items-end div.h6.mb-0"
-    );
-    await expect(initialBtcAmountElement).toBeAttached();
-    await initialBtcAmountElement.scrollIntoViewIfNeeded();
+    const initialBtcAmountElement = page.getByTestId('intents-portfolio').locator("div.flex-column", {hasText: "BTC"}).locator("div.h6.mb-0").last();
     await expect(initialBtcAmountElement).toHaveText("320");
+
+    await initialBtcAmountElement.scrollIntoViewIfNeeded();
     console.log("✓ Dashboard shows initial balance: 320 BTC");
 
     // Navigate to Payments page
