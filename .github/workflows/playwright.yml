@@ -51,8 +51,8 @@ jobs:
         with:
           name: playwright-report-${{ matrix.browser }}-shard-${{ env.SHARD_SAFE }}
           path: |
-            playwright-tests/playwright-report/
-            playwright-tests/test-results/
+            playwright-report/
+            test-results/
           retention-days: 30
 
       - name: Upload HTML report
@@ -60,5 +60,5 @@ jobs:
         if: always()
         with:
           name: playwright-html-report-${{ matrix.browser }}-shard-${{ env.SHARD_SAFE }}
-          path: playwright-tests/playwright-report/
+          path: playwright-report/
           retention-days: 30
