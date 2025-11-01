@@ -902,7 +902,7 @@ test.describe("Vote on Payment Request", () => {
 
     // Wait for vote to be processed and success message
     await page.waitForTimeout(5000);
-    await expect(page.getByText(/your vote is counted|vote.*counted|approved/i)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText("Your vote is counted.")).toBeVisible({ timeout: 30000 });
     console.log("✓ Approve from full page successful");
   });
 
@@ -1025,7 +1025,7 @@ test.describe("Vote on Payment Request", () => {
 
     // Wait for vote to be processed and success message
     await page.waitForTimeout(5000);
-    await expect(page.getByText(/your vote is counted|vote.*counted|rejected/i)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText("Your vote is counted.")).toBeVisible({ timeout: 30000 });
     console.log("✓ Reject from full page successful");
   });
 
