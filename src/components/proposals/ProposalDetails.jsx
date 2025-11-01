@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import ApprovedStatus from "@/components/icons/ApprovedStatus";
 import RejectedStatus from "@/components/icons/RejectedStatus";
 import Warning from "@/components/icons/Warning";
@@ -27,7 +28,6 @@ const ProposalDetails = ({
   ProposalContent,
 }) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const requiredVotes = approversGroup?.requiredVotes;
 
@@ -115,14 +115,13 @@ const ProposalDetails = ({
           isInProgress={proposalData?.status === "InProgress"}
         />
         {VoteActions}
-        {/* TODO: Fix the issue with the approvers list refetching every second */}
-        {/* {Object.keys(proposalData?.votes ?? {}).length > 0 && (
+        {Object.keys(proposalData?.votes ?? {}).length > 0 && (
           <Approvers
             votes={proposalData?.votes}
             approversGroup={approversGroup?.approverAccounts}
             showApproversList={true}
           />
-        )} */}
+        )}
       </div>
     );
   };
@@ -150,14 +149,18 @@ const ProposalDetails = ({
     );
   };
 
-  const Navbar = () => {
+  const Navbar = useMemo(() => {
     const handleBackClick = () => {
-      const params = new URLSearchParams(searchParams);
+      const params = new URLSearchParams(window.location.search);
       params.delete("id");
       router.push(`?${params.toString()}`);
     };
 
-    return !isCompactVersion ? (
+    if (isCompactVersion) {
+      return null;
+    }
+
+    return (
       <div className="d-flex justify-content-between gap-2 align-items-center">
         <button
           onClick={handleBackClick}
@@ -167,8 +170,8 @@ const ProposalDetails = ({
         </button>
         <CopyComponent />
       </div>
-    ) : null;
-  };
+    );
+  }, [isCompactVersion, router]);
 
   const MainSkeleton = () => {
     return (
@@ -221,7 +224,7 @@ const ProposalDetails = ({
   if (!proposalData) {
     return (
       <div className="container-lg d-flex flex-column gap-3">
-        <Navbar />
+        {Navbar}
         <div>
           {isCompactVersion ? (
             <div className="d-flex flex-column gap-10px w-100">
@@ -246,7 +249,7 @@ const ProposalDetails = ({
   }
 
   return (
-    <div key={proposalData?.id} className="text-sm">
+    <div key={proposalData?.id} className="text-sm mb-3">
       <div
         className={`container-lg d-flex flex-column ${
           isCompactVersion ? "absolute" : "relative"
@@ -255,7 +258,7 @@ const ProposalDetails = ({
           gap: isCompactVersion ? "0rem" : "1rem",
         }}
       >
-        <Navbar />
+        {Navbar}
         {isCompactVersion && (
           <div className="sticky top-0 z-50 bg-gray-50">
             <div className="d-flex justify-content-between gap-2 px-3 py-3 rounded-top-4 border border-bottom-0 bg-gray-100 relative">
@@ -298,6 +301,7 @@ const ProposalDetails = ({
               minWidth: 200,
               height: "fit-content",
               width: "-webkit-fill-available",
+              fontSize: 14,
             }}
           >
             {ProposalContent}

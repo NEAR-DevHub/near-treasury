@@ -43,11 +43,10 @@ const SettingsDropdown = ({ page, isPendingPage = false }) => {
       case "asset-exchange":
         return [
           { title: "Created Date", show: true },
-          { title: "From Token", show: true },
-          { title: "To Token", show: true },
-          { title: "Amount", show: true },
+          { title: "Send", show: true },
+          { title: "Receive", show: true },
+          { title: "Minimum received", show: true },
           { title: "Creator", show: true },
-          { title: "Notes", show: true },
           { title: "Required Votes", show: true },
           { title: "Votes", show: true },
           { title: "Approvers", show: true },

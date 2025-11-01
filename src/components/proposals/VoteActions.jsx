@@ -249,13 +249,17 @@ const VoteActions = ({
                 ? { amountWithDecimals: currentAmount }
                 : { amountWithoutDecimals: currentAmount })}
               address={currentContract}
+              displayAllDecimals={true}
             />
           </div>
           <div className="d-flex gap-1 align-items-center">
             • Your current balance:
             <TokenAmount
-              amountWithoutDecimals={userBalance}
+              {...(isHumanReadableCurrentAmount
+                ? { amountWithDecimals: userBalance }
+                : { amountWithoutDecimals: userBalance })}
               address={currentContract}
+              displayAllDecimals={true}
             />
           </div>
         </div>

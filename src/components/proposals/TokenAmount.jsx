@@ -31,6 +31,8 @@ const TokenAmount = ({
   amountWithoutDecimals = null,
   showUSDValue = false,
   price = null,
+  isProposalDetails = false,
+  displayAllDecimals = false,
 }) => {
   // Handle NEAR Intents token format (e.g., "nep141:btc.omft.near")
   const cleanAddress = useMemo(() => {
@@ -103,11 +105,20 @@ const TokenAmount = ({
     let amt = amountWithDecimals;
     let origAmt = amountWithDecimals;
 
-    if (amountWithoutDecimals !== undefined) {
-      origAmt = Big(amountWithoutDecimals).div(
-        Big(10).pow(ftMetadata.decimals ?? 1)
-      );
-      amt = origAmt.toFixed();
+    const hasRawAmount =
+      amountWithoutDecimals !== undefined &&
+      amountWithoutDecimals !== null &&
+      amountWithoutDecimals !== "";
+    if (hasRawAmount) {
+      try {
+        const raw = Big(String(amountWithoutDecimals));
+        origAmt = raw.div(Big(10).pow(ftMetadata.decimals ?? 1));
+        amt = origAmt.toFixed();
+      } catch (e) {
+        // Fallback safely when input is not a valid number
+        origAmt = Big(0);
+        amt = "0";
+      }
     }
 
     return { amount: amt, originalAmount: origAmt };
@@ -175,31 +186,65 @@ const TokenAmount = ({
   }
 
   const AmountDisplay = ({ showAllDecimals }) => {
-    const formattedAmount = toReadableAmount(amount, showAllDecimals);
+    const formattedAmount = toReadableAmount(
+      amount,
+      isProposalDetails || showAllDecimals
+    );
 
     return (
       <div className="text-center">
-        <div className="d-flex gap-1 align-items-center justify-content-end">
-          <span className="fw-bold mb-0">
-            {(showTilde && !showAllDecimals ? "~" : "") + formattedAmount}
-          </span>
-          {isNEAR ? (
-            <NearToken width={16} height={16} />
-          ) : ftMetadata.icon ? (
-            <img
-              width="16"
-              height="16"
-              src={ftMetadata.icon}
-              alt={ftMetadata.symbol}
-              className="rounded-circle"
-            />
-          ) : (
-            ftMetadata.symbol && <span>{ftMetadata.symbol}</span>
-          )}
-        </div>
-        {showUSDValue && tokenUSDValue && (
-          <div className="text-secondary d-flex justify-content-end small">
-            {formatUsdValue(amount, tokenPrice)}
+        {isProposalDetails ? (
+          <div className="d-flex gap-1 align-items-center h6 mb-0">
+            {isNEAR ? (
+              <NearToken width={16} height={16} />
+            ) : (
+              ftMetadata.icon && (
+                <img
+                  width="16"
+                  height="16"
+                  src={ftMetadata.icon}
+                  alt={ftMetadata.symbol}
+                  className="rounded-circle"
+                />
+              )
+            )}
+            <span className="fw-bold mb-0">{formattedAmount}</span>
+
+            {ftMetadata.symbol && (
+              <span style={{ fontWeight: "normal" }}>{ftMetadata.symbol}</span>
+            )}
+
+            {showUSDValue && tokenUSDValue && (
+              <div className="text-secondary small">
+                ~ {formatUsdValue(amount, tokenPrice)} USD
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <div className="d-flex gap-1 align-items-center justify-content-end">
+              <span className="fw-bold mb-0">
+                {(showTilde && !showAllDecimals ? "~" : "") + formattedAmount}
+              </span>
+              {isNEAR ? (
+                <NearToken width={16} height={16} />
+              ) : ftMetadata.icon ? (
+                <img
+                  width="16"
+                  height="16"
+                  src={ftMetadata.icon}
+                  alt={ftMetadata.symbol}
+                  className="rounded-circle"
+                />
+              ) : (
+                ftMetadata.symbol && <span>{ftMetadata.symbol}</span>
+              )}
+            </div>
+            {showUSDValue && tokenUSDValue && (
+              <div className="text-secondary d-flex justify-content-end small">
+                ~ {formatUsdValue(amount, tokenPrice)} USD
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -210,7 +255,7 @@ const TokenAmount = ({
   return (
     <Tooltip tooltip={<AmountDisplay showAllDecimals={true} />}>
       <div>
-        <AmountDisplay showAllDecimals={false} />
+        <AmountDisplay showAllDecimals={displayAllDecimals} />
       </div>
     </Tooltip>
   );

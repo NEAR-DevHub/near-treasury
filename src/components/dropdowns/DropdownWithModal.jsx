@@ -39,11 +39,21 @@ const DropdownWithModal = ({
   onSearch = null, // If provided, uses API search instead of local
   searchDebounceMs = 500,
   modalSize = "md",
+  // Controlled open state (optional). If provided, this component mirrors it.
+  open = undefined,
+  onOpenChange = undefined,
+  hideBorder = false,
 }) => {
-  console.log({ options });
   const [showModal, setShowModal] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchDebounceTimeout, setSearchDebounceTimeout] = useState(null);
+
+  // Mirror controlled "open" prop if provided
+  useEffect(() => {
+    if (typeof open === "boolean") {
+      setShowModal(open);
+    }
+  }, [open]);
 
   // Handle search with debounce for API calls
   const handleSearchChange = (value) => {
@@ -89,12 +99,12 @@ const DropdownWithModal = ({
           option.label,
           option.id,
           option.value,
-          option.asset_name,  // For asset search (e.g., "USDC")
-          option.symbol,      // For token symbol search
+          option.asset_name, // For asset search (e.g., "USDC")
+          option.symbol, // For token symbol search
         ]
-          .filter(Boolean)  // Remove null/undefined
-          .map(field => field.toString().toLowerCase())
-          .join(' ');
+          .filter(Boolean) // Remove null/undefined
+          .map((field) => field.toString().toLowerCase())
+          .join(" ");
         return searchableFields.includes(searchLower);
       }
 
@@ -133,6 +143,7 @@ const DropdownWithModal = ({
   const handleSelect = (option) => {
     onSelect(option);
     setShowModal(false);
+    if (typeof onOpenChange === "function") onOpenChange(false);
   };
 
   return (
@@ -140,10 +151,14 @@ const DropdownWithModal = ({
       {/* Dropdown Trigger Button */}
       <button
         type="button"
-        className={`d-flex align-items-center justify-content-between bg-dropdown border rounded-2 btn w-100 ${
-          disabled ? "opacity-50" : ""
-        }`}
-        onClick={() => !disabled && setShowModal(true)}
+        className={`d-flex align-items-center justify-content-between bg-dropdown ${
+          hideBorder ? "no-focus border-0 p-0" : "border"
+        } rounded-2 btn w-100 ${disabled ? "opacity-50" : ""}`}
+        onClick={() => {
+          if (disabled) return;
+          setShowModal(true);
+          if (typeof onOpenChange === "function") onOpenChange(true);
+        }}
         disabled={disabled}
         data-testid={dataTestId}
       >
@@ -160,7 +175,10 @@ const DropdownWithModal = ({
         <Modal
           isOpen={showModal}
           heading={modalTitle}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            if (typeof onOpenChange === "function") onOpenChange(false);
+          }}
           size={modalSize}
         >
           <div className="d-flex flex-column gap-3">
