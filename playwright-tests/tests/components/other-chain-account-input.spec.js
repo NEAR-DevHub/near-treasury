@@ -68,6 +68,11 @@ const testCases = {
 };
 
 test.describe("OtherChainAccountInput validation", () => {
+  test.afterEach(async ({ page }) => {
+    // Clean up route handlers to avoid interference between tests
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
   test("validates BTC addresses correctly", async ({ page }) => {
     const daoId = TEST_DAO_ID;
 
