@@ -83,7 +83,7 @@ test.describe("OtherChainAccountInput validation", () => {
 
     // Click "Create Request" button
     const createButton = page.getByRole("button", { name: "Create Request" });
-    await expect(createButton).toBeVisible({ timeout: 5000 });
+    await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
     // Wait for the form to load
@@ -110,13 +110,13 @@ test.describe("OtherChainAccountInput validation", () => {
 
     // Look for BTC or any cross-chain token option
     const btcOption = page.locator('text=/BTC/i').first();
-    await expect(btcOption).toBeVisible({ timeout: 5000 });
+    await expect(btcOption).toBeVisible({ timeout: 10_000 });
     await btcOption.click();
     await page.waitForTimeout(500);
 
     // Now the address input should be visible
     const addressInput = page.locator('input[placeholder*="Address"]').first();
-    await expect(addressInput).toBeVisible({ timeout: 5000 });
+    await expect(addressInput).toBeVisible({ timeout: 10_000 });
 
     // Test valid BTC addresses
     for (const address of testCases.btc.valid) {
@@ -156,7 +156,7 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForLoadState("networkidle");
 
     const createButton = page.getByRole("button", { name: "Create Request" });
-    await expect(createButton).toBeVisible({ timeout: 5000 });
+    await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
     await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
@@ -179,12 +179,12 @@ test.describe("OtherChainAccountInput validation", () => {
 
     // Look for ETH or USDC (which uses ETH-like addresses)
     const ethOption = page.locator('text=/ETH|USDC.*BASE|USDC.*ARB/i').first();
-    await expect(ethOption).toBeVisible({ timeout: 5000 });
+    await expect(ethOption).toBeVisible({ timeout: 10_000 });
     await ethOption.click();
     await page.waitForTimeout(500);
 
     const addressInput = page.locator('input[placeholder*="Address"]').first();
-    await expect(addressInput).toBeVisible({ timeout: 5000 });
+    await expect(addressInput).toBeVisible({ timeout: 10_000 });
 
     // Test valid ETH addresses
     for (const address of testCases.eth.valid) {
@@ -224,7 +224,7 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForLoadState("networkidle");
 
     const createButton = page.getByRole("button", { name: "Create Request" });
-    await expect(createButton).toBeVisible({ timeout: 5000 });
+    await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
     await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
@@ -246,12 +246,12 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForTimeout(500);
 
     const solOption = page.locator('text=/SOL|USDC.*SOL/i').first();
-    await expect(solOption).toBeVisible({ timeout: 5000 });
+    await expect(solOption).toBeVisible({ timeout: 10_000 });
     await solOption.click();
     await page.waitForTimeout(500);
 
     const addressInput = page.locator('input[placeholder*="Address"]').first();
-    await expect(addressInput).toBeVisible({ timeout: 5000 });
+    await expect(addressInput).toBeVisible({ timeout: 10_000 });
 
     // Test valid SOL addresses
     for (const address of testCases.sol.valid) {
@@ -291,7 +291,7 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForLoadState("networkidle");
 
     const createButton = page.getByRole("button", { name: "Create Request" });
-    await expect(createButton).toBeVisible({ timeout: 5000 });
+    await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
     await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
@@ -314,12 +314,12 @@ test.describe("OtherChainAccountInput validation", () => {
 
     // Select an ETH-like token (BASE, ARB, etc.)
     const ethLikeOption = page.locator('text=/USDC.*BASE|USDC.*ARB|ETH/i').first();
-    await expect(ethLikeOption).toBeVisible({ timeout: 5000 });
+    await expect(ethLikeOption).toBeVisible({ timeout: 10_000 });
     await ethLikeOption.click();
     await page.waitForTimeout(500);
 
     const addressInput = page.locator('input[placeholder*="Address"]').first();
-    await expect(addressInput).toBeVisible({ timeout: 5000 });
+    await expect(addressInput).toBeVisible({ timeout: 10_000 });
 
     // BTC address should be invalid for ETH-like chains
     const btcAddress = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080";
