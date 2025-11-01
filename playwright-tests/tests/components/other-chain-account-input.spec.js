@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createMockIntentsTokens, mockIntentsRpc, MOCK_TOKENS } from "../../util/mock-intents-rpc.js";
+import { mockIndexerFtTokens } from "../../util/mock-indexer-api.js";
 
 /**
  * OtherChainAccountInput Component Tests
@@ -75,6 +76,9 @@ test.describe("OtherChainAccountInput validation", () => {
 
   test("validates BTC addresses correctly", async ({ page }) => {
     const daoId = TEST_DAO_ID;
+
+    // Mock indexer API to avoid rate limiting
+    await mockIndexerFtTokens(page);
 
     // Mock RPC to ensure BTC is available (test won't fail if removed from treasury)
     const mockData = createMockIntentsTokens([MOCK_TOKENS.BTC]);
@@ -153,6 +157,9 @@ test.describe("OtherChainAccountInput validation", () => {
   test("validates ETH addresses correctly", async ({ page }) => {
     const daoId = TEST_DAO_ID;
 
+    // Mock indexer API to avoid rate limiting
+    await mockIndexerFtTokens(page);
+
     // Mock RPC to ensure ETH/USDC tokens are available
     const mockData = createMockIntentsTokens([MOCK_TOKENS.ETH, MOCK_TOKENS.USDC_BASE]);
     await mockIntentsRpc(page, mockData, daoId);
@@ -221,6 +228,9 @@ test.describe("OtherChainAccountInput validation", () => {
   test("validates Solana addresses correctly", async ({ page }) => {
     const daoId = TEST_DAO_ID;
 
+    // Mock indexer API to avoid rate limiting
+    await mockIndexerFtTokens(page);
+
     // Mock RPC to ensure SOL token is available
     const mockData = createMockIntentsTokens([MOCK_TOKENS.SOL]);
     await mockIntentsRpc(page, mockData, daoId);
@@ -287,6 +297,9 @@ test.describe("OtherChainAccountInput validation", () => {
 
   test("rejects cross-chain address mismatches", async ({ page }) => {
     const daoId = TEST_DAO_ID;
+
+    // Mock indexer API to avoid rate limiting
+    await mockIndexerFtTokens(page);
 
     // Mock RPC to ensure ETH-like tokens are available
     const mockData = createMockIntentsTokens([MOCK_TOKENS.ETH, MOCK_TOKENS.USDC_BASE, MOCK_TOKENS.USDC_ARB]);

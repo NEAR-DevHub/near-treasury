@@ -37,27 +37,22 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("0.005")).toBeVisible();
     console.log("✓ Token amount (0.005) is visible");
 
-    // TODO(#23): Network and Estimated Fee information not displaying
-    // These checks are skipped until issue #23 is resolved
-    // The legacy app shows this information but it's missing in the new app
-    //
-    // await expect(page.getByText("Network")).toBeVisible();
-    // await expect(page.getByText("Ethereum", { exact: false })).toBeVisible();
-    // await expect(page.getByText("Estimated Fee")).toBeVisible();
+    // Hard expectation: Network section should be displayed
+    await expect(page.getByText("Network")).toBeVisible({ timeout: 5000 });
+    console.log("✓ Network section is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible
-    // Related to same data fetching issue - transactionInfo.nearTxHash not always populated
-    // Sometimes appears, sometimes doesn't (race condition or data loading issue)
-    //
-    // await expect(page.getByText("Transaction Links")).toBeVisible();
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
+    // Hard expectation: Network name should display as "Ethereum"
+    await expect(page.getByText("Ethereum", { exact: false })).toBeVisible({ timeout: 10000 });
+    console.log("✓ Network name (Ethereum) is visible");
 
-    // TODO(#23): Target chain transaction links (Etherscan) not displaying
-    // This is part of the same issue as Network/Estimated Fee information
-    // The legacy app shows these links but they're missing in the new app
-    // await expect(
-    //   page.locator('a[href*="etherscan.io/tx/0x8f52efccdccc3bddc82abc15e259b3d1671959a9694f09d20276892a5863e8d6"]')
-    // ).toBeVisible();
+    // Hard expectation: Estimated Fee should be displayed
+    await expect(page.getByText("Estimated Fee").first()).toBeVisible();
+    console.log("✓ Estimated Fee is visible");
+
+    // TODO(#23): Transaction Links section inconsistently visible - sometimes slow to load
+    // await expect(page.getByText("Transaction Links").first()).toBeVisible({ timeout: 10000 });
+    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    // await expect(page.getByText("View transfer on etherscan.io")).toBeVisible({ timeout: 10000 });
 
     console.log("✓ Intents payment request for ETH displays basic details correctly");
   });
@@ -87,9 +82,16 @@ test.describe("Payment Request Detail Page", () => {
     await expect(avatar.first()).toBeVisible({ timeout: 5000 });
     console.log("✓ Recipient avatar is visible");
 
-    // TODO(#23): Network information not displaying for NEAR-to-NEAR payments
-    // await expect(page.getByText("Network")).toBeVisible();
-    // await expect(page.getByText("Near Protocol", { exact: false })).toBeVisible();
+    // Hard expectation: Network section should be displayed for NEAR-to-NEAR payments
+    await expect(page.getByText("Network")).toBeVisible({ timeout: 5000 });
+    console.log("✓ Network section is visible");
+
+    // Hard expectation: Network name should display (use locator to be more specific)
+    const networkLabel = page.locator('label:has-text("Network")');
+    const networkValue = networkLabel.locator('..').locator('span.text-capitalize');
+    await expect(networkValue).toBeVisible({ timeout: 10000 });
+    await expect(networkValue).toContainText("Near");
+    console.log("✓ Network name is visible");
 
     // Hard expectation: Payment Request Funded status should be visible
     await expect(page.getByText("Payment Request Funded")).toBeVisible();
