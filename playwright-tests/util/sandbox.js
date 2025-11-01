@@ -9,6 +9,7 @@ import {
   viewAccessKey,
   query,
   viewFunctionAsJson,
+  viewAccount as rpcViewAccount,
 } from "@near-js/jsonrpc-client";
 
 export class NearSandbox {
@@ -381,6 +382,15 @@ export class NearSandbox {
     return accountId;
   }
 
+  async viewAccount(accountId) {
+    await this.waitForBlockchainState();
+    const result = await rpcViewAccount(this.rpcClient, {
+      accountId: accountId,
+      finality: "final",
+    });
+    return result;
+  }
+
   getRpcUrl() {
     return this.sandbox.rpcUrl;
   }
@@ -450,7 +460,9 @@ export async function injectTestWallet(page, sandbox, accountId) {
   console.log('Injected wallet setup - transactions:', typeof transactions, 'utils:', typeof utils);
 
   // Expose signing function to the page - this function executes in Node.js context
-  await page.exposeFunction('__testWalletSign', async (transaction) => {
+  // Check if function is already exposed to avoid errors on multiple calls
+  try {
+    await page.exposeFunction('__testWalletSign', async (transaction) => {
     console.log('__testWalletSign called, transactions available:', typeof transactions);
     const client = new NearRpcClient({ endpoint: rpcUrl });
 
@@ -520,6 +532,12 @@ export async function injectTestWallet(page, sandbox, accountId) {
 
     return result;
   });
+  } catch (error) {
+    // Function already exposed, silently ignore - this allows multiple calls to injectTestWallet
+    if (!error.message.includes('has been already registered')) {
+      throw error;
+    }
+  }
 
   // Inject the test wallet immediately before any scripts run
   await page.addInitScript(({ accountId }) => {
@@ -560,11 +578,13 @@ export async function injectTestWallet(page, sandbox, accountId) {
       },
 
       async signAndSendTransaction({ receiverId, actions }) {
+        console.log('signAndSendTransaction called for:', receiverId, 'with', actions.length, 'actions');
         try {
           const result = await window.__testWalletSign({
             receiverId,
             actions,
           });
+          console.log('Transaction result:', result?.transaction?.hash);
           return result;
         } catch (error) {
           console.error('Test wallet sign error:', error);
@@ -573,11 +593,13 @@ export async function injectTestWallet(page, sandbox, accountId) {
       },
 
       async signAndSendTransactions({ transactions }) {
+        console.log('signAndSendTransactions called with', transactions.length, 'transactions');
         const results = [];
         for (const tx of transactions) {
           const result = await this.signAndSendTransaction(tx);
           results.push(result);
         }
+        console.log('All transactions completed:', results.length);
         return results;
       },
     };
@@ -630,29 +652,66 @@ export async function interceptIndexerAPI(page, sandbox) {
           const searchParams = new URLSearchParams(urlObj.search);
           const page = parseInt(searchParams.get('page') || '0');
           const pageSize = parseInt(searchParams.get('page_size') || '10');
+          const statusesParam = searchParams.get('statuses');
+          const requestedStatuses = statusesParam ? statusesParam.split(',') : [];
 
-          // Query proposals from sandbox DAO
-          const proposalsData = await sandbox.viewFunction(requestedDaoId, 'get_proposals', {
-            from_index: page * pageSize,
-            limit: pageSize,
-          });
+          // Get the last proposal ID to know how many proposals exist
+          let lastProposalId;
+          try {
+            lastProposalId = await sandbox.viewFunction(requestedDaoId, 'get_last_proposal_id', {});
+          } catch (error) {
+            lastProposalId = -1;
+          }
 
-          // Transform to indexer format
-          const proposals = (proposalsData || []).map((proposal, idx) => ({
-            id: proposal.id ?? (page * pageSize + idx),
-            proposer: proposal.proposer,
-            description: proposal.description,
-            kind: proposal.kind,
-            status: proposal.status,
-            vote_counts: proposal.vote_counts || { Vote: [0, 0, 0] },
-            votes: proposal.votes || {},
-            submission_time: proposal.submission_time || Date.now().toString() + '000000',
-            last_actions_log: null,
-          }));
+          // Query individual proposals from sandbox and filter by status
+          // This mimics what the indexer does - it queries the contract for each proposal
+          const allProposals = [];
+          for (let id = 0; id <= lastProposalId; id++) {
+            try {
+              const proposal = await sandbox.viewFunction(requestedDaoId, 'get_proposal', { id });
+
+              // Check if proposal has any "Remove" votes AND is still InProgress
+              // Only filter out InProgress proposals with Remove votes (these are "deleted")
+              // Proposals with final status (Rejected, Approved, etc.) should still appear in History
+              const hasRemoveVotes = proposal.votes && Object.values(proposal.votes).some(vote => vote === 'Remove');
+
+              if (hasRemoveVotes && proposal.status === 'InProgress') {
+                console.log(`Proposal ${id} has Remove votes and is InProgress - filtering out from results`);
+                continue; // Skip InProgress proposals with Remove votes (these are "deleted")
+              }
+
+              // If no status filter specified, include all proposals
+              // If status filter specified, only include matching proposals
+              if (requestedStatuses.length === 0 || requestedStatuses.includes(proposal.status)) {
+                allProposals.push({
+                  id: proposal.id ?? id,
+                  proposer: proposal.proposer,
+                  description: proposal.description,
+                  kind: proposal.kind,
+                  status: proposal.status,
+                  vote_counts: proposal.vote_counts || { Vote: [0, 0, 0] },
+                  votes: proposal.votes || {},
+                  submission_time: proposal.submission_time || Date.now().toString() + '000000',
+                  last_actions_log: null,
+                });
+              }
+            } catch (error) {
+              // Proposal doesn't exist - skip it
+              console.log(`Proposal ${id} not found (error querying contract)`);
+            }
+          }
+
+          // Sort by ID descending (newest first)
+          allProposals.sort((a, b) => b.id - a.id);
+
+          // Paginate
+          const startIdx = page * pageSize;
+          const endIdx = startIdx + pageSize;
+          const paginatedProposals = allProposals.slice(startIdx, endIdx);
 
           const response = {
-            proposals,
-            total: proposals.length, // For sandbox, we'll use actual length
+            proposals: paginatedProposals,
+            total: allProposals.length,
             page,
             page_size: pageSize,
           };
@@ -745,6 +804,52 @@ export async function interceptIndexerAPI(page, sandbox) {
         contentType: 'application/json',
         body: JSON.stringify({ error: error.message }),
       });
+    }
+  });
+}
+
+/**
+ * Intercept mainnet RPC calls and redirect to sandbox
+ * This ensures balance checks and other RPC calls go to sandbox instead of mainnet
+ */
+export async function interceptRPC(page, sandbox) {
+  const sandboxRpcUrl = sandbox.getRpcUrl();
+
+  await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
+    const request = route.request();
+    const postData = request.postDataJSON();
+
+    // Log RPC method calls for debugging
+    const method = postData?.params?.method_name || postData?.method || 'unknown';
+    if (method === 'get_last_proposal_id' || method.includes('proposal')) {
+      console.log(`RPC: ${method} for ${postData?.params?.account_id || 'unknown'}`);
+    }
+
+    try {
+      // Forward the request to sandbox RPC
+      const response = await fetch(sandboxRpcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const responseData = await response.json();
+
+      // Log response for proposal-related calls
+      if (method === 'get_last_proposal_id') {
+        console.log(`get_last_proposal_id response:`, responseData?.result);
+      }
+
+      await route.fulfill({
+        status: response.status,
+        contentType: 'application/json',
+        body: JSON.stringify(responseData),
+      });
+    } catch (error) {
+      console.error('Error intercepting RPC:', error);
+      await route.abort();
     }
   });
 }

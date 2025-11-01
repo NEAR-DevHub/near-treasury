@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import Big from "big.js";
 import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
+import { useNearWallet } from "@/context/NearWalletContext";
 import { Near } from "@/api/near";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import Modal from "@/components/ui/Modal";
@@ -28,6 +29,8 @@ const BulkImportPreviewTable = ({
     lastProposalId,
     refetchLastProposalId,
   } = useDao();
+
+  const { signAndSendTransactions, accountId } = useNearWallet();
 
   // Use proposals directly, memoized to prevent re-initialization
   const proposalList = useMemo(() => proposals, [proposals]);
@@ -200,13 +203,39 @@ const BulkImportPreviewTable = ({
     try {
       await Promise.all(proposalPromises);
       const calls = storageDepositOps.concat(proposalOps);
+
+      // Transform calls array to format expected by signAndSendTransactions
+      const transactions = calls.map(call => ({
+        receiverId: call.contractName,
+        signerId: accountId,
+        actions: [
+          {
+            type: "FunctionCall",
+            params: {
+              methodName: call.methodName,
+              args: call.args,
+            },
+            gas: call.gas,
+            deposit: call.deposit,
+          },
+        ],
+      }));
+
+      console.log("Submitting", transactions.length, "transactions to wallet");
       setIsCreatingRequest(false);
       setTxnCreated(true);
-      // TODO: Implement Near.call with wallet connector
-      console.log("Near.call", calls);
+
+      const result = await signAndSendTransactions({ transactions });
+
+      if (result && result.length > 0) {
+        console.log("Transactions completed successfully:", result.length);
+        // The useEffect polling will detect the new proposals and close the modal
+      }
     } catch (err) {
       console.error("Failed to process proposals:", err);
       setIsCreatingRequest(false);
+      setTxnCreated(false);
+      setToastStatus("ErrorAddingProposal");
     }
   }
 

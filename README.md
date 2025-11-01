@@ -59,6 +59,10 @@ This script:
 
 The video merger reads test titles from `test-title.txt` files (automatically created by the test utility), or falls back to using the test directory name.
 
+### SputnikDAO Indexer
+
+This project uses the [SputnikDAO Caching API Server](https://github.com/near-daos/sputnik-dao-caching-api-server) for indexing DAO proposals and data. The indexer source code provides insights into how proposal data is queried and filtered from the blockchain.
+
 ## Getting Started
 
 First, run the development server:
