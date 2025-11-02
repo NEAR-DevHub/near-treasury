@@ -39,6 +39,7 @@ jobs:
         run: npm run test:e2e -- --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
         env:
           CI: true
+          HOME: /root
           NEXT_PUBLIC_FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
 
       - name: Sanitize shard name
