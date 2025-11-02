@@ -398,35 +398,22 @@ test.describe("Base Payment Request Detail", () => {
     console.log("✓ Token amount (50) is visible");
 
     // Hard expectation: Network section should be displayed
-    await expect(page.getByText("Network")).toBeVisible({ timeout: 5000 });
+    const networkSection = page.locator("div.mt-3", {hasText: "Network"});
+    await expect(page.locator("div.mt-3", {hasText: "Network"})).toBeVisible({ timeout: 5000 });
     console.log("✓ Network section is visible");
 
-    // Hard expectation: Network name should display "Base"
-    // The backend should map eth:8453 to "Base" network
-    const networkLabel = page.locator('label:has-text("Network")');
-    const networkContainer = networkLabel.locator('..');
-    await expect(networkContainer).toBeVisible({ timeout: 10000 });
-
-    // Log what network name is actually displayed
-    const networkText = await networkContainer.textContent();
-    console.log(`Network section text: ${networkText}`);
-
-    // Check if it shows "Base" (the L2 network name)
-    // If the backend properly resolves eth:8453, it should show "Base"
-    // If not, it might show "eth" or "Ethereum" which would be incorrect for Layer 2
-    const networkNameElement = networkContainer.locator('span.text-capitalize, span:not(label)').filter({ hasText: /base|ethereum|eth/i }).first();
-    await expect(networkNameElement).toBeVisible({ timeout: 10000 });
-    const displayedNetwork = await networkNameElement.textContent();
-    console.log(`Displayed network name: ${displayedNetwork}`);
-
-    // Verify it's showing Base, not Ethereum
-    expect(displayedNetwork.toLowerCase()).toContain('base');
-    console.log("✓ Network correctly shows 'Base' (not 'Ethereum')");
+    await expect(networkSection.locator("span.text-capitalize")).toContainText("Base");
+    
+    await expect(await networkSection.locator("img").getAttribute("src")).toBe("https://near-intents.org/static/icons/network/base.svg");
+    
+    // Verify it's showing Base, not Ethereum or eth:8453    
+    console.log("✓ Network correctly shows 'Base' (Layer 2 network name)");
 
     // Hard expectation: Estimated Fee should be displayed
     await expect(page.getByText("Estimated Fee").first()).toBeVisible();
     console.log("✓ Estimated Fee is visible");
 
+    await page.waitForTimeout(1000);
     console.log("\n✓ Base payment request detail page displays correctly with Layer 2 network info");
   });
 });

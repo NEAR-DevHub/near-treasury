@@ -6,7 +6,7 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
-import { fetchBlockchainByNetwork } from "@/api/backend";
+import { fetchBlockchainByNetwork, fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -244,32 +244,37 @@ const ProposalDetailsPage = ({
               symbol: intentsToken.asset_name || intentsToken.symbol,
             }));
 
-            // Fetch blockchain name and icon using the blockchain identifier
-            // Extract just the network name (e.g., "eth" from "eth:1")
-            if (blockchain) {
+            // Fetch blockchain name and icon using the intents_token_id
+            // The backend API needs the chainName (e.g., "base", "arbitrum"), not the chain ID format
+            if (intentsToken.intents_token_id) {
               try {
-                const networkName = blockchain.split(":")[0];
-                console.log(`Fetching blockchain metadata for: ${networkName}`);
-                const networkResults = await fetchBlockchainByNetwork(
-                  [networkName],
-                  "light" // TODO: Use theme context when available
+                const tokenMetadata = await fetchTokenMetadataByDefuseAssetId(
+                  intentsToken.intents_token_id
                 );
-                console.log("Blockchain metadata result:", networkResults);
-                const networkData = Array.isArray(networkResults)
-                  ? networkResults[0]
-                  : networkResults;
 
-                if (networkData && networkData.error) {
-                  console.error("Backend API error:", networkData.error);
-                } else if (networkData && networkData.name) {
-                  console.log(`Setting network name to: ${networkData.name}`);
-                  setNetworkInfo((prev) => ({
-                    ...prev,
-                    name: networkData.name,
-                    blockchainIcon: networkData.icon,
-                  }));
-                } else {
-                  console.log("No network data or name found", networkData);
+                // tokenMetadata is an array, get the first result
+                const metadata = Array.isArray(tokenMetadata) && tokenMetadata.length > 0
+                  ? tokenMetadata[0]
+                  : tokenMetadata;
+
+                if (metadata && metadata.chainName) {
+                  const networkResults = await fetchBlockchainByNetwork(
+                    [metadata.chainName],
+                    "light" // TODO: Use theme context when available
+                  );
+                  const networkData = Array.isArray(networkResults)
+                    ? networkResults[0]
+                    : networkResults;
+
+                  if (networkData && networkData.error) {
+                    console.error("Backend API error:", networkData.error);
+                  } else if (networkData && networkData.name) {
+                    setNetworkInfo((prev) => ({
+                      ...prev,
+                      name: networkData.name,
+                      blockchainIcon: networkData.icon,
+                    }));
+                  }
                 }
               } catch (error) {
                 console.error("Failed to fetch blockchain metadata:", error);
