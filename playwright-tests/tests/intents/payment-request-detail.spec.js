@@ -15,6 +15,8 @@ import { test, expect } from "@playwright/test";
 
 const DAO_ID = "webassemblymusic-treasury.sputnik-dao.near";
 
+test.describe.configure({ mode: 'serial' });
+
 test.describe("Payment Request Detail Page", () => {
   test("displays Intents payment request for ETH with all details", async ({ page }) => {
     // Navigate to an Intents payment for ETH (cross-chain to Ethereum)
@@ -49,12 +51,19 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("Estimated Fee").first()).toBeVisible();
     console.log("✓ Estimated Fee is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible - sometimes slow to load
-    // await expect(page.getByText("Transaction Links").first()).toBeVisible({ timeout: 10000 });
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
-    // await expect(page.getByText("View transfer on etherscan.io")).toBeVisible({ timeout: 10000 });
+    // Hard expectation: Transaction Links section should be displayed
+    await expect(page.getByText("Transaction Links").first()).toBeVisible({ timeout: 10000 });
+    console.log("✓ Transaction Links section is visible");
 
-    console.log("✓ Intents payment request for ETH displays basic details correctly");
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
+
+    // Hard expectation: Etherscan link should be visible for ETH payments
+    await expect(page.getByText("View transfer on etherscan.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ etherscan.io link is visible");
+
+    console.log("✓ Intents payment request for ETH displays all details correctly");
   });
 
   test("displays Intents payment request for wNEAR (NEAR-to-NEAR)", async ({ page }) => {
@@ -97,15 +106,18 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("Payment Request Funded")).toBeVisible();
     console.log("✓ Payment Request Funded status is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible
-    // Related to same data fetching issue - transactionInfo.nearTxHash not always populated
-    //
-    // await expect(page.getByText("Transaction Links")).toBeVisible();
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
-    //
-    // For NEAR-to-NEAR, external chain links should not appear:
-    // const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
-    // await expect(externalChainLink).not.toBeVisible();
+    // Hard expectation: Transaction Links section should be displayed
+    await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 10000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
+
+    // For NEAR-to-NEAR, external chain links should not appear
+    const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
+    await expect(externalChainLink).not.toBeVisible();
+    console.log("✓ No external chain links (as expected for NEAR-to-NEAR)");
 
     console.log("✓ Intents payment request for wNEAR displays all details correctly");
   });
@@ -134,15 +146,18 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("Payment Request Funded")).toBeVisible();
     console.log("✓ Payment Request Funded status is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible
-    // Related to same data fetching issue - transactionInfo.nearTxHash not always populated
-    //
-    // await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 15000 });
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
-    //
-    // For regular payments, external chain links should not appear:
-    // const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
-    // await expect(externalChainLink).not.toBeVisible();
+    // Hard expectation: Transaction Links section should be displayed
+    await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 15000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
+
+    // For regular payments, external chain links should not appear
+    const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
+    await expect(externalChainLink).not.toBeVisible();
+    console.log("✓ No external chain links (as expected for regular NEAR payments)");
 
     console.log("✓ Regular payment request displays all details correctly");
   });
@@ -159,16 +174,13 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("Payment Request Failed")).toBeVisible({ timeout: 15000 });
     console.log("✓ Payment Request Failed status is visible");
 
-    // TODO(#23): Transaction Links may not be visible for failed payments
-    // This might be expected behavior or a bug - needs investigation
-    // The code shows Transaction Links should appear when:
-    // - status is "Approved" OR "Failed"
-    // - AND transactionInfo.nearTxHash exists
-    // If transactionInfo.nearTxHash is not populated, links won't show
-    //
-    // For now, we just verify the failed status is shown correctly
-    // await expect(page.getByText("Transaction Links")).toBeVisible();
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
+    // Hard expectation: Transaction Links section should be displayed for failed payments
+    await expect(page.getByText('Transaction Links', { exact: true })).toBeVisible({ timeout: 10000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
 
     console.log("✓ Failed payment request displays transaction links correctly");
   });
