@@ -5,6 +5,7 @@ import {
   interceptIndexerAPI,
   parseNEAR,
 } from "../../util/sandbox.js";
+import { KeyPair } from "near-api-js";
 
 /**
  * Asset Exchange Request Creation Tests
@@ -25,6 +26,8 @@ let intentsContractId;
 let omftContractId;
 let creatorAccountId;
 let daoAccountId;
+let testDepositKeyPair;
+let testDepositAddress;
 
 test.describe("Create Asset Exchange Request (1Click)", () => {
   test.beforeAll(async () => {
@@ -278,6 +281,26 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
     console.log(`✓ Treasury ETH balance: ${ethBalance} (5 ETH)`);
     expect(ethBalance).toBe("5000000000000000000");
 
+    // Setup deposit address for 1Click
+    console.log("\n=== Setting up 1Click deposit address ===\n");
+    testDepositKeyPair = KeyPair.fromRandom("ed25519");
+    testDepositAddress = Buffer.from(
+      testDepositKeyPair.publicKey.data
+    ).toString("hex");
+
+    // Register the public key with intents contract so mt_transfer can work
+    await sandbox.functionCall(
+      creatorAccountId, // signerId (caller)
+      intentsContractId, // receiverId (contract to call)
+      "add_public_key", // methodName
+      {
+        public_key: testDepositKeyPair.publicKey.toString(),
+      }, // args
+      "30000000000000", // gas
+      "1" // deposit (1 yoctoNEAR)
+    );
+    console.log(`✓ Registered deposit address public key: ${testDepositAddress.substring(0, 20)}...`);
+
     console.log("\n=== Sandbox Setup Complete ===\n");
   });
 
@@ -319,7 +342,33 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
         const responseBody = await response.text();
         console.log(`[RPC Route] Response status: ${response.status()}`);
-        console.log(`[RPC Route] Response preview: ${responseBody}`);
+
+        // Log detailed info for transaction broadcasts
+        if (postData.method === "broadcast_tx_commit" || postData.method === "EXPERIMENTAL_broadcast_tx_commit") {
+          try {
+            const result = JSON.parse(responseBody);
+            if (result.result) {
+              console.log(`[TX] Transaction status:`, result.result.status);
+              if (result.result.status.Failure) {
+                console.log(`[TX] Transaction FAILED:`, JSON.stringify(result.result.status.Failure, null, 2));
+              }
+              if (result.result.receipts_outcome) {
+                result.result.receipts_outcome.forEach((receipt, i) => {
+                  if (receipt.outcome.logs && receipt.outcome.logs.length > 0) {
+                    console.log(`[TX] Receipt ${i} logs:`, receipt.outcome.logs);
+                  }
+                  if (receipt.outcome.status.Failure) {
+                    console.log(`[TX] Receipt ${i} FAILED:`, JSON.stringify(receipt.outcome.status.Failure, null, 2));
+                  }
+                });
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+
+        console.log(`[RPC Route] Response preview: ${responseBody.substring(0, 500)}`);
 
         await route.fulfill({
           status: response.status(),
@@ -352,7 +401,7 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
               amountOut: "450000000", // 450 USDC
               amountInFormatted: "0.15",
               amountOutFormatted: "450.00",
-              depositAddress: "test-deposit-address-123",
+              depositAddress: testDepositAddress,
               deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
               timeEstimate: 10,
               signature: "ed25519:mock-signature-12345",
@@ -378,13 +427,13 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
             tokenInSymbol: requestBody.inputToken.symbol,
             tokenOut: requestBody.outputToken.symbol,
             networkOut: requestBody.networkOut,
-            amountIn: "0.15",
+            amountIn: "0.15", // Backend returns formatted amount (legacy behavior)
             quote: {
               amountIn: "150000000000000000",
               amountOut: "450000000",
               amountInFormatted: "0.15",
               amountOutFormatted: "450.00",
-              depositAddress: "test-deposit-address-123",
+              depositAddress: testDepositAddress,
               deadline: new Date(
                 Date.now() + 7 * 24 * 60 * 60 * 1000
               ).toISOString(),
@@ -556,6 +605,93 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
     await expect(page.getByText("ETH").first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("USDC").first()).toBeVisible({ timeout: 10000 });
     console.log("✓ Proposal appears in Pending Requests table with ETH → USDC");
+
+    // Step 22: Approve the proposal
+    console.log("\n=== Approving Proposal ===\n");
+
+    // Find and click the proposal row to expand it
+    const proposalRow = page
+      .locator("tr")
+      .filter({ hasText: "ETH" })
+      .filter({ hasText: "USDC" })
+      .first();
+    await expect(proposalRow).toBeVisible({ timeout: 10000 });
+    await proposalRow.click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Clicked proposal row to expand details");
+
+    // Click Approve button (use .first() to avoid strict mode violation)
+    const approveButton = page.getByRole("button", { name: "Approve" }).first();
+    await expect(approveButton).toBeVisible({ timeout: 10000 });
+    await approveButton.click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Clicked Approve button");
+
+    // Handle "Insufficient Balance" warning modal
+    // The UI checks if the wallet has enough tokens, but tokens are in the intents contract
+    const proceedAnywayButton = page.getByRole("button", { name: "Proceed Anyway" });
+    if (await proceedAnywayButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await proceedAnywayButton.click();
+      await page.waitForTimeout(1000);
+      console.log("✓ Clicked 'Proceed Anyway' to bypass balance warning");
+    }
+
+    // Confirm the transaction
+    const confirmButton = page.getByRole("button", { name: "Confirm" });
+    await expect(confirmButton).toBeVisible({ timeout: 10000 });
+    await confirmButton.click();
+    await page.waitForTimeout(2000);
+    console.log("✓ Confirmed approval transaction");
+
+    // Wait for execution result - either success or failure notification
+    await expect(
+      page.getByText(/request (has been|is) (successfully executed|failed)|vote.*counted/i)
+    ).toBeVisible({ timeout: 30000 });
+    console.log("✓ Proposal approval transaction completed");
+
+    // Check the proposal status - should now succeed with registered deposit address
+    const proposal = await sandbox.viewFunction(
+      daoAccountId,
+      "get_proposal",
+      { id: 0 }
+    );
+    console.log("Proposal status:", proposal.status);
+
+    if (proposal.status === "Failed") {
+      console.log("Proposal action:", JSON.stringify(proposal.kind, null, 2));
+      throw new Error("Proposal execution failed unexpectedly!");
+    }
+
+    // Verify the proposal executed successfully
+    expect(proposal.status).toBe("Approved");
+    console.log("✓ Proposal executed successfully");
+
+    // Verify the mt_transfer succeeded by checking deposit address balance
+    const depositBalance = await sandbox.viewFunction(
+      intentsContractId,
+      "mt_balance_of",
+      {
+        account_id: testDepositAddress,
+        token_id: "nep141:eth.omft.near",
+      }
+    );
+    console.log(`✓ Deposit address ETH balance: ${depositBalance} (0.15 ETH transferred)`);
+    expect(depositBalance).toBe("150000000000000000");
+
+    // Verify ETH balance decreased in DAO account
+    console.log("\n=== Verifying Balance Changes ===\n");
+    const ethBalanceAfter = await sandbox.viewFunction(
+      intentsContractId,
+      "mt_balance_of",
+      {
+        account_id: daoAccountId,
+        token_id: "nep141:eth.omft.near",
+      }
+    );
+    console.log(`DAO ETH balance after execution: ${ethBalanceAfter}`);
+    // Should be 5 ETH - 0.15 ETH = 4.85 ETH
+    expect(ethBalanceAfter).toBe("4850000000000000000");
+    console.log("✓ DAO ETH balance decreased correctly by 0.15 ETH");
 
     console.log("\n=== Test Complete ===\n");
   });
