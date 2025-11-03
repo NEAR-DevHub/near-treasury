@@ -175,7 +175,7 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
     // Create a DAO
     const daoName = "testdao";
-    await sandbox.functionCall(
+    const createDaoResult = await sandbox.functionCall(
       creatorAccountId,
       factoryContractId,
       "create",
@@ -235,7 +235,7 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
               bounty_forgiveness_period: "604800000000000",
             },
           })
-        ),
+        ).toString("base64"),
       },
       "300000000000000",
       await parseNEAR("6")
@@ -243,25 +243,6 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
     daoAccountId = `${daoName}.${factoryContractId}`;
     console.log(`✓ DAO created: ${daoAccountId}`);
-
-    // Wait for DAO account to be queryable (the factory creates it via receipt)
-    // Retry up to 10 times with 500ms delay between attempts
-    console.log("⏳ Waiting for DAO account to be created via receipt...");
-    let daoAccountInfo;
-    for (let i = 0; i < 10; i++) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      try {
-        daoAccountInfo = await sandbox.viewAccount(daoAccountId);
-        console.log(`✓ DAO account verified after ${(i + 1) * 500}ms - Balance: ${daoAccountInfo.amount}`);
-        break;
-      } catch (error) {
-        if (i === 9) {
-          console.error(`❌ Failed to query DAO account after ${10 * 500}ms: ${error.message}`);
-          throw error;
-        }
-        console.log(`  Attempt ${i + 1}/10: Account not yet available, retrying...`);
-      }
-    }
 
     // Deposit ETH tokens to treasury via intents
     console.log("\n=== Depositing ETH to Treasury ===\n");
@@ -338,7 +319,7 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
         const responseBody = await response.text();
         console.log(`[RPC Route] Response status: ${response.status()}`);
-        console.log(`[RPC Route] Response preview: ${responseBody.substring(0, 200)}`);
+        console.log(`[RPC Route] Response preview: ${responseBody}`);
 
         await route.fulfill({
           status: response.status(),
