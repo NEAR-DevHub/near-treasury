@@ -55,3 +55,6 @@ freeze_frames
 processed_videos
 final_output.mp4
 file_list.txt
+
+# Test output logs
+*.log
