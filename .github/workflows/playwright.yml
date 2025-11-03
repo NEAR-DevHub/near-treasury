@@ -11,6 +11,8 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
 
     strategy:
       fail-fast: false
@@ -33,13 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps ${{ matrix.browser }}
-
       - name: Run Playwright tests on ${{ matrix.browser }} (shard ${{ matrix.shard }})
         run: npm run test:e2e -- --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
         env:
           CI: true
+          HOME: /root
           NEXT_PUBLIC_FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
 
       - name: Sanitize shard name

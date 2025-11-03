@@ -15,6 +15,8 @@ import { test, expect } from "@playwright/test";
 
 const DAO_ID = "webassemblymusic-treasury.sputnik-dao.near";
 
+test.describe.configure({ mode: 'serial' });
+
 test.describe("Payment Request Detail Page", () => {
   test("displays Intents payment request for ETH with all details", async ({ page }) => {
     // Navigate to an Intents payment for ETH (cross-chain to Ethereum)
@@ -37,29 +39,31 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("0.005")).toBeVisible();
     console.log("✓ Token amount (0.005) is visible");
 
-    // TODO(#23): Network and Estimated Fee information not displaying
-    // These checks are skipped until issue #23 is resolved
-    // The legacy app shows this information but it's missing in the new app
-    //
-    // await expect(page.getByText("Network")).toBeVisible();
-    // await expect(page.getByText("Ethereum", { exact: false })).toBeVisible();
-    // await expect(page.getByText("Estimated Fee")).toBeVisible();
+    // Hard expectation: Network section should be displayed
+    await expect(page.getByText("Network")).toBeVisible({ timeout: 5000 });
+    console.log("✓ Network section is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible
-    // Related to same data fetching issue - transactionInfo.nearTxHash not always populated
-    // Sometimes appears, sometimes doesn't (race condition or data loading issue)
-    //
-    // await expect(page.getByText("Transaction Links")).toBeVisible();
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
+    // Hard expectation: Network name should display as "Ethereum"
+    await expect(page.getByText("Ethereum", { exact: false })).toBeVisible({ timeout: 10000 });
+    console.log("✓ Network name (Ethereum) is visible");
 
-    // TODO(#23): Target chain transaction links (Etherscan) not displaying
-    // This is part of the same issue as Network/Estimated Fee information
-    // The legacy app shows these links but they're missing in the new app
-    // await expect(
-    //   page.locator('a[href*="etherscan.io/tx/0x8f52efccdccc3bddc82abc15e259b3d1671959a9694f09d20276892a5863e8d6"]')
-    // ).toBeVisible();
+    // Hard expectation: Estimated Fee should be displayed
+    await expect(page.getByText("Estimated Fee").first()).toBeVisible();
+    console.log("✓ Estimated Fee is visible");
 
-    console.log("✓ Intents payment request for ETH displays basic details correctly");
+    // Hard expectation: Transaction Links section should be displayed
+    await expect(page.getByText("Transaction Links").first()).toBeVisible({ timeout: 10000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
+
+    // Hard expectation: Etherscan link should be visible for ETH payments
+    await expect(page.getByText("View transfer on etherscan.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ etherscan.io link is visible");
+
+    console.log("✓ Intents payment request for ETH displays all details correctly");
   });
 
   test("displays Intents payment request for wNEAR (NEAR-to-NEAR)", async ({ page }) => {
@@ -87,23 +91,33 @@ test.describe("Payment Request Detail Page", () => {
     await expect(avatar.first()).toBeVisible({ timeout: 5000 });
     console.log("✓ Recipient avatar is visible");
 
-    // TODO(#23): Network information not displaying for NEAR-to-NEAR payments
-    // await expect(page.getByText("Network")).toBeVisible();
-    // await expect(page.getByText("Near Protocol", { exact: false })).toBeVisible();
+    // Hard expectation: Network section should be displayed for NEAR-to-NEAR payments
+    await expect(page.getByText("Network")).toBeVisible({ timeout: 5000 });
+    console.log("✓ Network section is visible");
+
+    // Hard expectation: Network name should display (use locator to be more specific)
+    const networkLabel = page.locator('label:has-text("Network")');
+    const networkValue = networkLabel.locator('..').locator('span.text-capitalize');
+    await expect(networkValue).toBeVisible({ timeout: 10000 });
+    await expect(networkValue).toContainText("Near");
+    console.log("✓ Network name is visible");
 
     // Hard expectation: Payment Request Funded status should be visible
     await expect(page.getByText("Payment Request Funded")).toBeVisible();
     console.log("✓ Payment Request Funded status is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible
-    // Related to same data fetching issue - transactionInfo.nearTxHash not always populated
-    //
-    // await expect(page.getByText("Transaction Links")).toBeVisible();
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
-    //
-    // For NEAR-to-NEAR, external chain links should not appear:
-    // const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
-    // await expect(externalChainLink).not.toBeVisible();
+    // Hard expectation: Transaction Links section should be displayed
+    await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 10000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
+
+    // For NEAR-to-NEAR, external chain links should not appear
+    const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
+    await expect(externalChainLink).not.toBeVisible();
+    console.log("✓ No external chain links (as expected for NEAR-to-NEAR)");
 
     console.log("✓ Intents payment request for wNEAR displays all details correctly");
   });
@@ -132,15 +146,18 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("Payment Request Funded")).toBeVisible();
     console.log("✓ Payment Request Funded status is visible");
 
-    // TODO(#23): Transaction Links section inconsistently visible
-    // Related to same data fetching issue - transactionInfo.nearTxHash not always populated
-    //
-    // await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 15000 });
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
-    //
-    // For regular payments, external chain links should not appear:
-    // const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
-    // await expect(externalChainLink).not.toBeVisible();
+    // Hard expectation: Transaction Links section should be displayed
+    await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 15000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
+
+    // For regular payments, external chain links should not appear
+    const externalChainLink = page.getByText(/View.*on (etherscan|polygonscan|bscscan)/i);
+    await expect(externalChainLink).not.toBeVisible();
+    console.log("✓ No external chain links (as expected for regular NEAR payments)");
 
     console.log("✓ Regular payment request displays all details correctly");
   });
@@ -157,16 +174,13 @@ test.describe("Payment Request Detail Page", () => {
     await expect(page.getByText("Payment Request Failed")).toBeVisible({ timeout: 15000 });
     console.log("✓ Payment Request Failed status is visible");
 
-    // TODO(#23): Transaction Links may not be visible for failed payments
-    // This might be expected behavior or a bug - needs investigation
-    // The code shows Transaction Links should appear when:
-    // - status is "Approved" OR "Failed"
-    // - AND transactionInfo.nearTxHash exists
-    // If transactionInfo.nearTxHash is not populated, links won't show
-    //
-    // For now, we just verify the failed status is shown correctly
-    // await expect(page.getByText("Transaction Links")).toBeVisible();
-    // await expect(page.getByText("View execution on nearblocks.io")).toBeVisible();
+    // Hard expectation: Transaction Links section should be displayed for failed payments
+    await expect(page.getByText('Transaction Links', { exact: true })).toBeVisible({ timeout: 10000 });
+    console.log("✓ Transaction Links section is visible");
+
+    // Hard expectation: NEAR transaction link should be visible
+    await expect(page.getByText("View execution on nearblocks.io")).toBeVisible({ timeout: 10000 });
+    console.log("✓ nearblocks.io link is visible");
 
     console.log("✓ Failed payment request displays transaction links correctly");
   });

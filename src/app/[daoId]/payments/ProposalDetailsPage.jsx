@@ -6,7 +6,7 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
-import { fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
+import { fetchBlockchainByNetwork, fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -214,8 +214,22 @@ const ProposalDetailsPage = ({
         const address = proposalData.intentsTokenInfo.tokenContract;
 
         try {
-          const data = await fetchTokenMetadataByDefuseAssetId(address);
-          const intentsToken = Array.isArray(data) ? data[0] : data;
+          // Call bridge RPC directly to get complete token metadata including withdrawal_fee
+          const response = await fetch("https://bridge.chaindefuser.com/rpc", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "supportedTokensFetchAll",
+              jsonrpc: "2.0",
+              method: "supported_tokens",
+              params: [{}],
+            }),
+          });
+
+          const bridgeData = await response.json();
+          const intentsToken = bridgeData.result?.tokens?.find(
+            (token) => token.near_token_id === address
+          );
 
           if (intentsToken) {
             const defuse_asset_identifier_parts =
@@ -229,6 +243,43 @@ const ProposalDetailsPage = ({
               blockchain,
               symbol: intentsToken.asset_name || intentsToken.symbol,
             }));
+
+            // Fetch blockchain name and icon using the intents_token_id
+            // The backend API needs the chainName (e.g., "base", "arbitrum"), not the chain ID format
+            if (intentsToken.intents_token_id) {
+              try {
+                const tokenMetadata = await fetchTokenMetadataByDefuseAssetId(
+                  intentsToken.intents_token_id
+                );
+
+                // tokenMetadata is an array, get the first result
+                const metadata = Array.isArray(tokenMetadata) && tokenMetadata.length > 0
+                  ? tokenMetadata[0]
+                  : tokenMetadata;
+
+                if (metadata && metadata.chainName) {
+                  const networkResults = await fetchBlockchainByNetwork(
+                    [metadata.chainName],
+                    "light" // TODO: Use theme context when available
+                  );
+                  const networkData = Array.isArray(networkResults)
+                    ? networkResults[0]
+                    : networkResults;
+
+                  if (networkData && networkData.error) {
+                    console.error("Backend API error:", networkData.error);
+                  } else if (networkData && networkData.name) {
+                    setNetworkInfo((prev) => ({
+                      ...prev,
+                      name: networkData.name,
+                      blockchainIcon: networkData.icon,
+                    }));
+                  }
+                }
+              } catch (error) {
+                console.error("Failed to fetch blockchain metadata:", error);
+              }
+            }
 
             // Extract withdrawal fee information
             if (intentsToken.withdrawal_fee && intentsToken.decimals) {
