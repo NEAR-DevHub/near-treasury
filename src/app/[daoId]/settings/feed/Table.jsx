@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
-import { Near } from "@/api/near";
 import { LOCAL_STORAGE_KEYS } from "@/constants/localStorage";
 import {
   decodeProposalDescription,
@@ -23,20 +21,15 @@ const SettingsFeedTable = ({
   proposals,
   loading,
   isPendingRequests,
-  highlightProposalId,
   selectedProposalDetailsId,
   onSelectRequest,
-  setToastStatus,
-  setVoteProposalId,
-  refreshTableData,
   handleSortClick,
   sortDirection,
   settingsApproverGroup,
   deleteGroup,
 }) => {
-  const router = useRouter();
   const { accountId } = useNearWallet();
-  const { daoId: treasuryDaoID, daoPolicy } = useDao();
+  const { daoPolicy } = useDao();
 
   const [columnsVisibility, setColumnsVisibility] = useState([]);
 
@@ -78,38 +71,11 @@ const SettingsFeedTable = ({
     };
   }, []);
 
-  function updateVoteSuccess(status, proposalId) {
-    setToastStatus(status);
-    setVoteProposalId(proposalId);
-    onSelectRequest(null);
-    refreshTableData();
-  }
-
-  function checkProposalStatus(proposalId) {
-    Near.view(treasuryDaoID, "get_proposal", {
-      id: proposalId,
-    })
-      .then((result) => {
-        updateVoteSuccess(result.status, proposalId);
-      })
-      .catch(() => {
-        // deleted request (thus proposal won't exist)
-        updateVoteSuccess("Removed", proposalId);
-      });
-  }
-
   function isVisible(column) {
     return columnsVisibility.find((i) => i.title === column)?.show !== false
       ? ""
       : "d-none";
   }
-
-  const highlightId =
-    highlightProposalId ||
-    highlightProposalId === "0" ||
-    highlightProposalId === 0
-      ? parseInt(highlightProposalId)
-      : null;
 
   const requiredVotes = settingsApproverGroup?.requiredVotes;
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
@@ -139,9 +105,7 @@ const SettingsFeedTable = ({
               }}
               key={index}
               className={`cursor-pointer proposal-row ${
-                highlightId === item.id || selectedProposalDetailsId === item.id
-                  ? "bg-highlight"
-                  : ""
+                selectedProposalDetailsId === item.id ? "bg-highlight" : ""
               }`}
             >
               <td className="fw-semi-bold">{item.id}</td>
@@ -230,7 +194,7 @@ const SettingsFeedTable = ({
                       hasDeletePermission={hasDeletePermission}
                       avoidCheckForBalance={true}
                       requiredVotes={requiredVotes}
-                      checkProposalStatus={() => checkProposalStatus(item.id)}
+                      context="settings"
                       hasOneDeleteIcon={hasOneDeleteIcon}
                       proposal={item}
                     />

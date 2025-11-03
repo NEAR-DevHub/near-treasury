@@ -228,13 +228,13 @@ const Chart = ({
                     backgroundColor:
                       periodMap[selectedPeriod].value === value &&
                       periodMap[selectedPeriod].interval === interval
-                        ? "var(--theme-color)"
+                        ? "var(--grey-05)"
                         : "transparent",
                     color:
                       periodMap[selectedPeriod].value === value &&
                       periodMap[selectedPeriod].interval === interval
-                        ? "white"
-                        : "var(--text-color)",
+                        ? "var(--text-color)"
+                        : "var(--text-secondary-color)",
                     border: "1px solid var(--border-color)",
                     padding: "4px 12px",
                     borderRadius: "8px",
@@ -402,7 +402,7 @@ const Chart = ({
                 },
               },
               animation: {
-                duration: 300,
+                duration: 0,
               },
             }}
           />

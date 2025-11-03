@@ -13,7 +13,6 @@ import AccountInput from "@/components/forms/AccountInput";
 import OtherChainAccountInput from "@/components/forms/OtherChainAccountInput";
 import Tooltip from "@/components/ui/Tooltip";
 import { useDao } from "@/context/DaoContext";
-import { useProposals } from "@/hooks/useProposals";
 import { Near } from "@/api/near";
 import {
   getNearPrice,
@@ -23,6 +22,7 @@ import {
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { parseString } from "@/helpers/formatters";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 
 const tokenMapping = {
   NEAR: "NEAR",
@@ -32,10 +32,9 @@ const tokenMapping = {
 
 const CreatePaymentRequest = ({
   onCloseCanvas = () => {},
-  setVoteProposalId,
-  setToastStatus,
   setIsBulkImport,
 }) => {
+  const { showToast } = useProposalToastContext();
   const {
     daoId: treasuryDaoID,
     lockupContract,
@@ -156,19 +155,6 @@ const CreatePaymentRequest = ({
       const proposals = (result || []).slice(0, 10);
       setProposalData(proposals);
     });
-  }
-
-  const { invalidateCategoryAfterTransaction } = useProposals({
-    daoId: treasuryDaoID,
-    category: "payments",
-    enabled: false,
-  });
-
-  async function refreshData() {
-    // Invalidate proposals cache with delay for indexer processing
-    await invalidateCategoryAfterTransaction();
-    if (setVoteProposalId) setVoteProposalId(lastProposalId);
-    if (setToastStatus) setToastStatus("ProposalAdded");
   }
 
   function cleanInputs() {
@@ -425,16 +411,14 @@ const CreatePaymentRequest = ({
       console.log("Payment request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
-          cleanInputs();
-          refreshData();
-          setTxnCreated(false);
-          onCloseCanvas();
-        });
+        cleanInputs();
+        showToast("ProposalAdded", null, "payment");
+        setTxnCreated(false);
+        onCloseCanvas();
       }
     } catch (error) {
       console.error("Payment request error:", error);
-      setToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "payment");
       setTxnCreated(false);
     }
   };

@@ -19,7 +19,6 @@ const Table = ({
   proposals,
   loading,
   isPendingRequests,
-  highlightProposalId,
   selectedProposalDetailsId,
   onSelectRequest,
   handleSortClick,
@@ -88,10 +87,7 @@ const Table = ({
               key={index}
               className={
                 "cursor-pointer proposal-row " +
-                (highlightProposalId === item.id ||
-                selectedProposalDetailsId === item.id
-                  ? "bg-highlight"
-                  : "")
+                (selectedProposalDetailsId === item.id ? "bg-highlight" : "")
               }
             >
               <td className="fw-semi-bold px-3">{item.id}</td>

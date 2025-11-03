@@ -9,13 +9,13 @@ import TokenAmount from "@/components/proposals/TokenAmount";
 import Tooltip from "@/components/ui/Tooltip";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { Near } from "@/api/near";
 import Big from "big.js";
 
 const VoteActions = ({
   votes = {},
   proposalId,
-  checkProposalStatus,
   currentAmount = "0",
   currentContract = "",
   avoidCheckForBalance = false,
@@ -32,6 +32,7 @@ const VoteActions = ({
   proposal,
   isQuoteExpired = false,
   quoteDeadline,
+  context = "request", // Default context for toast messages
 }) => {
   const { accountId, signAndSendTransactions } = useNearWallet();
   const {
@@ -45,6 +46,7 @@ const VoteActions = ({
     refetchIntentsBalances,
     refetchDaoConfig,
   } = useDao();
+  const { showToast } = useProposalToastContext();
 
   const alreadyVoted = Object.keys(votes).includes(accountId);
   const userVote = votes[accountId];
@@ -181,8 +183,20 @@ const VoteActions = ({
       ) {
         // Delay cache invalidation to give the indexer time to process the transaction
         // This prevents a race condition where the refetch happens before indexing completes
-        setTimeout(() => {
-          checkProposalStatus?.();
+        setTimeout(async () => {
+          try {
+            const proposalResult = await Near.view(
+              treasuryDaoID,
+              "get_proposal",
+              {
+                id: proposalId,
+              }
+            );
+            showToast(proposalResult.status, proposalId, context);
+          } catch {
+            // deleted request (thus proposal won't exist)
+            showToast("Removed", proposalId, context);
+          }
         }, 2000); // 2 second delay to allow indexer to process
 
         setTxnCreated(false);
@@ -194,6 +208,7 @@ const VoteActions = ({
       }
     } catch (error) {
       console.error("Error acting on proposal:", error);
+      showToast("ErrorVoting", proposalId, context);
       setTxnCreated(false);
     }
   };
@@ -328,39 +343,10 @@ const VoteActions = ({
       ) : (
         <div className={containerClass}>
           {isQuoteExpired ? (
-            // Check if we're in table view (hasOneDeleteIcon is only passed from table)
-            hasOneDeleteIcon !== undefined ? (
-              // Compact version for table view
-              <div className="d-flex align-items-center gap-2">
-                <Tooltip
-                  tooltip={
-                    <div>
-                      Voting is not available due to expired swap quote. The
-                      1Click API quote for this request expired on{" "}
-                      {`${quoteDeadline.toLocaleString("en-US", {
-                        month: "short",
-                        day: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                        timeZone: "UTC",
-                      })} UTC`}
-                      . Executing the swap at an outdated rate could result in
-                      loss of funds.
-                    </div>
-                  }
-                >
-                  <span className="text-secondary">
-                    <i className="bi bi-info-circle"></i> Voting not available
-                    due to expired swap quote
-                  </span>
-                </Tooltip>
-              </div>
-            ) : (
-              // Full version for details page
-              <div className="d-flex align-items-center gap-2 w-100">
-                <div className="d-flex align-items-center gap-2 text-secondary flex-grow-1">
+            <div>
+              {/* Check if we're in table view (hasOneDeleteIcon is only passed from table) */}
+              {isProposalDetailsPage ? (
+                <div className="d-flex align-items-center gap-3 text-secondary flex-grow-1">
                   <i className="bi bi-info-circle"></i>
                   <span>
                     Voting is not available due to expired swap quote. The
@@ -390,8 +376,34 @@ const VoteActions = ({
                     </Tooltip>
                   </span>
                 </div>
-              </div>
-            )
+              ) : (
+                // Compact version for table view
+                <Tooltip
+                  tooltip={
+                    <div>
+                      Voting is not available due to expired swap quote. The
+                      1Click API quote for this request expired on{" "}
+                      {`${quoteDeadline.toLocaleString("en-US", {
+                        month: "short",
+                        day: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: "UTC",
+                      })} UTC`}
+                      . Executing the swap at an outdated rate could result in
+                      loss of funds.
+                    </div>
+                  }
+                >
+                  <span className="text-secondary">
+                    <i className="bi bi-info-circle"></i> Voting not available
+                    due to expired swap quote
+                  </span>
+                </Tooltip>
+              )}
+            </div>
           ) : !isReadyToBeWithdrawn ? (
             <div className="text-center fw-bold">
               Voting is not available before unstaking release{" "}
@@ -463,7 +475,7 @@ const VoteActions = ({
                   <div data-testid="delete-btn" disabled={isTxnCreated}>
                     <i
                       className="bi bi-trash text-red mb-0"
-                      style={{ fontSize: "1.2rem" }}
+                      style={{ fontSize: "1.3rem" }}
                     ></i>
                   </div>
                 )}
@@ -479,7 +491,7 @@ const VoteActions = ({
               />
             </div>
           ) : hasOneDeleteIcon ? (
-            <div style={{ minWidth: 36 }}></div>
+            <div style={{ minWidth: 20 }}></div>
           ) : null}
         </div>
       )}

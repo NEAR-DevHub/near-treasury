@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { getProposalsFromIndexer } from "@/api/indexer";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import Modal from "@/components/ui/Modal";
@@ -15,14 +15,7 @@ import WarningTable from "./WarningTable";
 import { logger } from "@/helpers/logger";
 
 const VotingDurationPage = () => {
-  const router = useRouter();
-  const {
-    daoId: treasuryDaoID,
-    hasPermission,
-    daoPolicy,
-    lastProposalId,
-    refetchLastProposalId,
-  } = useDao();
+  const { daoId: treasuryDaoID, hasPermission, daoPolicy } = useDao();
   const { accountId, signAndSendTransactions } = useNearWallet();
 
   const {
@@ -41,11 +34,12 @@ const VotingDurationPage = () => {
 
   const [currentDurationDays, setCurrentDurationDays] = useState(0);
   const [proposalsThatWillExpire, setProposalsThatWillExpire] = useState([]);
+  const { showToast } = useProposalToastContext();
+
   const [proposalsThatWillBeActive, setProposalsThatWillBeActive] = useState(
     []
   );
   const [otherPendingRequests, setOtherPendingRequests] = useState([]);
-  const [showToastStatus, setShowToastStatus] = useState("");
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showAffectedProposalsModal, setShowAffectedProposalsModal] =
     useState(false);
@@ -243,16 +237,14 @@ const VotingDurationPage = () => {
       });
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
-          setTxnCreated(false);
-          setShowToastStatus("ProposalAdded");
-          reset({ durationDays: currentDurationDays });
-        });
+        setTxnCreated(false);
+        showToast("ProposalAdded", null, "settings");
+        reset({ durationDays: currentDurationDays });
       }
     } catch (error) {
       logger.error("Error submitting proposal:", error);
       setTxnCreated(false);
-      setShowToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "settings");
     }
   };
 
@@ -290,48 +282,6 @@ const VotingDurationPage = () => {
         showInProgress={isTxnCreated}
         cancelTxn={() => setTxnCreated(false)}
       />
-      {showToastStatus && (
-        <div className="toast-container position-fixed bottom-0 end-0 p-3">
-          <div className="toast show">
-            <div className="toast-header px-2">
-              <strong className="me-auto">Just Now</strong>
-              <i
-                className="bi bi-x-lg h6 mb-0 cursor-pointer"
-                onClick={() => setShowToastStatus("")}
-              ></i>
-            </div>
-            <div className="toast-body">
-              {showToastStatus === "ProposalAdded" ? (
-                <div className="d-flex align-items-center gap-3">
-                  <i className="bi bi-check2 h3 mb-0 success-icon"></i>
-                  <div>
-                    <div>Voting duration change request submitted.</div>
-                    {lastProposalId && (
-                      <a
-                        href="#"
-                        className="text-underline cursor-pointer"
-                        onClick={() => {
-                          const daoIdPart = treasuryDaoID.split(".")[0];
-                          router.push(
-                            `/${daoIdPart}/settings?id=${lastProposalId}`
-                          );
-                        }}
-                      >
-                        View it
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : showToastStatus === "ErrorAddingProposal" ? (
-                <div className="d-flex align-items-center gap-3">
-                  <i className="bi bi-exclamation-triangle h3 mb-0 text-danger"></i>
-                  <div>Failed to submit proposal. Please try again.</div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showAffectedProposalsModal && (
         <Modal

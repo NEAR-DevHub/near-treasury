@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
-import { Near } from "@/api/near";
 import { normalize } from "@/helpers/formatters";
 import Table from "@/app/[daoId]/payments/Table";
 import ProposalDetailsPage from "@/app/[daoId]/payments/ProposalDetailsPage";
@@ -22,7 +20,6 @@ import InsufficientBannerModal from "@/components/proposals/InsufficientBannerMo
 const PaymentsIndex = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { accountId } = useNearWallet();
   const { daoId: treasuryDaoID, hasPermission } = useDao();
 
   const tab = searchParams.get("tab");
@@ -30,8 +27,7 @@ const PaymentsIndex = () => {
 
   const [showCreateRequest, setShowCreateRequest] = useState(false);
   const [showProposalDetailsId, setShowProposalId] = useState(null);
-  const [showToastStatus, setToastStatus] = useState(false);
-  const [voteProposalId, setVoteProposalId] = useState(null);
+
   // Derive current tab from URL
   const currentTab = {
     title: tab === "history" ? "History" : "Pending Requests",
@@ -87,183 +83,17 @@ const PaymentsIndex = () => {
     setShowCreateRequest(!showCreateRequest);
   }
 
-  function updateVoteSuccess(status, proposalId) {
-    // Invalidate the proposals cache
-    invalidateCategory();
-    setVoteProposalId(proposalId);
-    setToastStatus(status);
-  }
-
-  async function checkProposalStatus(proposalId) {
-    try {
-      const result = await Near.view(treasuryDaoID, "get_proposal", {
-        id: proposalId,
-      });
-      updateVoteSuccess(result.status, proposalId);
-    } catch {
-      // deleted request (thus proposal won't exist)
-      updateVoteSuccess("Removed", proposalId);
-    }
-  }
-
-  // Handle transaction hashes from redirects
-  useEffect(() => {
-    const transactionHashes = searchParams.get("transactionHashes");
-    if (transactionHashes && accountId) {
-      fetch(process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.mainnet.near.org", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "dontcare",
-          method: "tx",
-          params: [transactionHashes, accountId],
-        }),
-      })
-        .then((response) => response.json())
-        .then((transaction) => {
-          if (transaction !== null) {
-            const transaction_method_name =
-              transaction?.result?.transaction?.actions[0]?.FunctionCall
-                ?.method_name;
-
-            if (transaction_method_name === "act_proposal") {
-              const args =
-                transaction?.result?.transaction?.actions[0]?.FunctionCall
-                  ?.args;
-              const decodedArgs = JSON.parse(atob(args ?? "") ?? "{}");
-              if (decodedArgs.id) {
-                const proposalId = decodedArgs.id;
-                checkProposalStatus(proposalId);
-              }
-            } else if (transaction_method_name === "add_proposal") {
-              const proposalId = atob(transaction.result.status.SuccessValue);
-              setVoteProposalId(proposalId);
-              setToastStatus("ProposalAdded");
-              invalidateCategory();
-            }
-          }
-        })
-        .catch((error) => {
-          console.error("Error checking transaction:", error);
-        });
-    }
-  }, [searchParams, accountId, treasuryDaoID]);
-
   const handleSortClick = () => {
     const newDirection = sortDirection === "desc" ? "asc" : "desc";
     setSortDirection(newDirection);
   };
 
-  const ToastStatusContent = () => {
-    let content = "";
-    switch (showToastStatus) {
-      case "InProgress":
-        content =
-          "Your vote is counted" +
-          (typeof proposalDetailsPageId === "number"
-            ? "."
-            : ", the payment request is highlighted.");
-        break;
-      case "Approved":
-        content = "The payment request has been successfully executed.";
-        break;
-      case "Rejected":
-        content = "The payment request has been rejected.";
-        break;
-      case "Removed":
-        content = "The payment request has been successfully deleted.";
-        break;
-      case "ProposalAdded":
-        content = "Payment request has been successfully created.";
-        break;
-
-      case "ErrorAddingProposal":
-        content = "Failed to create payment request.";
-        break;
-
-      default:
-        if (showToastStatus.startsWith("BulkProposalAdded")) {
-          content = `Successfully imported ${
-            showToastStatus.split(":")[1]
-          } payment requests.`;
-        } else {
-          content = `The payment request is ${showToastStatus}.`;
-        }
-        break;
-    }
-    return (
-      <div className="toast-body">
-        <div className="d-flex align-items-center gap-3">
-          {showToastStatus === "Approved" && (
-            <i className="bi bi-check2 mb-0 success-icon"></i>
-          )}
-          <div>
-            {content}
-            <br />
-            {showToastStatus === "ProposalAdded" && (
-              <a
-                className="text-underline cursor-pointer"
-                onClick={() => {
-                  const params = new URLSearchParams(searchParams);
-                  params.set("id", voteProposalId);
-                  router.push(`?${params.toString()}`);
-                }}
-              >
-                View Request
-              </a>
-            )}
-            {showToastStatus !== "InProgress" &&
-              showToastStatus !== "Removed" &&
-              showToastStatus !== "ProposalAdded" &&
-              !showToastStatus.startsWith("BulkProposalAdded") &&
-              typeof proposalDetailsPageId !== "number" &&
-              showToastStatus !== "ErrorAddingProposal" && (
-                <a
-                  className="text-underline cursor-pointer"
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.set("id", voteProposalId);
-                    router.push(`?${params.toString()}`);
-                  }}
-                >
-                  View in History
-                </a>
-              )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const VoteSuccessToast = () => {
-    return showToastStatus ? (
-      <div className="toast-container position-fixed bottom-0 end-0 p-3">
-        <div className={`toast ${showToastStatus ? "show" : ""}`}>
-          <div className="toast-header px-2">
-            <strong className="me-auto">Just Now</strong>
-            <i
-              className="bi bi-x-lg h6 mb-0 cursor-pointer"
-              onClick={() => setToastStatus(null)}
-            ></i>
-          </div>
-          <ToastStatusContent />
-        </div>
-      </div>
-    ) : null;
-  };
-
   return (
     <div className="w-100 h-100 flex-grow-1 d-flex flex-column">
-      <VoteSuccessToast />
       {typeof proposalDetailsPageId === "number" ? (
         <div className="mt-4">
           <ProposalDetailsPage
             id={proposalDetailsPageId}
-            setToastStatus={setToastStatus}
-            setVoteProposalId={setVoteProposalId}
             currentTab={currentTab}
           />
         </div>
@@ -273,7 +103,6 @@ const PaymentsIndex = () => {
             <BulkImportPreviewTable
               proposals={bulkPreviewData}
               closePreviewTable={() => setBulkPreviewData(null)}
-              setToastStatus={setToastStatus}
             />
           )}
 
@@ -315,8 +144,6 @@ const PaymentsIndex = () => {
             ) : (
               <CreatePaymentRequest
                 onCloseCanvas={toggleCreatePage}
-                setToastStatus={setToastStatus}
-                setVoteProposalId={setVoteProposalId}
                 setIsBulkImport={setIsBulkImport}
               />
             )}
@@ -478,11 +305,7 @@ const PaymentsIndex = () => {
                   sortDirection={sortDirection}
                   handleSortClick={handleSortClick}
                   onSelectRequest={(id) => setShowProposalId(id)}
-                  highlightProposalId={voteProposalId}
-                  setToastStatus={setToastStatus}
-                  setVoteProposalId={setVoteProposalId}
                   selectedProposalDetailsId={showProposalDetailsId}
-                  refreshTableData={() => invalidateCategory()}
                 />
 
                 {(proposals ?? [])?.length > 0 && (
@@ -511,8 +334,6 @@ const PaymentsIndex = () => {
                   id={showProposalDetailsId}
                   isCompactVersion={true}
                   onClose={() => setShowProposalId(null)}
-                  setToastStatus={setToastStatus}
-                  setVoteProposalId={setVoteProposalId}
                   currentTab={currentTab}
                 />
               )}

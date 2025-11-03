@@ -27,12 +27,8 @@ const StakeDelegationTable = ({
   proposals = [],
   loading = false,
   isPendingRequests = false,
-  highlightProposalId = null,
   selectedProposalDetailsId = null,
   onSelectRequest = () => {},
-  refreshTableData = () => {},
-  setToastStatus = () => {},
-  setVoteProposalId = () => {},
   handleSortClick = () => {},
   sortDirection = "desc",
 }) => {
@@ -113,26 +109,6 @@ const StakeDelegationTable = ({
     return found && found.show === false ? "d-none" : "";
   }
 
-  function updateVoteSuccess(status, proposalId) {
-    setToastStatus(status);
-    setVoteProposalId(proposalId);
-    onSelectRequest(null);
-    refreshTableData();
-  }
-
-  function checkProposalStatus(proposalId) {
-    Near.view(treasuryDaoID, "get_proposal", {
-      id: proposalId,
-    })
-      .then((result) => {
-        updateVoteSuccess(result.status, proposalId);
-      })
-      .catch(() => {
-        // deleted request (thus proposal won't exist)
-        updateVoteSuccess("Removed", proposalId);
-      });
-  }
-
   const requiredVotes = functionCallApproversGroup?.requiredVotes || 0;
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
   const proposalPeriod = daoPolicy?.proposal_period;
@@ -196,10 +172,7 @@ const StakeDelegationTable = ({
               key={item.id}
               data-testid={"proposal-request-#" + item.id}
               className={`cursor-pointer proposal-row ${
-                highlightProposalId === item.id ||
-                selectedProposalDetailsId === item.id
-                  ? "bg-highlight"
-                  : ""
+                selectedProposalDetailsId === item.id ? "bg-highlight" : ""
               }`}
               onClick={() => onSelectRequest(item.id)}
               style={{ cursor: "pointer" }}
@@ -303,7 +276,7 @@ const StakeDelegationTable = ({
                       proposalCreator={item.proposer}
                       hasVotingPermission={hasVotingPermission}
                       hasDeletePermission={hasDeletePermission}
-                      checkProposalStatus={() => checkProposalStatus(item.id)}
+                      context="stake"
                       avoidCheckForBalance={true}
                       isWithdrawRequest={isWithdrawRequest}
                       validatorAccount={validatorAccount}

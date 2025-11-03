@@ -41,7 +41,9 @@ const FtLockupPortfolio = ({
       Near.view(contractMetadata?.token_account_id, "storage_balance_of", {
         account_id: treasuryDaoID,
       }).then((res) => {
-        setIsFTRegistered(res.total);
+        if (res && res.total) {
+          setIsFTRegistered(res.total);
+        }
       });
     }
   }, [contractMetadata, hasPermissionToClaim, treasuryDaoID]);

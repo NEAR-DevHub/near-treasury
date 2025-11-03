@@ -6,43 +6,27 @@ import Big from "big.js";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import Modal from "@/components/ui/Modal";
 import WalletDropdown from "@/components/dropdowns/WalletDropdown";
-import Tooltip from "@/components/ui/Tooltip";
 import ValidatorDropdown from "./ValidatorDropdown";
 import BalanceDisplay from "./BalanceDisplay";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
-import { Near } from "@/api/near";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { getValidators } from "@/api/backend";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
-import {
-  formatNearAmount,
-  LOCKUP_MIN_BALANCE_FOR_STORAGE,
-} from "@/helpers/nearHelpers";
-import { useProposals } from "@/hooks/useProposals";
+import { LOCKUP_MIN_BALANCE_FOR_STORAGE } from "@/helpers/nearHelpers";
 
-const CreateStakeRequest = ({
-  onCloseCanvas = () => {},
-  setVoteProposalId,
-  setToastStatus,
-}) => {
+const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
   const {
     daoId: treasuryDaoID,
     lockupContract,
     daoNearBalances,
     lockupNearBalances,
-    daoStakedBalances,
-    lockupStakedBalances,
     lastProposalId,
     daoPolicy,
     lockupStakedPoolId,
-    refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-  const { invalidateCategoryAfterTransaction } = useProposals({
-    daoId: treasuryDaoID,
-    category: "stake-delegation",
-    enabled: false,
-  });
+  const { showToast } = useProposalToastContext();
 
   const [validators, setValidators] = useState([]);
   const [isTxnCreated, setTxnCreated] = useState(false);
@@ -258,18 +242,15 @@ const CreateStakeRequest = ({
       console.log("Stake request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then(async (id) => {
-          await invalidateCategoryAfterTransaction();
-          setVoteProposalId(id);
-          setToastStatus("StakeProposalAdded");
-          setTxnCreated(false);
-          reset();
-          onCloseCanvas();
-        });
+        // Toast context will automatically fetch proposal ID and invalidate cache
+        showToast("StakeProposalAdded", null, "stake");
+        setTxnCreated(false);
+        reset();
+        onCloseCanvas();
       }
     } catch (error) {
       console.error("Stake request error:", error);
-      setToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "stake");
       setTxnCreated(false);
     }
   };

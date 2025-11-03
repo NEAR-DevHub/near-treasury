@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import InsufficientBannerModal from "@/components/proposals/InsufficientBannerModal";
@@ -28,14 +29,12 @@ const Theme = () => {
     hasPermission,
     daoConfig: config,
     daoPolicy: policy,
-    lastProposalId,
-    refetchLastProposalId,
   } = useDao();
   const { accountId, signAndSendTransactions } = useNearWallet();
+  const { showToast } = useProposalToastContext();
 
   const [error, setError] = useState(null);
   const [isTxnCreated, setTxnCreated] = useState(false);
-  const [showToastStatus, setShowToastStatus] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadButtonDisabled, setUploadButtonDisabled] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -181,15 +180,12 @@ const Theme = () => {
       });
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
-          setTxnCreated(false);
-          setShowToastStatus("ProposalAdded");
-          setShowToastStatus(false);
-        });
+        setTxnCreated(false);
+        showToast("ProposalAdded", null, "settings");
       }
     } catch (error) {
       logger.error("Error submitting proposal:", error);
-      setShowToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "settings");
       setTxnCreated(false);
     }
   };
@@ -219,55 +215,6 @@ const Theme = () => {
     onSubmitClick();
   };
 
-  const Toast = () => {
-    return (
-      <div className="toast-container position-fixed bottom-0 end-0 p-3">
-        <div className="toast show">
-          <div className="toast-header px-2">
-            <strong className="me-auto">Just Now</strong>
-            <i
-              className="bi bi-x-lg h6 mb-0 cursor-pointer"
-              onClick={() => setShowToastStatus(false)}
-            ></i>
-          </div>
-          <div className="toast-body">
-            <ToastStatusContent />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ToastStatusContent = () => {
-    switch (showToastStatus) {
-      case "ProposalAdded":
-        return (
-          <div className="d-flex align-items-center gap-3">
-            <i className="bi bi-check2 mb-0 success-icon"></i>
-            <div>Theme change request submitted.</div>
-            <a
-              onClick={() => {
-                const params = new URLSearchParams(searchParams);
-                params.set("id", lastProposalId);
-                router.push(`?${params.toString()}`);
-              }}
-              className="text-underline cursor-pointer"
-            >
-              View it
-            </a>
-          </div>
-        );
-      case "ErrorAddingProposal":
-        return (
-          <div className="d-flex align-items-center gap-3">
-            <i className="bi bi-exclamation-octagon mb-0 error-icon"></i>
-            <div>Failed to submit proposal. Please try again.</div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
   return (
     <div style={{ maxWidth: "50rem" }}>
       <TransactionLoader showInProgress={isTxnCreated} />
@@ -390,9 +337,6 @@ const Theme = () => {
           </div>
         )}
       </div>
-
-      {/* Toast Notification */}
-      {showToastStatus && <Toast />}
     </div>
   );
 };

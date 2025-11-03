@@ -183,6 +183,7 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
                               src={getImage(txnType)}
                               height="40"
                               alt={txnType}
+                              className="rounded-circle"
                             />
                             <div className="text-sm">
                               <div className="text-md mb-0">{txnType}</div>
@@ -211,7 +212,7 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
                           />
                         </td>
                         <td className="text-end" style={{ minWidth: 100 }}>
-                          <div className="d-flex gap-2 align-items-center fw-semibold justify-content-end">
+                          <div className="d-flex gap-2 align-items-center justify-content-end">
                             <a
                               target="_blank"
                               rel="noopener noreferrer"
