@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useProposals } from "@/hooks/useProposals";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
-import { Near } from "@/api/near";
+import { useProposal } from "@/hooks/useProposal";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
 import { fetchBlockchainByNetwork, fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
@@ -15,28 +14,17 @@ import Profile from "@/components/ui/Profile";
 import Copy from "@/components/ui/Copy";
 import TokenAmount from "@/components/proposals/TokenAmount";
 
-const ProposalDetailsPage = ({
-  id,
-  isCompactVersion,
-  onClose,
-  setVoteProposalId,
-  setToastStatus,
-  currentTab,
-}) => {
+const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const { accountId } = useNearWallet();
   const {
     daoId: treasuryDaoID,
     daoPolicy,
     getApproversAndThreshold,
   } = useDao();
-  const { invalidateCategory } = useProposals({
-    daoId: treasuryDaoID,
-    category: "payments",
-    enabled: false,
-  });
+
+  const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
   const [proposalData, setProposalData] = useState(null);
-  const [isDeleted, setIsDeleted] = useState(false);
   const [networkInfo, setNetworkInfo] = useState({
     blockchain: null,
     blockchainIcon: null,
@@ -61,148 +49,142 @@ const ProposalDetailsPage = ({
 
   const proposalPeriod = daoPolicy?.proposal_period || 0;
 
+  // Process raw proposal data when it changes
   useEffect(() => {
-    const fetchProposalData = async () => {
-      if (proposalPeriod && !proposalData) {
-        try {
-          const item = await Near.view(treasuryDaoID, "get_proposal", {
-            id: parseInt(id),
-          });
+    const processProposalData = async () => {
+      if (!rawProposal || !proposalPeriod) return;
 
-          const notes = decodeProposalDescription("notes", item.description);
-          const title = decodeProposalDescription("title", item.description);
-          const summary = decodeProposalDescription(
-            "summary",
-            item.description
-          );
-          const description = !title && !summary && item.description;
-          const proposalIdStr = decodeProposalDescription(
-            "proposalId",
-            item.description
-          );
-          const proposalId = proposalIdStr ? parseInt(proposalIdStr, 10) : null;
-          let proposalUrl = decodeProposalDescription("url", item.description);
-          proposalUrl = (proposalUrl || "").replace(/\.+$/, "");
+      try {
+        const item = rawProposal;
 
-          const isFunctionType =
-            Object.values(item?.kind?.FunctionCall ?? {})?.length > 0;
-          let decodedArgs = {};
+        const notes = decodeProposalDescription("notes", item.description);
+        const title = decodeProposalDescription("title", item.description);
+        const summary = decodeProposalDescription("summary", item.description);
+        const description = !title && !summary && item.description;
+        const proposalIdStr = decodeProposalDescription(
+          "proposalId",
+          item.description
+        );
+        const proposalId = proposalIdStr ? parseInt(proposalIdStr, 10) : null;
+        let proposalUrl = decodeProposalDescription("url", item.description);
+        proposalUrl = (proposalUrl || "").replace(/\.+$/, "");
 
-          // Check if this is a NEAR Intents payment request
-          const isIntentsPayment =
-            isFunctionType &&
-            item.kind.FunctionCall?.receiver_id === "intents.near" &&
-            item.kind.FunctionCall?.actions[0]?.method_name === "ft_withdraw";
+        const isFunctionType =
+          Object.values(item?.kind?.FunctionCall ?? {})?.length > 0;
+        let decodedArgs = {};
 
-          let args;
-          let intentsTokenInfo = null;
+        // Check if this is a NEAR Intents payment request
+        const isIntentsPayment =
+          isFunctionType &&
+          item.kind.FunctionCall?.receiver_id === "intents.near" &&
+          item.kind.FunctionCall?.actions[0]?.method_name === "ft_withdraw";
 
-          if (isIntentsPayment) {
-            decodedArgs = decodeBase64(item.kind.FunctionCall?.actions[0].args);
-            // For intents payments, extract the real token and recipient info
-            let realRecipient;
+        let args;
+        let intentsTokenInfo = null;
 
-            // Check if this is a cross-chain withdrawal (memo contains WITHDRAW_TO:)
-            if (
-              decodedArgs?.memo &&
-              typeof decodedArgs.memo === "string" &&
-              decodedArgs.memo.includes("WITHDRAW_TO:")
-            ) {
-              // Cross-chain intents payment - extract address from memo
-              realRecipient = decodedArgs.memo.split("WITHDRAW_TO:")[1];
-            } else {
-              // NEAR intents payment - use receiver_id
-              realRecipient = decodedArgs?.receiver_id;
-            }
+        if (isIntentsPayment) {
+          decodedArgs = decodeBase64(item.kind.FunctionCall?.actions[0].args);
+          // For intents payments, extract the real token and recipient info
+          let realRecipient;
 
-            intentsTokenInfo = {
-              tokenContract: decodedArgs?.token,
-              realRecipient: realRecipient,
-              amount: decodedArgs?.amount,
-              fee: decodedArgs?.fee,
-              memo: decodedArgs?.memo,
-              originalArgs: decodedArgs,
-            };
-
-            args = {
-              token_id: decodedArgs?.token, // Use the actual token contract
-              receiver_id: realRecipient, // Use the real recipient
-              amount: decodedArgs?.amount,
-            };
-          } else if (isFunctionType) {
-            const actions = item.kind.FunctionCall?.actions || [];
-            const receiverId = item.kind.FunctionCall?.receiver_id;
-
-            // Requests from NEARN
-            if (
-              actions.length >= 2 &&
-              actions[0]?.method_name === "storage_deposit" &&
-              actions[1]?.method_name === "ft_transfer"
-            ) {
-              args = {
-                ...decodeBase64(actions[1].args),
-                token_id: receiverId,
-              };
-            } else if (actions[0]?.method_name === "ft_transfer") {
-              args = {
-                ...decodeBase64(actions[0].args),
-                token_id: receiverId,
-              };
-            } else {
-              args = decodeBase64(actions[0]?.args);
-            }
+          // Check if this is a cross-chain withdrawal (memo contains WITHDRAW_TO:)
+          if (
+            decodedArgs?.memo &&
+            typeof decodedArgs.memo === "string" &&
+            decodedArgs.memo.includes("WITHDRAW_TO:")
+          ) {
+            // Cross-chain intents payment - extract address from memo
+            realRecipient = decodedArgs.memo.split("WITHDRAW_TO:")[1];
           } else {
-            args = item.kind.Transfer;
+            // NEAR intents payment - use receiver_id
+            realRecipient = decodedArgs?.receiver_id;
           }
 
-          let status = item.status;
-          if (status === "InProgress") {
-            const endTime = Big(item.submission_time ?? "0")
-              .plus(proposalPeriod ?? "0")
-              .toFixed();
-            const timestampInMilliseconds = Big(endTime).div(Big(1_000_000));
-            const currentTimeInMilliseconds = Date.now();
-            if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
-              status = "Expired";
-            }
-          }
-          const sourceWallet = isIntentsPayment
-            ? "Intents"
-            : isFunctionType &&
-              item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
-            ? "Lockup"
-            : "SputnikDAO";
+          intentsTokenInfo = {
+            tokenContract: decodedArgs?.token,
+            realRecipient: realRecipient,
+            amount: decodedArgs?.amount,
+            fee: decodedArgs?.fee,
+            memo: decodedArgs?.memo,
+            originalArgs: decodedArgs,
+          };
 
-          setProposalData({
-            id: item.id,
-            proposer: item.proposer,
-            votes: item.votes,
-            submissionTime: item.submission_time,
-            notes,
-            title: title ? title : description,
-            summary,
-            proposalId,
-            args,
-            status,
-            isLockupTransfer:
-              isFunctionType &&
-              item.kind.FunctionCall?.actions[0]?.method_name === "transfer",
-            isIntentsPayment,
-            intentsTokenInfo,
-            proposalUrl,
-            proposal: item,
-            sourceWallet,
-          });
-        } catch (e) {
-          // proposal is deleted or doesn't exist
-          console.error("Error fetching proposal data:", e);
-          setIsDeleted(true);
+          args = {
+            token_id: decodedArgs?.token, // Use the actual token contract
+            receiver_id: realRecipient, // Use the real recipient
+            amount: decodedArgs?.amount,
+          };
+        } else if (isFunctionType) {
+          const actions = item.kind.FunctionCall?.actions || [];
+          const receiverId = item.kind.FunctionCall?.receiver_id;
+
+          // Requests from NEARN
+          if (
+            actions.length >= 2 &&
+            actions[0]?.method_name === "storage_deposit" &&
+            actions[1]?.method_name === "ft_transfer"
+          ) {
+            args = {
+              ...decodeBase64(actions[1].args),
+              token_id: receiverId,
+            };
+          } else if (actions[0]?.method_name === "ft_transfer") {
+            args = {
+              ...decodeBase64(actions[0].args),
+              token_id: receiverId,
+            };
+          } else {
+            args = decodeBase64(actions[0]?.args);
+          }
+        } else {
+          args = item.kind.Transfer;
         }
+
+        let status = item.status;
+        if (status === "InProgress") {
+          const endTime = Big(item.submission_time ?? "0")
+            .plus(proposalPeriod ?? "0")
+            .toFixed();
+          const timestampInMilliseconds = Big(endTime).div(Big(1_000_000));
+          const currentTimeInMilliseconds = Date.now();
+          if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
+            status = "Expired";
+          }
+        }
+        const sourceWallet = isIntentsPayment
+          ? "Intents"
+          : isFunctionType &&
+            item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
+          ? "Lockup"
+          : "SputnikDAO";
+
+        setProposalData({
+          id: item.id,
+          proposer: item.proposer,
+          votes: item.votes,
+          submissionTime: item.submission_time,
+          notes,
+          title: title ? title : description,
+          summary,
+          proposalId,
+          args,
+          status,
+          isLockupTransfer:
+            isFunctionType &&
+            item.kind.FunctionCall?.actions[0]?.method_name === "transfer",
+          isIntentsPayment,
+          intentsTokenInfo,
+          proposalUrl,
+          proposal: item,
+          sourceWallet,
+        });
+      } catch (e) {
+        console.error("Error processing proposal data:", e);
       }
     };
 
-    fetchProposalData();
-  }, [id, proposalPeriod, proposalData, treasuryDaoID]);
+    processProposalData();
+  }, [rawProposal, proposalPeriod]);
 
   // Fetch network information for intents payments
   useEffect(() => {
@@ -505,36 +487,6 @@ const ProposalDetailsPage = ({
     treasuryDaoID,
   ]);
 
-  useEffect(() => {
-    if (proposalData && proposalData.id !== id) {
-      setProposalData(null);
-    }
-  }, [id, proposalData]);
-
-  function refreshData() {
-    setProposalData(null);
-    // Invalidate proposals cache
-    invalidateCategory();
-  }
-
-  function updateVoteSuccess(status, proposalId) {
-    setVoteProposalId?.(proposalId);
-    setToastStatus?.(status);
-    refreshData();
-  }
-
-  async function checkProposalStatus(proposalId) {
-    try {
-      const result = await Near.view(treasuryDaoID, "get_proposal", {
-        id: proposalId,
-      });
-      updateVoteSuccess(result.status, proposalId);
-    } catch {
-      // deleted request (thus proposal won't exist)
-      updateVoteSuccess("Removed", proposalId);
-    }
-  }
-
   function getExplorerButtonText(url) {
     try {
       const urlObj = new URL(url);
@@ -569,9 +521,9 @@ const ProposalDetailsPage = ({
             isIntentsRequest={proposalData?.isIntentsPayment}
             currentAmount={proposalData?.args?.amount}
             currentContract={proposalData?.args?.token_id}
-            checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
             isProposalDetailsPage={true}
             proposal={proposalData?.proposal}
+            context="payment"
           />
         ) : null
       }

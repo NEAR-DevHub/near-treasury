@@ -18,8 +18,6 @@ const SettingsFeed = () => {
   const id = searchParams.get("id");
 
   const [showProposalDetailsId, setShowProposalId] = useState(null);
-  const [showToastStatus, setToastStatus] = useState(false);
-  const [voteProposalId, setVoteProposalId] = useState(null);
   // The tab comes from the settings page URL as "pending-requests" or "history"
   const currentTab = {
     title: tab === "history" ? "History" : "Pending Requests",
@@ -144,82 +142,10 @@ const SettingsFeed = () => {
     setSortDirection(newDirection);
   };
 
-  const ToastStatusContent = () => {
-    let content = "";
-    switch (showToastStatus) {
-      case "InProgress":
-        content =
-          "Your vote is counted" +
-          (typeof proposalDetailsPageId === "number"
-            ? "."
-            : ", the request is highlighted.");
-        break;
-      case "Approved":
-        content = "The request has been successfully executed.";
-        break;
-      case "Rejected":
-        content = "The request has been rejected.";
-        break;
-      case "Removed":
-        content = "The request has been successfully deleted.";
-        break;
-      default:
-        content = `The request has ${showToastStatus}.`;
-        break;
-    }
-    return (
-      <div className="toast-body">
-        <div className="d-flex align-items-center gap-3">
-          {showToastStatus === "Approved" && (
-            <i className="bi bi-check2 h3 mb-0 success-icon"></i>
-          )}
-          <div>
-            {content}
-            <br />
-            {showToastStatus !== "InProgress" &&
-              showToastStatus !== "Removed" &&
-              typeof proposalDetailsPageId !== "number" && (
-                <a
-                  className="text-underline"
-                  href={`?tab=${
-                    tab === "history" ? "history" : "pending"
-                  }&id=${voteProposalId}`}
-                >
-                  View in History
-                </a>
-              )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const VoteSuccessToast = () => {
-    return showToastStatus ? (
-      <div className="toast-container position-fixed bottom-0 end-0 p-3">
-        <div className={`toast ${showToastStatus ? "show" : ""}`}>
-          <div className="toast-header px-2">
-            <strong className="me-auto">Just Now</strong>
-            <i
-              className="bi bi-x-lg h6 mb-0 cursor-pointer"
-              onClick={() => setToastStatus(null)}
-            ></i>
-          </div>
-          <ToastStatusContent />
-        </div>
-      </div>
-    ) : null;
-  };
-
   return (
     <div className="w-100 h-100 flex-grow-1 d-flex flex-column">
-      <VoteSuccessToast />
       {typeof proposalDetailsPageId === "number" ? (
-        <ProposalDetailsPage
-          id={proposalDetailsPageId}
-          setToastStatus={setToastStatus}
-          setVoteProposalId={setVoteProposalId}
-        />
+        <ProposalDetailsPage id={proposalDetailsPageId} />
       ) : (
         <div className="h-100 w-100 flex-grow-1 d-flex flex-column">
           <div className="layout-flex-wrap flex-grow-1">
@@ -324,13 +250,9 @@ const SettingsFeed = () => {
                   proposals={proposals}
                   isPendingRequests={currentTab.title === "Pending Requests"}
                   loading={isLoading}
-                  refreshTableData={() => invalidateCategory()}
                   sortDirection={sortDirection}
                   handleSortClick={handleSortClick}
                   onSelectRequest={(id) => setShowProposalId(id)}
-                  highlightProposalId={showProposalDetailsId || voteProposalId}
-                  setToastStatus={setToastStatus}
-                  setVoteProposalId={setVoteProposalId}
                   selectedProposalDetailsId={showProposalDetailsId}
                 />
                 {(proposals ?? [])?.length > 0 && (
@@ -365,8 +287,6 @@ const SettingsFeed = () => {
                   id={showProposalDetailsId}
                   isCompactVersion={true}
                   onClose={() => setShowProposalId(null)}
-                  setToastStatus={setToastStatus}
-                  setVoteProposalId={setVoteProposalId}
                 />
               )}
             </div>

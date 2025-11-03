@@ -56,6 +56,11 @@
   color: white !important;
 }
 
+.bg-grey-035 {
+  background-color: var(--grey-035) !important;
+  color: var(--text-color) !important;
+}
+
 .bg-grey-04 {
   background-color: var(--grey-04) !important;
   color: var(--text-secondary-color) !important;
@@ -319,8 +324,8 @@ input[type="number"] {
 }
 
 .form-check-input:checked {
-  background-color: var(--theme-color) !important;
-  border-color: var(--theme-color) !important;
+  background-color: var(--text-secondary-color  ) !important;
+  border-color: var(--text-secondary-color) !important;
 }
 
 .form-label {
@@ -1373,4 +1378,11 @@ input[type="checkbox"].indeterminate::after {
   height: 2px;
   background-color: white;
   transform: translateY(-50%);
+}
+
+.info-box {
+  background: var(--grey-04);
+  color: var(--grey-02);
+  padding: 12px;
+  border-radius: 12px;
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
-import { Near } from "@/api/near";
+import { useProposal } from "@/hooks/useProposal";
 import { decodeProposalDescription, decodeBase64 } from "@/helpers/daoHelpers";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -11,22 +11,13 @@ import VoteActions from "@/components/proposals/VoteActions";
 import Profile from "@/components/ui/Profile";
 import { logger } from "@/helpers/logger";
 
-const SettingsProposalDetailsPage = ({
-  id,
-  isCompactVersion,
-  onClose,
-  setVoteProposalId,
-  setToastStatus,
-}) => {
+const SettingsProposalDetailsPage = ({ id, isCompactVersion, onClose }) => {
   const { accountId } = useNearWallet();
-  const {
-    daoId: treasuryDaoID,
-    daoPolicy,
-    getApproversAndThreshold,
-  } = useDao();
+  const { daoPolicy, getApproversAndThreshold } = useDao();
+
+  const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
   const [proposalData, setProposalData] = useState(null);
-  const [isDeleted, setIsDeleted] = useState(false);
 
   const settingsApproverGroup = getApproversAndThreshold("policy");
   const deleteGroup = getApproversAndThreshold("policy", true);
@@ -50,91 +41,66 @@ const SettingsProposalDetailsPage = ({
     OTHER: "Settings",
   };
 
-  function checkProposalStatus(proposalId) {
-    Near.view(treasuryDaoID, "get_proposal", {
-      id: proposalId,
-    })
-      .then((result) => {
-        setToastStatus(result.status);
-        setVoteProposalId(proposalId);
-        onClose?.();
-      })
-      .catch(() => {
-        setIsDeleted(true);
-      });
-  }
-
+  // Process raw proposal data when it changes
   useEffect(() => {
-    const fetchProposalData = async () => {
-      if (proposalPeriod) {
-        try {
-          const item = await Near.view(treasuryDaoID, "get_proposal", {
-            id: parseInt(id),
-          });
+    const processProposalData = async () => {
+      if (!rawProposal || !proposalPeriod) return;
 
-          const title = decodeProposalDescription("title", item.description);
-          const summary = decodeProposalDescription(
-            "summary",
-            item.description
-          );
+      try {
+        const item = rawProposal;
 
-          let requestType = RequestType.OTHER;
+        const title = decodeProposalDescription("title", item.description);
+        const summary = decodeProposalDescription("summary", item.description);
 
-          if (
-            ((title ?? "").includes("Add New Members") ||
-              (title ?? "").includes("Edit Members Permissions") ||
-              (title ?? "").includes("Remove Members") ||
-              (title ?? "").includes("Members Permissions")) &&
-            !(summary ?? "").includes("revoke")
-          ) {
-            requestType = RequestType.MEMBERS;
-          } else if ((title ?? "").includes("Voting Thresholds")) {
-            requestType = RequestType.VOTING_THRESHOLD;
-          } else if ((title ?? "").includes("Voting Duration")) {
-            requestType = RequestType.VOTING_DURATION;
-          } else if ((title ?? "").includes("Theme & logo")) {
-            requestType = RequestType.THEME;
-          }
+        let requestType = RequestType.OTHER;
 
-          let status = item.status;
-          if (status === "InProgress") {
-            const endTime = Big(item.submission_time ?? "0")
-              .plus(proposalPeriod ?? "0")
-              .toFixed();
-            const timestampInMilliseconds = Big(endTime) / Big(1_000_000);
-            const currentTimeInMilliseconds = Date.now();
-            if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
-              status = "Expired";
-            }
-          }
-
-          setProposalData({
-            id: item.id,
-            proposer: item.proposer,
-            votes: item.votes,
-            submissionTime: item.submission_time,
-            status,
-            kind: item.kind,
-            title,
-            summary,
-            requestType,
-            proposal: item,
-          });
-        } catch (error) {
-          logger.error("Error fetching proposal:", error);
-          setIsDeleted(true);
+        if (
+          ((title ?? "").includes("Add New Members") ||
+            (title ?? "").includes("Edit Members Permissions") ||
+            (title ?? "").includes("Remove Members") ||
+            (title ?? "").includes("Members Permissions")) &&
+          !(summary ?? "").includes("revoke")
+        ) {
+          requestType = RequestType.MEMBERS;
+        } else if ((title ?? "").includes("Voting Thresholds")) {
+          requestType = RequestType.VOTING_THRESHOLD;
+        } else if ((title ?? "").includes("Voting Duration")) {
+          requestType = RequestType.VOTING_DURATION;
+        } else if ((title ?? "").includes("Theme & logo")) {
+          requestType = RequestType.THEME;
         }
+
+        let status = item.status;
+        if (status === "InProgress") {
+          const endTime = Big(item.submission_time ?? "0")
+            .plus(proposalPeriod ?? "0")
+            .toFixed();
+          const timestampInMilliseconds = Big(endTime) / Big(1_000_000);
+          const currentTimeInMilliseconds = Date.now();
+          if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
+            status = "Expired";
+          }
+        }
+
+        setProposalData({
+          id: item.id,
+          proposer: item.proposer,
+          votes: item.votes,
+          submissionTime: item.submission_time,
+          status,
+          kind: item.kind,
+          title,
+          summary,
+          requestType,
+          proposal: item,
+        });
+      } catch (error) {
+        logger.error("Error processing proposal data:", error);
       }
     };
 
-    fetchProposalData();
-  }, [id, proposalPeriod]);
-
-  useEffect(() => {
-    if (proposalData && proposalData.id !== parseInt(id)) {
-      setProposalData(null);
-    }
-  }, [id, proposalData]);
+    processProposalData();
+  }, [rawProposal, proposalPeriod]);
 
   const parseMembersSummary = (text) => {
     if (!text) return [];
@@ -355,6 +321,8 @@ const SettingsProposalDetailsPage = ({
         proposalData={proposalData}
         isDeleted={isDeleted}
         isCompactVersion={isCompactVersion}
+        page="settings"
+        proposalPeriod={proposalPeriod}
         approversGroup={settingsApproverGroup}
         proposalStatusLabel={{
           approved: `${proposalData?.requestType} Request Executed`,
@@ -363,7 +331,6 @@ const SettingsProposalDetailsPage = ({
           failed: `${proposalData?.requestType} Request Failed`,
           expired: `${proposalData?.requestType} Request Expired`,
         }}
-        checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
         onClose={onClose}
         ProposalContent={
           <div className="card card-body d-flex flex-column gap-2">
@@ -402,7 +369,7 @@ const SettingsProposalDetailsPage = ({
               proposalCreator={proposalData?.proposer}
               avoidCheckForBalance={true}
               requiredVotes={requiredVotes}
-              checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
+              context="settings"
               isProposalDetailsPage={true}
               proposal={proposalData?.proposal}
             />

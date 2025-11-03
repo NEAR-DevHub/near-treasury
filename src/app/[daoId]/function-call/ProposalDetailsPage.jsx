@@ -3,36 +3,20 @@
 import { useState, useEffect } from "react";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
-import { useProposals } from "@/hooks/useProposals";
-import { Near } from "@/api/near";
+import { useProposal } from "@/hooks/useProposal";
 import { formatBase64ArgsPretty } from "@/helpers/daoHelpers";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
 import VoteActions from "@/components/proposals/VoteActions";
 import Profile from "@/components/ui/Profile";
 
-const ProposalDetailsPage = ({
-  id,
-  isCompactVersion,
-  onClose,
-  setVoteProposalId,
-  setToastStatus,
-  currentTab,
-}) => {
+const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const { accountId } = useNearWallet();
-  const {
-    daoId: treasuryDaoID,
-    daoPolicy,
-    getApproversAndThreshold,
-  } = useDao();
-  const { invalidateCategory } = useProposals({
-    daoId: treasuryDaoID,
-    proposalType: ["FunctionCall"],
-    enabled: false,
-  });
+  const { daoPolicy, getApproversAndThreshold } = useDao();
+
+  const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
   const [proposalData, setProposalData] = useState(null);
-  const [isDeleted, setIsDeleted] = useState(false);
 
   const callApproversGroup = getApproversAndThreshold("call");
   const deleteGroup = getApproversAndThreshold("call", true);
@@ -45,84 +29,45 @@ const ProposalDetailsPage = ({
     accountId
   );
 
-  const requiredVotes = callApproversGroup?.threshold || 0;
   const proposalPeriod = daoPolicy?.proposal_period || 0;
 
+  // Process raw proposal data when it changes
   useEffect(() => {
-    const fetchProposalData = async () => {
-      if (proposalPeriod && !proposalData) {
-        try {
-          const item = await Near.view(treasuryDaoID, "get_proposal", {
-            id: parseInt(id),
-          });
+    const processProposalData = async () => {
+      if (!rawProposal || !proposalPeriod) return;
 
-          let status = item.status;
-          if (status === "InProgress") {
-            const endTime = Big(item.submission_time ?? "0")
-              .plus(proposalPeriod ?? "0")
-              .toFixed();
-            const timestampInMilliseconds = Big(endTime).div(Big(1_000_000));
-            const currentTimeInMilliseconds = Date.now();
-            if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
-              status = "Expired";
-            }
+      try {
+        const item = rawProposal;
+
+        let status = item.status;
+        if (status === "InProgress") {
+          const endTime = Big(item.submission_time ?? "0")
+            .plus(proposalPeriod ?? "0")
+            .toFixed();
+          const timestampInMilliseconds = Big(endTime).div(Big(1_000_000));
+          const currentTimeInMilliseconds = Date.now();
+          if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
+            status = "Expired";
           }
-
-          setProposalData({
-            id: item.id,
-            proposer: item.proposer,
-            votes: item.votes,
-            submissionTime: item.submission_time,
-            notes: item.description,
-            status,
-            kind: item.kind,
-            proposal: item,
-          });
-        } catch (error) {
-          console.error("Error fetching proposal:", error);
-          setIsDeleted(true);
         }
+
+        setProposalData({
+          id: item.id,
+          proposer: item.proposer,
+          votes: item.votes,
+          submissionTime: item.submission_time,
+          notes: item.description,
+          status,
+          kind: item.kind,
+          proposal: item,
+        });
+      } catch (error) {
+        console.error("Error processing proposal data:", error);
       }
     };
 
-    fetchProposalData();
-  }, [id, proposalPeriod, proposalData, treasuryDaoID]);
-
-  // Clear proposal data when id changes
-  useEffect(() => {
-    if (proposalData && proposalData.id !== id) {
-      setProposalData(null);
-      setIsDeleted(false);
-    }
-  }, [id, proposalData]);
-
-  function refreshData() {
-    setProposalData(null);
-    // Invalidate proposals cache
-    invalidateCategory();
-  }
-
-  function updateVoteSuccess(status, proposalId) {
-    setVoteProposalId?.(proposalId);
-    setToastStatus?.(status);
-    refreshData();
-  }
-
-  async function checkProposalStatus(proposalId) {
-    try {
-      const result = await Near.view(treasuryDaoID, "get_proposal", {
-        id: proposalId,
-      });
-      if (result) {
-        setProposalData(result);
-        if (result.status !== "InProgress") {
-          updateVoteSuccess(result.status, proposalId);
-        }
-      }
-    } catch (error) {
-      console.error("Error checking proposal status:", error);
-    }
-  }
+    processProposalData();
+  }, [rawProposal, proposalPeriod]);
 
   // Convert gas units to Tgas
   function formatGas(gasUnits) {
@@ -156,9 +101,21 @@ const ProposalDetailsPage = ({
 
   return (
     <ProposalDetails
+      proposalData={proposalData}
+      isDeleted={isDeleted}
       currentTab={currentTab}
       proposalPeriod={proposalPeriod}
       page="function-call"
+      isCompactVersion={isCompactVersion}
+      onClose={onClose}
+      approversGroup={callApproversGroup}
+      proposalStatusLabel={{
+        approved: "Function Call Request Executed",
+        rejected: "Function Call Request Rejected",
+        deleted: "Function Call Request Deleted",
+        failed: "Function Call Request Failed",
+        expired: "Function Call Request Expired",
+      }}
       VoteActions={
         (hasVotingPermission || hasDeletePermission) &&
         proposalData?.status === "InProgress" ? (
@@ -168,7 +125,7 @@ const ProposalDetailsPage = ({
             hasDeletePermission={hasDeletePermission}
             hasVotingPermission={hasVotingPermission}
             proposalCreator={proposalData?.proposer}
-            checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
+            context="function"
             isProposalDetailsPage={true}
             proposal={proposalData?.proposal}
           />
@@ -250,18 +207,6 @@ const ProposalDetailsPage = ({
           </div>
         </div>
       }
-      proposalData={proposalData}
-      isDeleted={isDeleted}
-      isCompactVersion={isCompactVersion}
-      approversGroup={callApproversGroup}
-      proposalStatusLabel={{
-        approved: "Function Call Request Approved",
-        rejected: "Function Call Request Rejected",
-        deleted: "Function Call Request Deleted",
-        failed: "Function Call Request Failed",
-        expired: "Function Call Request Expired",
-      }}
-      onClose={onClose}
     />
   );
 };

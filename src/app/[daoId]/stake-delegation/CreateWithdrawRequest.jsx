@@ -1,44 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Big from "big.js";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import Modal from "@/components/ui/Modal";
 import WalletDropdown from "@/components/dropdowns/WalletDropdown";
 import BalanceDisplay from "./BalanceDisplay";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
-import { Near } from "@/api/near";
 import { getValidatorDetails } from "@/api/backend";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
-import {
-  formatNearAmount,
-  LOCKUP_MIN_BALANCE_FOR_STORAGE,
-} from "@/helpers/nearHelpers";
-import { useProposals } from "@/hooks/useProposals";
-const CreateWithdrawRequest = ({
-  onCloseCanvas = () => {},
-  setVoteProposalId,
-  setToastStatus,
-}) => {
+import { useProposalToastContext } from "@/context/ProposalToastContext";
+
+const CreateWithdrawRequest = ({ onCloseCanvas = () => {} }) => {
   const {
     daoId: treasuryDaoID,
     lockupContract,
-    daoNearBalances,
-    lockupNearBalances,
-    daoStakedBalances,
-    lockupStakedBalances,
     daoStakedPools,
     lockupStakedPools,
     daoPolicy,
-    refetchLastProposalId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-  const { invalidateCategoryAfterTransaction } = useProposals({
-    daoId: treasuryDaoID,
-    category: "stake-delegation",
-    enabled: false,
-  });
+  const { showToast } = useProposalToastContext();
   const [withdrawValidators, setWithdrawValidators] = useState([]);
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -57,35 +39,6 @@ const CreateWithdrawRequest = ({
       });
     }
   }, [treasuryDaoID, selectedWallet]);
-
-  // Get balances based on selected wallet
-  const getBalances = () => {
-    if (selectedWallet?.value === lockupContract) {
-      const locked = lockupNearBalances?.contractLockedParsed || 0;
-      const total = lockupNearBalances?.totalParsed || 0;
-      const available = Math.max(
-        0,
-        parseFloat(total) -
-          parseFloat(locked) -
-          parseFloat(LOCKUP_MIN_BALANCE_FOR_STORAGE)
-      ).toFixed(2);
-
-      return {
-        available: available,
-        staked: lockupStakedBalances?.staked || 0,
-        unstaked: lockupStakedBalances?.unstaked || 0,
-        withdrawal: lockupStakedBalances?.availableToWithdraw || 0,
-      };
-    }
-    return {
-      available: daoNearBalances?.availableParsed || 0,
-      staked: daoStakedBalances?.staked || 0,
-      unstaked: daoStakedBalances?.unstaked || 0,
-      withdrawal: daoStakedBalances?.availableToWithdraw || 0,
-    };
-  };
-
-  const balances = getBalances();
 
   // Get fee of staked pools with withdrawal balance
   const getFeeOfStakedPools = async (stakedPoolsWithBalance) => {
@@ -205,17 +158,14 @@ const CreateWithdrawRequest = ({
       console.log("Withdraw request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then(async (id) => {
-          setVoteProposalId(id);
-          setToastStatus("WithdrawProposalAdded");
-          setTxnCreated(false);
-          await invalidateCategoryAfterTransaction();
-          onCloseCanvas();
-        });
+        // Toast context will automatically fetch proposal ID and invalidate cache
+        showToast("WithdrawProposalAdded", null, "stake");
+        setTxnCreated(false);
+        onCloseCanvas();
       }
     } catch (error) {
       console.error("Withdraw request error:", error);
-      setToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "stake");
       setTxnCreated(false);
     }
   };
@@ -239,7 +189,7 @@ const CreateWithdrawRequest = ({
       {Array.isArray(withdrawValidators) && withdrawValidators.length > 0 && (
         <div className="border border-1 rounded-3">
           {withdrawValidators.map((validator, index) => {
-            const { pool_id, fee, stakedBalance } = validator;
+            const { pool_id, fee } = validator;
 
             return (
               <div

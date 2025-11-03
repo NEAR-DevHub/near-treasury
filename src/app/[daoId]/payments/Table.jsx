@@ -26,12 +26,8 @@ const Table = ({
   proposals,
   loading,
   isPendingRequests,
-  highlightProposalId,
   selectedProposalDetailsId,
   onSelectRequest,
-  setToastStatus,
-  setVoteProposalId,
-  refreshTableData,
   handleSortClick,
   sortDirection,
 }) => {
@@ -88,13 +84,6 @@ const Table = ({
       window.removeEventListener("columnsVisibilityChanged", handleCustomEvent);
     };
   }, []);
-
-  const highlightId =
-    highlightProposalId ||
-    highlightProposalId === "0" ||
-    highlightProposalId === 0
-      ? parseInt(highlightProposalId)
-      : null;
 
   const requiredVotes = transferApproversGroup?.requiredVotes;
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
@@ -159,25 +148,6 @@ const Table = ({
       fetchIntentsTokens();
     }
   }, [proposals]);
-
-  function updateVoteSuccess(status, proposalId) {
-    refreshTableData?.();
-    setToastStatus?.(status);
-    setVoteProposalId?.(proposalId);
-    onSelectRequest?.(null);
-  }
-
-  async function checkProposalStatus(proposalId) {
-    try {
-      const result = await Near.view(treasuryDaoID, "get_proposal", {
-        id: proposalId,
-      });
-      updateVoteSuccess(result.status, proposalId);
-    } catch {
-      // deleted request (thus proposal won't exist)
-      updateVoteSuccess("Removed", proposalId);
-    }
-  }
 
   const TooltipContent = ({ title, summary }) => {
     return (
@@ -285,10 +255,7 @@ const Table = ({
               }}
               className={
                 "cursor-pointer proposal-row " +
-                (highlightId === item.id ||
-                selectedProposalDetailsId === item.id
-                  ? "bg-highlight"
-                  : "")
+                (selectedProposalDetailsId === item.id ? "bg-highlight" : "")
               }
             >
               <td className="fw-semi-bold px-3">{item.id}</td>
@@ -391,7 +358,7 @@ const Table = ({
               </td>
               <td className={"text-sm text-left " + isVisible("Notes")}>
                 {notes ? (
-                  <Tooltip content={<TooltipContent summary={notes} />}>
+                  <Tooltip tooltip={notes}>
                     <div className="custom-truncate" style={{ width: 180 }}>
                       {notes}
                     </div>
@@ -455,8 +422,8 @@ const Table = ({
                       isIntentsRequest={isIntentWithdraw}
                       currentAmount={args.amount}
                       currentContract={args.token_id}
-                      checkProposalStatus={() => checkProposalStatus(item.id)}
                       proposal={item}
+                      context="payment"
                     />
                   </td>
                 )}

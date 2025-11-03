@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import Modal from "@/components/ui/Modal";
 import OffCanvas from "@/components/ui/OffCanvas";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
@@ -12,7 +13,6 @@ import TableSkeleton from "@/components/ui/TableSkeleton";
 import Profile from "@/components/ui/Profile";
 import AccountInput from "@/components/forms/AccountInput";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
-import { useRouter } from "next/navigation";
 import { getProposalsFromIndexer } from "@/api/indexer";
 import WarningTable from "./WarningTable";
 import isEqual from "lodash/isEqual";
@@ -109,13 +109,6 @@ const MembersEditor = ({
     const updated = [...members];
     updated[index].member = accountId;
     setMembers(updated);
-  };
-
-  const handleRoleChange = (index, selectedRoles) => {
-    const updated = [...members];
-    updated[index].roles = selectedRoles;
-    setMembers(updated);
-    setRolesError("");
   };
 
   const handleSubmit = () => {
@@ -388,15 +381,9 @@ const MembersEditor = ({
 };
 
 const Members = () => {
-  const {
-    daoId,
-    daoPolicy,
-    lastProposalId,
-    refetchLastProposalId,
-    hasPermission,
-  } = useDao();
+  const { daoId, daoPolicy, hasPermission } = useDao();
   const { accountId, signAndSendTransactions } = useNearWallet();
-  const router = useRouter();
+  const { showToast } = useProposalToastContext();
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(0);
@@ -405,7 +392,6 @@ const Members = () => {
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [showEditor, setShowEditor] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showToastStatus, setShowToastStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEdit, setIsEdit] = useState(false);
   const [
@@ -597,58 +583,6 @@ const Members = () => {
     return `https://i.near.social/magic/large/https://near.social/magic/img/account/${acc}`;
   }
 
-  const Toast = () => {
-    if (!showToastStatus) return null;
-
-    return (
-      <div className="toast-container position-fixed bottom-0 end-0 p-3">
-        <div className="toast show">
-          <div className="toast-header px-2">
-            <strong className="me-auto">Just Now</strong>
-            <i
-              className="bi bi-x-lg h6 mb-0 cursor-pointer"
-              onClick={() => setShowToastStatus(null)}
-            ></i>
-          </div>
-          <div className="toast-body">
-            <ToastStatusContent />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ToastStatusContent = () => {
-    switch (showToastStatus) {
-      case "ProposalAdded":
-        return (
-          <div className="d-flex align-items-center gap-3">
-            <i className="bi bi-check2 mb-0 success-icon"></i>
-            <div>
-              <div>Your request has been submitted.</div>
-              <button
-                className="btn btn-link text-underline p-0 text-start"
-                onClick={() => {
-                  router.push(`/${daoId}/settings?id=${lastProposalId}`);
-                }}
-              >
-                View it
-              </button>
-            </div>
-          </div>
-        );
-      case "ErrorAddingProposal":
-        return (
-          <div className="d-flex align-items-center gap-3">
-            <i className="bi bi-exclamation-octagon mb-0 error-icon"></i>
-            <div>Failed to submit proposal. Please try again.</div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   const MembersTable = () => {
     return (
       <tbody>
@@ -811,7 +745,6 @@ const Members = () => {
     if (!daoPolicy) return;
 
     setTxnCreated(true);
-    setShowToastStatus(null);
 
     try {
       const changes = updateDaoPolicyLocal(list, isEdit);
@@ -853,17 +786,15 @@ const Members = () => {
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         checkProposals();
-        refetchLastProposalId().then((id) => {
-          setShowEditor(false);
-          setTxnCreated(false);
-          setShowToastStatus("ProposalAdded");
-          setSelectedRows([]);
-          setSelectedMembers([]);
-        });
+        setShowEditor(false);
+        setTxnCreated(false);
+        showToast("ProposalAdded", null, "settings");
+        setSelectedRows([]);
+        setSelectedMembers([]);
       }
     } catch (error) {
       console.error("Error creating proposal:", error);
-      setShowToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "settings");
       setTxnCreated(false);
     }
   };
@@ -872,7 +803,6 @@ const Members = () => {
     if (!daoPolicy) return;
 
     setTxnCreated(true);
-    setShowToastStatus(null);
 
     try {
       const changes = removeMembersFromPolicy(selectedMembers);
@@ -912,17 +842,15 @@ const Members = () => {
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         checkProposals();
-        refetchLastProposalId().then((id) => {
-          setShowDeleteModal(false);
-          setTxnCreated(false);
-          setShowToastStatus("ProposalAdded");
-          setSelectedRows([]);
-          setSelectedMembers([]);
-        });
+        setShowDeleteModal(false);
+        setTxnCreated(false);
+        showToast("ProposalAdded", null, "settings");
+        setSelectedRows([]);
+        setSelectedMembers([]);
       }
     } catch (error) {
       console.error("Error creating proposal:", error);
-      setShowToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "settings");
       setTxnCreated(false);
     }
   };
@@ -932,7 +860,6 @@ const Members = () => {
       className="d-flex flex-column"
       style={{ fontSize: "13px", minHeight: "75vh" }}
     >
-      <Toast />
       <TransactionLoader showInProgress={isTxnCreated} />
 
       {/* Proposals Override Confirmation Modal */}

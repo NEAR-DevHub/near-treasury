@@ -86,7 +86,7 @@ const SettingsPage = () => {
                 <Link
                   href={`?tab=${option.key}`}
                   className={`link d-inline-flex gap-2 p-2 px-3 rounded-3 pointer w-100 ${
-                    isActive ? "bg-theme-color text-white" : ""
+                    isActive ? "bg-grey-035" : ""
                   }`}
                   style={{ textDecoration: "none" }}
                 >
