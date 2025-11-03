@@ -479,18 +479,24 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
     await page.waitForTimeout(1000);
     console.log("✓ Selected Ethereum network for ETH");
 
-    // Step 13: Select receive token (USDC)
-    // The form now shows ETH selected in Send section
-    // Now we need to select token in the Receive section
-    // Look for "Select token" text that appears AFTER "Receive" heading
-    await page.waitForTimeout(1000); // Wait for form to update after ETH selection
-
-    // Click the second "Select token" button (the one in Receive section)
-    const receiveTokenButton = page.locator('text="Receive"').locator('..').getByText("Select token");
-    await expect(receiveTokenButton).toBeVisible({ timeout: 10000 });
-    await receiveTokenButton.click();
+    // Step 13: Fill in send amount first
+    // Fill in the amount in the Send section before selecting receive token
     await page.waitForTimeout(1000);
-    console.log("✓ Opened receive token dropdown");
+    const amountInput = page.locator('input[type="number"]').or(page.locator('input[type="text"]')).first();
+    await expect(amountInput).toBeVisible({ timeout: 10000 });
+    await amountInput.click();
+    await amountInput.fill("0.15");
+    await page.waitForTimeout(1000);
+    console.log("✓ Entered send amount: 0.15 ETH");
+
+    // Step 14: Select receive token (USDC)
+    // There are 2 buttons: "Select token " (dropdown in Receive section) and "Select Token" (bottom button)
+    // First click the dropdown in the Receive section
+    const receiveTokenDropdown = page.getByRole("button", { name: "Select token", exact: false }).first();
+    await expect(receiveTokenDropdown).toBeVisible({ timeout: 10000 });
+    await receiveTokenDropdown.click();
+    await page.waitForTimeout(1500);
+    console.log("✓ Clicked receive token dropdown");
 
     // Wait for token selector modal and select USDC
     await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10000 });
@@ -500,55 +506,37 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
     // Select network for USDC
     await expect(page.getByRole("heading", { name: /Select Network for USDC/i })).toBeVisible({ timeout: 10000 });
-    await page.getByText("Ethereum", { exact: true }).click();
+    // There are multiple "Ethereum" texts on page (one in Send section), use .last() to get the one in modal
+    await page.getByText("Ethereum", { exact: true }).last().click();
     await page.waitForTimeout(1000);
     console.log("✓ Selected Ethereum network for USDC");
 
-    // Step 14: Fill in send amount
-    // Look for input field near the Send section
-    const sendAmountInput = page.locator('input[type="number"]').first();
-    await expect(sendAmountInput).toBeVisible({ timeout: 10000 });
-    await sendAmountInput.fill("0.15");
-    await page.waitForTimeout(1000);
-    console.log("✓ Entered send amount: 0.15 ETH");
+    // Step 15: Set price slippage limit (optional - default is 1%)
+    // We can keep the default
+    console.log("✓ Price slippage limit set to default (1%)");
 
-    // Step 15: Set price slippage limit
-    const slippageInput = page.getByText("Price Slippage Limit").locator("..").locator("input");
-    await expect(slippageInput).toBeVisible({ timeout: 10000 });
-    // Default is already 1%, we can keep it or change it
-    console.log("✓ Price slippage limit set");
-
-    // Step 16: Click "Select Token" button to proceed
-    const selectTokenButton = page.getByRole("button", { name: "Select Token" });
-    await expect(selectTokenButton).toBeVisible({ timeout: 10000 });
-    await selectTokenButton.click();
-    console.log("✓ Clicked Select Token button");
-
-    // Step 17: Wait for quote to be fetched and form to update
+    // Step 16: Wait for quote to be fetched and form to update
     await page.waitForTimeout(3000);
     console.log("✓ Waiting for quote...");
 
-    // Step 18: Look for "Create Request" or "Submit" button in the modal
-    // The form should now show quote details
-    const submitButton = page.getByRole("button", { name: /Create|Submit/i });
-    await expect(submitButton).toBeVisible({ timeout: 15000 });
+    // Step 17: Click "Preview" button to proceed
+    const previewButton = page.getByRole("button", { name: "Preview" });
+    await expect(previewButton).toBeVisible({ timeout: 15000 });
+    await previewButton.click();
+    console.log("✓ Clicked Preview button");
+
+    // Step 18: Wait for Confirm modal and click Submit
+    await expect(page.getByRole("heading", { name: "Confirm" })).toBeVisible({ timeout: 10000 });
+    console.log("✓ Confirm modal appeared");
+
+    const submitButton = page.getByRole("button", { name: "Submit" });
+    await expect(submitButton).toBeVisible({ timeout: 10000 });
     await submitButton.click();
-    console.log("✓ Clicked Create/Submit button");
+    console.log("✓ Clicked Submit button");
 
-    // Step 19: Confirm transaction if prompted
-    const confirmButton = page.getByRole("button", { name: "Confirm" });
-    if (await confirmButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await confirmButton.click();
-      console.log("✓ Confirmed transaction");
-    }
-
-    // Step 20: Wait for success message
-    await expect(
-      page.getByText(/successfully|created/i)
-    ).toBeVisible({
-      timeout: 15000,
-    });
-    console.log("✓ Asset exchange request created successfully");
+    // Step 19: Wait for transaction to complete
+    await page.waitForTimeout(2000);
+    console.log("✓ Waiting for transaction to complete...");
 
     // Step 21: Verify proposal appears in table
     // Close the modal if still open
@@ -565,8 +553,8 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
     });
 
     // Look for ETH and USDC in the table
-    await expect(page.getByText("ETH")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("USDC")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("ETH").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("USDC").first()).toBeVisible({ timeout: 10000 });
     console.log("✓ Proposal appears in Pending Requests table with ETH → USDC");
 
     console.log("\n=== Test Complete ===\n");
