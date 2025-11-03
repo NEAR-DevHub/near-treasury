@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import { useDao } from "@/context/DaoContext";
 import { useTheme } from "@/context/ThemeContext";
-import {
-  fetchTokenMetadataByDefuseAssetId,
-  fetchBlockchainByNetwork,
-} from "@/api/backend";
-import { fetchSupportedTokens, fetchDepositAddress } from "@/api/chaindefuser";
+import { fetchDepositAddress } from "@/api/chaindefuser";
+import { getAggregatedIntentsAssets } from "@/helpers/treasuryHelpers";
 import DropdownWithModal from "@/components/dropdowns/DropdownWithModal";
 import DepositAddress from "@/app/[daoId]/dashboard/intents-deposit/DepositAddress";
 import FAQSection from "@/components/ui/FAQSection";
@@ -112,94 +109,71 @@ const Intents = () => {
     setIntentsDepositAddress("");
 
     try {
-      const result = await fetchSupportedTokens();
+      const aggregatedAssets = await getAggregatedIntentsAssets({
+        intentsBalances: [],
+        theme: isDarkTheme ? "dark" : "light",
+      });
 
-      if (result && result.tokens) {
-        const filteredTokens = result.tokens.filter(
-          (token) => token.standard === "nep141"
-        );
+      if (!aggregatedAssets || aggregatedAssets.length === 0) {
+        setErrorApi("No bridgeable assets found.");
+        setIsLoadingTokens(false);
+        return;
+      }
 
-        const defuseAssetIds = filteredTokens
-          .map((token) => token.intents_token_id)
-          .filter((id) => id);
-
-        if (defuseAssetIds.length === 0) {
-          setErrorApi("No bridgeable assets found.");
-          setIsLoadingTokens(false);
-          return;
-        }
-
-        // Fetch token metadata
-        const metadataResults = await fetchTokenMetadataByDefuseAssetId(
-          defuseAssetIds
-        );
-
-        const metadataMap = {};
-        metadataResults.forEach((metadata) => {
-          if (metadata.defuse_asset_id) {
-            metadataMap[metadata.defuse_asset_id] = metadata;
-          }
-        });
-
-        const enrichedTokens = filteredTokens
-          .map((token) => {
-            const metadata = metadataMap[token.intents_token_id];
-            if (!metadata) {
-              return null;
-            }
-            return {
-              ...token,
-              ...metadata,
-            };
-          })
-          .filter((token) => token !== null && token.chainName);
-
-        // Collect unique chain names
-        const uniqueChainNames = new Set();
-        enrichedTokens.forEach((token) => {
-          uniqueChainNames.add(token.chainName);
-        });
-
-        // Fetch network icons
-        const networkResults = await fetchBlockchainByNetwork(
-          Array.from(uniqueChainNames),
-          isDarkTheme ? "dark" : "light"
-        );
-
-        const networkIconMap = {};
-        networkResults.forEach((network) => {
-          if (network.network && network.icon) {
-            networkIconMap[network.network] = {
-              name: network.name || network.network,
+      // Build network icon map from aggregated assets
+      const networkIconMapFromAssets = {};
+      aggregatedAssets.forEach((asset) => {
+        asset.networks?.forEach((network) => {
+          if (network.id && network.icon) {
+            networkIconMapFromAssets[network.id] = {
+              name: network.label || network.chainId,
               icon: network.icon,
             };
           }
         });
+      });
 
-        // Create unique assets
-        const assetMap = {};
-        enrichedTokens.forEach((token) => {
-          const assetName = token.asset_name;
-          if (!assetMap[assetName]) {
-            assetMap[assetName] = {
-              asset_name: assetName,
-              name: token.name,
-              symbol: token.symbol,
-              icon: token.icon,
-              tokens: [],
-            };
-          }
-          assetMap[assetName].tokens.push(token);
+      // Transform aggregated assets to match the expected structure
+      // Each asset has networks, we need to create tokens from networks
+      const enrichedTokens = [];
+      aggregatedAssets.forEach((asset) => {
+        asset.networks?.forEach((network) => {
+          enrichedTokens.push({
+            asset_name: asset.asset_name,
+            name: asset.name,
+            symbol: asset.symbol,
+            icon: asset.icon,
+            intents_token_id: network.id,
+            defuse_asset_identifier: network.id,
+            chainName: network.chainId?.split(":")[0] || network.chainId,
+            near_token_id: network.id?.replace("nep141:", "") || network.id,
+            chainId: network.chainId,
+          });
         });
+      });
 
-        const uniqueAssets = Object.values(assetMap);
+      // Create unique assets (grouped by asset_name)
+      const assetMap = {};
+      aggregatedAssets.forEach((asset) => {
+        const assetName = asset.asset_name;
+        if (!assetMap[assetName]) {
+          assetMap[assetName] = {
+            asset_name: assetName,
+            name: asset.name,
+            symbol: asset.symbol,
+            icon: asset.icon,
+            tokens: enrichedTokens.filter(
+              (token) => token.asset_name === assetName
+            ),
+          };
+        }
+      });
 
-        setAllFetchedTokens(enrichedTokens);
-        setUniqueAssets(uniqueAssets);
-        setNetworkIconMap(networkIconMap);
-      } else {
-        setErrorApi("No bridgeable assets found or unexpected API response.");
-      }
+      const uniqueAssets = Object.values(assetMap);
+
+      setAllFetchedTokens(enrichedTokens);
+      setUniqueAssets(uniqueAssets);
+      setNetworkIconMap(networkIconMapFromAssets);
     } catch (err) {
       console.error("Failed to fetch tokens:", err);
       setErrorApi(err.message || "Failed to fetch assets. Please try again.");
@@ -223,22 +197,40 @@ const Intents = () => {
 
     const networks = selectedAsset.tokens
       .map((token) => {
-        if (!token.chainName) return null;
+        if (!token.intents_token_id && !token.defuse_asset_identifier)
+          return null;
 
-        const networkInfo = networkIconMap?.[token.chainName];
-        const parts = token.defuse_asset_identifier.split(":");
+        // Get network info from networkIconMap using the token id
+        const networkInfo =
+          networkIconMap?.[
+            token.intents_token_id || token.defuse_asset_identifier
+          ];
+
+        // Extract chainId from defuse_asset_identifier or use chainId if available
         let chainId;
-        if (parts.length >= 2) {
-          chainId = parts.slice(0, 2).join(":");
+        if (token.chainId) {
+          chainId = token.chainId;
         } else {
-          chainId = parts[0];
+          const parts = (
+            token.defuse_asset_identifier ||
+            token.intents_token_id ||
+            ""
+          ).split(":");
+          if (parts.length >= 2) {
+            chainId = parts.slice(0, 2).join(":");
+          } else {
+            chainId = parts[0];
+          }
         }
 
         return {
           id: chainId,
-          name: networkInfo?.name || token.chainName,
+          name: networkInfo?.name || token.chainName || chainId,
           icon: networkInfo?.icon || placeholderNetworkIcon,
-          near_token_id: token.near_token_id,
+          near_token_id:
+            token.near_token_id ||
+            token.intents_token_id?.replace("nep141:", "") ||
+            token.intents_token_id,
           originalTokenData: token,
         };
       })
@@ -368,6 +360,7 @@ const Intents = () => {
                       dropdownLabel="Select Asset"
                       options={uniqueAssets}
                       enableSearch={true}
+                      isLoading={isLoadingTokens}
                       onSelect={handleAssetSelect}
                       searchPlaceholder="Search assets"
                       renderOption={(asset) => (

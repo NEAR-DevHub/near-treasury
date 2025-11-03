@@ -408,19 +408,8 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
       </div>
 
       {dataErrors?.length > 0 && (
-        <div
-          className="d-flex gap-3 px-3 py-2 rounded-3 align-items-start"
-          style={{
-            backgroundColor: "rgba(217, 92, 74, 0.1)",
-            color: "var(--other-red)",
-            fontWeight: 500,
-            fontSize: "13px",
-          }}
-        >
-          <i
-            className="bi bi-exclamation-octagon h5 mb-0"
-            style={{ color: "var(--other-red)" }}
-          ></i>
+        <div className="error-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start">
+          <i className="bi bi-exclamation-octagon h5 mb-0"></i>
           {formatCsvErrors(dataErrors)}
         </div>
       )}
@@ -430,18 +419,9 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
           {dataWarnings.map((w, i) => (
             <div
               key={i}
-              className="d-flex gap-3 px-3 py-2 rounded-3 align-items-start"
-              style={{
-                backgroundColor: "rgba(255, 158, 0, 0.1)",
-                color: "var(--other-warning)",
-                fontWeight: 500,
-                fontSize: "13px",
-              }}
+              className="warning-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start"
             >
-              <i
-                className="bi bi-exclamation-triangle h5 mb-0"
-                style={{ color: "var(--other-warning)" }}
-              ></i>
+              <i className="bi bi-exclamation-triangle h5 mb-0"></i>
               <div>{w.message}</div>
             </div>
           ))}

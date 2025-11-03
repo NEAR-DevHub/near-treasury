@@ -78,6 +78,24 @@ export const decodeBase64 = (encodedArgs) => {
   }
 };
 
+/**
+ * Decode base64-encoded args and pretty-print JSON if possible; otherwise return decoded text.
+ */
+export const formatBase64ArgsPretty = (encodedArgs) => {
+  if (!encodedArgs) return "";
+  try {
+    const decoded = Buffer.from(encodedArgs, "base64").toString("utf-8");
+    try {
+      const parsed = JSON.parse(decoded);
+      return JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      return decoded;
+    }
+  } catch (e) {
+    return "";
+  }
+};
+
   export const formatSubmissionTimeStamp = (
   submissionTime,
   proposalPeriod,

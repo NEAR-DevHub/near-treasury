@@ -5,6 +5,7 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
 import { Near } from "@/api/near";
+import { formatBase64ArgsPretty } from "@/helpers/daoHelpers";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
 import VoteActions from "@/components/proposals/VoteActions";
@@ -200,44 +201,42 @@ const ProposalDetailsPage = ({
                         >
                           <h6 className="mb-0">Action {index + 1}</h6>
                         </div>
-
-                        <div className="px-3 py-2 border-top rounded-top-3">
-                          <div className="mb-3">
+                        <div className="d-flex flex-column gap-2 p-2">
+                          <div className="d-flex flex-column gap-2 mt-1">
                             <label className="proposal-label">
                               Method Name
                             </label>
-                            <div className="text-secondary text-md">
-                              {action.method_name}
-                            </div>
+                            <div>{action.method_name}</div>
                           </div>
 
-                          <div className="border-top pt-2 mb-2">
-                            <label className="proposal-label">Arguments</label>
+                          <div className="d-flex flex-column gap-2 mt-1">
+                            {" "}
+                            <label className="border-top proposal-label">
+                              Arguments
+                            </label>
                             {action.args ? (
-                              <pre className="mt-1 p-2 rounded small code-block">
-                                {Buffer.from(action.args, "base64").toString(
-                                  "utf-8"
-                                )}
+                              <pre className="mt-1 p-2 rounded small code-block mb-1">
+                                {formatBase64ArgsPretty(action.args)}
                               </pre>
                             ) : (
-                              <div className="text-secondary text-md">-</div>
+                              <div>-</div>
                             )}
                           </div>
 
                           <div className="border-top pt-2">
                             <div className="row">
                               <div className="col-md-6">
-                                <label className="proposal-label">Gas</label>
-                                <div className="text-secondary text-md">
-                                  {formatGas(action.gas)} Tgas
+                                <div className="d-flex flex-column gap-2">
+                                  <label className="proposal-label">Gas</label>
+                                  <div>{formatGas(action.gas)} Tgas</div>
                                 </div>
                               </div>
                               <div className="col-md-6">
-                                <label className="proposal-label">
-                                  Deposit
-                                </label>
-                                <div className="text-secondary text-md">
-                                  {formatDeposit(action.deposit)}
+                                <div className="d-flex flex-column gap-2">
+                                  <label className="proposal-label">
+                                    Deposit
+                                  </label>
+                                  <div>{formatDeposit(action.deposit)}</div>
                                 </div>
                               </div>
                             </div>

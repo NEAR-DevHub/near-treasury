@@ -579,9 +579,7 @@ const ProposalDetailsPage = ({
         <div className="card card-body d-flex flex-column gap-2">
           <div className="d-flex flex-column gap-2 mt-1">
             <label className="proposal-label">Source Wallet</label>
-            <div className="text-secondary text-md">
-              {proposalData?.sourceWallet}
-            </div>
+            <div>{proposalData?.sourceWallet}</div>
           </div>
           <h6 className="mb-0 flex-1 border-top pt-3">{proposalData?.title}</h6>
           {proposalData?.summary && (
@@ -622,17 +620,16 @@ const ProposalDetailsPage = ({
           </div>
           <div className="d-flex flex-column gap-2 mt-1">
             <label className="border-top proposal-label">Funding Ask</label>
-            <h5 className="mb-0" style={{ width: "fit-content" }}>
-              <TokenAmount
-                amountWithoutDecimals={proposalData?.args?.amount}
-                showUSDValue={false}
-                address={
-                  proposalData?.isIntentsPayment
-                    ? proposalData?.intentsTokenInfo?.tokenContract
-                    : proposalData?.args?.token_id
-                }
-              />
-            </h5>
+            <TokenAmount
+              amountWithoutDecimals={proposalData?.args?.amount}
+              showUSDValue={false}
+              address={
+                proposalData?.isIntentsPayment
+                  ? proposalData?.intentsTokenInfo?.tokenContract
+                  : proposalData?.args?.token_id
+              }
+              isProposalDetails={true}
+            />
             {proposalData?.isIntentsPayment && networkInfo.blockchain && (
               <div className="d-flex flex-column gap-2 mt-3">
                 <label className="border-top proposal-label">Network</label>
