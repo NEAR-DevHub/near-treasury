@@ -22,12 +22,8 @@ const Table = ({
   proposals,
   loading,
   isPendingRequests,
-  highlightProposalId,
   selectedProposalDetailsId,
   onSelectRequest,
-  setToastStatus,
-  setVoteProposalId,
-  refreshTableData,
   handleSortClick,
   sortDirection,
 }) => {
@@ -51,6 +47,15 @@ const Table = ({
     () => (deleteGroup?.approverAccounts ?? []).includes(accountId),
     [deleteGroup, accountId]
   );
+
+  const hasOneDeleteIcon =
+    isPendingRequests &&
+    hasDeletePermission &&
+    (proposals ?? []).find(
+      (i) =>
+        i.proposer === accountId &&
+        !Object.keys(i.votes ?? {}).includes(accountId)
+    );
 
   // Columns visibility
   const [columnsVisibility, setColumnsVisibility] = useState([]);
@@ -111,30 +116,6 @@ const Table = ({
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
   const proposalPeriod = daoPolicy?.proposal_period;
 
-  const updateVoteSuccess = useCallback(
-    (status, proposalId) => {
-      refreshTableData?.();
-      setToastStatus?.(status);
-      setVoteProposalId?.(proposalId);
-      onSelectRequest?.(null);
-    },
-    [refreshTableData, setToastStatus, setVoteProposalId, onSelectRequest]
-  );
-
-  const checkProposalStatus = useCallback(
-    async (proposalId) => {
-      try {
-        const result = await Near.view(treasuryDaoID, "get_proposal", {
-          id: proposalId,
-        });
-        updateVoteSuccess(result.status, proposalId);
-      } catch {
-        updateVoteSuccess("Removed", proposalId);
-      }
-    },
-    [treasuryDaoID, updateVoteSuccess]
-  );
-
   const ProposalsComponent = () => (
     <tbody style={{ overflowX: "auto" }}>
       {proposals?.map((item) => {
@@ -175,13 +156,6 @@ const Table = ({
 
         const sourceWallet = quoteDeadlineStr ? "NEAR Intents" : "SputnikDAO";
 
-        const highlightId =
-          highlightProposalId ||
-          highlightProposalId === 0 ||
-          highlightProposalId === "0"
-            ? parseInt(highlightProposalId)
-            : null;
-
         const tokenInLower = (tokenIn || "").toLowerCase();
         const displaySymbolIn = symbolByAddress[tokenInLower] || tokenIn;
         const priceIn = oneClickPrices[displaySymbolIn] || undefined;
@@ -193,9 +167,7 @@ const Table = ({
             onClick={() => onSelectRequest?.(item.id)}
             className={
               "cursor-pointer proposal-row " +
-              (highlightId === item.id || selectedProposalDetailsId === item.id
-                ? "bg-highlight"
-                : "")
+              (selectedProposalDetailsId === item.id ? "bg-highlight" : "")
             }
           >
             <td className="fw-semi-bold">{item.id}</td>
@@ -326,19 +298,8 @@ const Table = ({
                     currentContract={tokenIn}
                     requiredVotes={requiredVotes}
                     isHumanReadableCurrentAmount={true}
-                    checkProposalStatus={useMemo(
-                      () => () => checkProposalStatus(item.id),
-                      [checkProposalStatus, item.id]
-                    )}
-                    hasOneDeleteIcon={
-                      isPendingRequests &&
-                      hasDeletePermission &&
-                      !!(proposals ?? []).find(
-                        (i) =>
-                          i.proposer === accountId &&
-                          !Object.keys(i.votes ?? {}).includes(accountId)
-                      )
-                    }
+                    context="exchange"
+                    hasOneDeleteIcon={hasOneDeleteIcon}
                     proposal={item}
                     isIntentsRequest={!!quoteDeadlineStr}
                     isQuoteExpired={isQuoteExpired}

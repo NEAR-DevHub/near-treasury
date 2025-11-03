@@ -82,8 +82,8 @@ export const DaoProvider = ({ children }) => {
           setDaoId(validation.daoId);
           setCustomConfig(getDaoConfig(validation.daoId));
         } else {
-          // Redirect to home page if invalid
-          window.location.href = "/";
+          // Redirect to home page if invalid with error flag
+          window.location.href = "/?error=invalid-dao";
         }
       });
     }

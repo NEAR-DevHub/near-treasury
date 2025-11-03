@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useProposals } from "@/hooks/useProposals";
+import { useState, useEffect, useMemo } from "react";
+import { useProposal } from "@/hooks/useProposal";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
-import { Near } from "@/api/near";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -15,24 +14,13 @@ import Tooltip from "@/components/ui/Tooltip";
 import { getAggregatedIntentsAssets } from "@/helpers/treasuryHelpers";
 import TokenAmount from "@/components/proposals/TokenAmount";
 
-const ProposalDetailsPage = ({
-  id,
-  isCompactVersion,
-  onClose,
-  setVoteProposalId,
-  setToastStatus,
-  currentTab,
-}) => {
+const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const { accountId } = useNearWallet();
   const { daoId, daoPolicy, getApproversAndThreshold } = useDao();
-  const { invalidateCategory } = useProposals({
-    daoId,
-    category: "asset-exchange",
-    enabled: false,
-  });
+
+  const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
   const [proposalData, setProposalData] = useState(null);
-  const [isDeleted, setIsDeleted] = useState(false);
   const [intentsAssets, setIntentsAssets] = useState([]);
 
   const proposalPeriod = daoPolicy?.proposal_period;
@@ -110,13 +98,13 @@ const ProposalDetailsPage = ({
     []
   );
 
+  // Process raw proposal data when it changes
   useEffect(() => {
-    async function fetchProposalData() {
-      if (!daoId || !proposalPeriod || proposalData) return;
+    const processProposalData = async () => {
+      if (!rawProposal || !proposalPeriod) return;
+
       try {
-        const item = await Near.view(daoId, "get_proposal", {
-          id: parseInt(id),
-        });
+        const item = rawProposal;
         const notes = decodeProposalDescription("notes", item.description);
         const amountIn = decodeProposalDescription(
           "amountIn",
@@ -208,57 +196,24 @@ const ProposalDetailsPage = ({
           intentsTokenContractId,
         });
       } catch (e) {
-        setIsDeleted(true);
+        console.error("Error processing proposal data:", e);
       }
-    }
-    fetchProposalData();
-  }, [id, daoId, proposalPeriod]);
+    };
 
-  useEffect(() => {
-    if (proposalData && proposalData.id !== id) {
-      setProposalData(null);
-    }
-  }, [id, proposalData]);
-
-  const refreshData = useCallback(() => {
-    setProposalData(null);
-    invalidateCategory();
-  }, [invalidateCategory]);
-
-  const updateVoteSuccess = useCallback(
-    (status, proposalId) => {
-      setVoteProposalId?.(proposalId);
-      setToastStatus?.(status);
-      refreshData();
-    },
-    [setVoteProposalId, setToastStatus, refreshData]
-  );
-
-  const checkProposalStatus = useCallback(
-    async (proposalId) => {
-      try {
-        const result = await Near.view(daoId, "get_proposal", {
-          id: proposalId,
-        });
-        updateVoteSuccess(result.status, proposalId);
-      } catch {
-        updateVoteSuccess("Removed", proposalId);
-      }
-    },
-    [daoId, updateVoteSuccess]
-  );
-
-  const handleCheckProposalStatus = useMemo(
-    () =>
-      proposalData?.id ? () => checkProposalStatus(proposalData.id) : undefined,
-    [checkProposalStatus, proposalData?.id]
-  );
+    processProposalData();
+  }, [rawProposal, proposalPeriod]);
 
   return (
     <ProposalDetails
+      proposalData={proposalData}
+      isDeleted={isDeleted}
       currentTab={currentTab}
       proposalPeriod={proposalPeriod}
       page="asset-exchange"
+      isCompactVersion={isCompactVersion}
+      onClose={onClose}
+      approversGroup={functionCallApproversGroup}
+      proposalStatusLabel={proposalStatusLabel}
       VoteActions={
         (hasVotingPermission || hasDeletePermission) &&
         proposalData?.status === "InProgress" ? (
@@ -275,7 +230,7 @@ const ProposalDetailsPage = ({
             isHumanReadableCurrentAmount={true}
             requiredVotes={functionCallApproversGroup?.requiredVotes}
             isIntentsRequest={!!proposalData?.quoteDeadline}
-            checkProposalStatus={handleCheckProposalStatus}
+            context="exchange"
             isProposalDetailsPage={true}
             proposal={proposalData?.proposal}
             isQuoteExpired={isQuoteExpired}
@@ -443,12 +398,6 @@ const ProposalDetailsPage = ({
           </div>
         )
       }
-      proposalData={proposalData}
-      isDeleted={isDeleted}
-      isCompactVersion={isCompactVersion}
-      approversGroup={functionCallApproversGroup}
-      proposalStatusLabel={proposalStatusLabel}
-      onClose={onClose}
     />
   );
 };

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Big from "big.js";
 import { useDao } from "@/context/DaoContext";
-import { useProposals } from "@/hooks/useProposals";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { Near } from "@/api/near";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
@@ -12,23 +11,16 @@ import TransactionLoader from "@/components/proposals/TransactionLoader";
 import Profile from "@/components/ui/Profile";
 import TokenIcon from "@/components/proposals/TokenIcon";
 import TokenAmount from "@/components/proposals/TokenAmount";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 
 /**
  * BulkImportPreviewTable Component
  * Shows preview of bulk payment requests with checkbox selection
  * Optimized to prevent flickering on checkbox toggle
  */
-const BulkImportPreviewTable = ({
-  proposals = [],
-  closePreviewTable,
-  setToastStatus,
-}) => {
-  const {
-    daoId: treasuryDaoID,
-    daoPolicy,
-    lastProposalId,
-    refetchLastProposalId,
-  } = useDao();
+const BulkImportPreviewTable = ({ proposals = [], closePreviewTable }) => {
+  const { showToast } = useProposalToastContext();
+  const { daoId: treasuryDaoID, daoPolicy } = useDao();
 
   const { signAndSendTransactions, accountId } = useNearWallet();
 
@@ -75,43 +67,6 @@ const BulkImportPreviewTable = ({
     });
     setSelectedMap(newMap);
   }, [selectedMap, allSelected]);
-
-  const { invalidateCategoryAfterTransaction } = useProposals({
-    category: "payments",
-    enabled: false,
-  });
-
-  async function refreshData() {
-    if (setToastStatus) {
-      setToastStatus(`BulkProposalAdded: ${selectedCount}`);
-    }
-    // Invalidate proposals cache with delay for indexer processing
-    await invalidateCategoryAfterTransaction();
-  }
-
-  // Monitor transaction completion
-  useEffect(() => {
-    if (isTxnCreated) {
-      let checkTxnTimeout = null;
-
-      const checkForNewProposal = () => {
-        refetchLastProposalId().then((id) => {
-          if (typeof lastProposalId === "number" && lastProposalId !== id) {
-            setTimeout(() => {
-              closePreviewTable();
-              clearTimeout(checkTxnTimeout);
-              refreshData();
-            }, 1000);
-          } else {
-            checkTxnTimeout = setTimeout(() => checkForNewProposal(), 1000);
-          }
-        });
-      };
-      checkForNewProposal();
-
-      return () => clearTimeout(checkTxnTimeout);
-    }
-  }, [isTxnCreated, lastProposalId, refetchLastProposalId]);
 
   /**
    * Check if receiver is registered for FT storage
@@ -205,7 +160,7 @@ const BulkImportPreviewTable = ({
       const calls = storageDepositOps.concat(proposalOps);
 
       // Transform calls array to format expected by signAndSendTransactions
-      const transactions = calls.map(call => ({
+      const transactions = calls.map((call) => ({
         receiverId: call.contractName,
         signerId: accountId,
         actions: [
@@ -227,15 +182,21 @@ const BulkImportPreviewTable = ({
 
       const result = await signAndSendTransactions({ transactions });
 
-      if (result && result.length > 0) {
+      if (
+        result &&
+        result.length > 0 &&
+        typeof result[0]?.status?.SuccessValue === "string"
+      ) {
         console.log("Transactions completed successfully:", result.length);
-        // The useEffect polling will detect the new proposals and close the modal
+        showToast(`BulkProposalAdded: ${selectedCount}`, null, "payment");
+        setTxnCreated(false);
+        closePreviewTable();
       }
     } catch (err) {
       console.error("Failed to process proposals:", err);
       setIsCreatingRequest(false);
       setTxnCreated(false);
-      setToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "payment");
     }
   }
 

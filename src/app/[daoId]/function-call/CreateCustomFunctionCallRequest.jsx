@@ -6,26 +6,16 @@ import Big from "big.js";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import Modal from "@/components/ui/Modal";
 import { useDao } from "@/context/DaoContext";
-import { useProposals } from "@/hooks/useProposals";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { Near } from "@/api/near";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { isValidNearAccount } from "@/helpers/nearHelpers";
 import { useNearWallet } from "@/context/NearWalletContext";
 
-const CreateCustomFunctionCallRequest = ({
-  onCloseCanvas = () => {},
-  setVoteProposalId,
-  setToastStatus,
-}) => {
-  const { daoId: treasuryDaoID, daoPolicy, refetchLastProposalId } = useDao();
-
-  const { invalidateCategoryAfterTransaction } = useProposals({
-    daoId: treasuryDaoID,
-    proposalType: ["FunctionCall"],
-    enabled: false,
-  });
-
+const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
+  const { daoId: treasuryDaoID, daoPolicy } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
+  const { showToast } = useProposalToastContext();
 
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -194,17 +184,13 @@ const CreateCustomFunctionCallRequest = ({
         result.length > 0 &&
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
-        refetchLastProposalId().then(async (id) => {
-          await invalidateCategoryAfterTransaction();
-          setVoteProposalId(id);
-          setToastStatus("ProposalAdded");
-          setTxnCreated(false);
-          reset();
-          onCloseCanvas();
-        });
+        showToast("ProposalAdded", null, "function");
+        setTxnCreated(false);
+        reset();
+        onCloseCanvas();
       }
     } catch (error) {
-      setToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "function");
       console.error("Error creating proposal:", error);
     } finally {
       setTxnCreated(false);
@@ -233,7 +219,6 @@ const CreateCustomFunctionCallRequest = ({
   return (
     <div>
       <TransactionLoader showInProgress={isTxnCreated} />
-
       <Modal
         isOpen={showCancelModal}
         heading="Are you sure you want to cancel?"

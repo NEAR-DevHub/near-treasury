@@ -16,7 +16,7 @@ import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { useNearWallet } from "@/context/NearWalletContext";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import { Near } from "@/api/near";
-import { useProposals } from "@/hooks/useProposals";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 
 const formatNumberWithCommas = (value) => {
   const num = Number(value || 0);
@@ -62,24 +62,10 @@ const TokenBadge = ({ token, network, hideSymbol = false }) => {
   );
 };
 
-const CreateAssetExchangeRequest = ({
-  onCloseCanvas = () => {},
-  setToastStatus,
-  setVoteProposalId,
-}) => {
-  const {
-    daoId: treasuryDaoID,
-    intentsBalances,
-    daoPolicy,
-    refetchLastProposalId,
-  } = useDao();
+const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
+  const { daoId: treasuryDaoID, intentsBalances, daoPolicy } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
-
-  const { invalidateCategoryAfterTransaction } = useProposals({
-    daoId: treasuryDaoID,
-    category: "asset-exchange",
-    enabled: false,
-  });
+  const { showToast } = useProposalToastContext();
 
   const {
     register,
@@ -510,21 +496,15 @@ const CreateAssetExchangeRequest = ({
       });
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        // Wait for proposal ID to be available
-        refetchLastProposalId().then((id) => {
-          // Invalidate proposals cache with delay for indexer processing
-          invalidateCategoryAfterTransaction().then(() => {
-            if (setVoteProposalId) setVoteProposalId(id);
-            if (setToastStatus) setToastStatus("ProposalAdded");
-            setTxnCreated(false);
-            setShowPreview(false);
-            onCloseCanvas();
-          });
-        });
+        // Toast context will automatically fetch proposal ID and invalidate cache
+        showToast("ProposalAdded", null, "exchange");
+        setTxnCreated(false);
+        setShowPreview(false);
+        onCloseCanvas();
       }
     } catch (error) {
       console.error("Error submitting proposal:", error);
-      if (setToastStatus) setToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "exchange");
       setTxnCreated(false);
     }
   }

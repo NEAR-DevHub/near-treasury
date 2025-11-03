@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { getProposalsFromIndexer } from "@/api/indexer";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import Modal from "@/components/ui/Modal";
@@ -114,14 +114,7 @@ function computeRequiredVotes(
 }
 
 const Thresholds = () => {
-  const router = useRouter();
-  const {
-    daoId: treasuryDaoID,
-    hasPermission,
-    daoPolicy,
-    lastProposalId,
-    refetchLastProposalId,
-  } = useDao();
+  const { daoId: treasuryDaoID, hasPermission, daoPolicy } = useDao();
   const { accountId, signAndSendTransactions } = useNearWallet();
 
   const {
@@ -141,10 +134,11 @@ const Thresholds = () => {
   const voteOption = watch("voteOption");
   const voteValue = watch("voteValue");
 
+  const { showToast } = useProposalToastContext();
+
   const [rolesData, setRolesData] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [isTxnCreated, setTxnCreated] = useState(false);
-  const [showToastStatus, setShowToastStatus] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [proposals, setProposals] = useState([]);
@@ -177,23 +171,27 @@ const Thresholds = () => {
     }
   }, [daoPolicy]);
 
+  function checkProposals() {
+    getProposalsFromIndexer({
+      daoId: treasuryDaoID,
+      page: 0,
+      pageSize: 10,
+      proposalType: ["ChangePolicy"],
+      statuses: ["InProgress"],
+      sortDirection: "desc",
+    })
+      .then((result) => {
+        setProposals(result.proposals || []);
+      })
+      .catch((error) => {
+        logger.error("Error fetching proposals:", error);
+      });
+  }
+
   // Fetch pending proposals
   useEffect(() => {
     if (hasCreatePermission && treasuryDaoID) {
-      getProposalsFromIndexer({
-        daoId: treasuryDaoID,
-        page: 0,
-        pageSize: 10,
-        proposalType: ["ChangePolicy"],
-        statuses: ["InProgress"],
-        sortDirection: "desc",
-      })
-        .then((result) => {
-          setProposals(result.proposals || []);
-        })
-        .catch((error) => {
-          logger.error("Error fetching proposals:", error);
-        });
+      checkProposals();
     }
   }, [hasCreatePermission, treasuryDaoID]);
 
@@ -298,16 +296,15 @@ const Thresholds = () => {
       ]);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        refetchLastProposalId().then((id) => {
-          setTxnCreated(false);
-          setShowToastStatus("ProposalAdded");
-          resetForm();
-        });
+        checkProposals();
+        setTxnCreated(false);
+        showToast("ProposalAdded", null, "settings");
+        resetForm();
       }
     } catch (error) {
       logger.error("Error submitting proposal:", error);
       setTxnCreated(false);
-      setShowToastStatus("ErrorAddingProposal");
+      showToast("ErrorAddingProposal", null, "settings");
     }
   };
 
@@ -398,48 +395,6 @@ const Thresholds = () => {
         showInProgress={isTxnCreated}
         cancelTxn={() => setTxnCreated(false)}
       />
-      {showToastStatus && (
-        <div className="toast-container position-fixed bottom-0 end-0 p-3">
-          <div className="toast show">
-            <div className="toast-header px-2">
-              <strong className="me-auto">Just Now</strong>
-              <i
-                className="bi bi-x-lg h6 mb-0 cursor-pointer"
-                onClick={() => setShowToastStatus("")}
-              ></i>
-            </div>
-            <div className="toast-body">
-              {showToastStatus === "ProposalAdded" ? (
-                <div className="d-flex align-items-center gap-3">
-                  <i className="bi bi-check2 h3 mb-0 success-icon"></i>
-                  <div>
-                    <div>Threshold change request submitted.</div>
-                    {lastProposalId && (
-                      <a
-                        href="#"
-                        className="text-underline cursor-pointer"
-                        onClick={() => {
-                          const daoIdPart = treasuryDaoID.split(".")[0];
-                          router.push(
-                            `/${daoIdPart}/settings?id=${lastProposalId}`
-                          );
-                        }}
-                      >
-                        View it
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : showToastStatus === "ErrorAddingProposal" ? (
-                <div className="d-flex align-items-center gap-3">
-                  <i className="bi bi-exclamation-triangle h3 mb-0 text-danger"></i>
-                  <div>Failed to submit proposal. Please try again.</div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showWarningModal && (
         <Modal
@@ -566,14 +521,10 @@ const Thresholds = () => {
                   }}
                   className={
                     "py-2 cursor-pointer text-color " +
-                    (name === selectedGroup.roleName && "selected-role")
+                    (name === selectedGroup.roleName
+                      ? " selected-role bg-grey-04"
+                      : "bg-transparent")
                   }
-                  style={{
-                    backgroundColor:
-                      name === selectedGroup.roleName
-                        ? "var(--grey-04)"
-                        : "transparent",
-                  }}
                 >
                   <span className="px-3">{name}</span>
                   {description && (
@@ -595,11 +546,7 @@ const Thresholds = () => {
               {selectedGroup.roleName}` permission group?
             </div>
             <div className="d-flex flex-column gap-1">
-              <label
-                style={{ color: "rgba(153, 153, 153, 1)", fontSize: "12px" }}
-              >
-                Based On
-              </label>
+              <label className="proposal-label">Based On</label>
               <DropDown
                 options={options}
                 selectedValue={selectedVoteOption}
@@ -610,9 +557,7 @@ const Thresholds = () => {
               />
             </div>
             <div className="d-flex flex-column gap-1">
-              <label
-                style={{ color: "rgba(153, 153, 153, 1)", fontSize: "12px" }}
-              >
+              <label className="proposal-label">
                 {isPercentageSelected ? "Enter percentage" : "Value"}
               </label>
               <div className="position-relative">
@@ -761,10 +706,7 @@ const Thresholds = () => {
         <div className="flex-1 py-3">
           <div className="card-title px-3 pb-3 d-flex align-items-center gap-2">
             <div>Who Can Vote</div>
-            <span
-              className="rounded-pill px-3 py-1 text-sm"
-              style={{ backgroundColor: "var(--grey-04)" }}
-            >
+            <span className="rounded-pill px-3 py-1 text-sm bg-grey-04">
               {selectedGroup.members.length}
             </span>
           </div>

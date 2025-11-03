@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useProposals } from "@/hooks/useProposals";
+import { useProposal } from "@/hooks/useProposal";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
-import { Near } from "@/api/near";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -21,14 +20,7 @@ const RequestType = {
   WHITELIST: "Whitelist",
 };
 
-const ProposalDetailsPage = ({
-  id,
-  isCompactVersion,
-  onClose,
-  setVoteProposalId,
-  setToastStatus,
-  currentTab,
-}) => {
+const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const { accountId } = useNearWallet();
   const {
     daoId: treasuryDaoID,
@@ -37,14 +29,10 @@ const ProposalDetailsPage = ({
     lockupStakedPoolId,
     getApproversAndThreshold,
   } = useDao();
-  const { invalidateCategory } = useProposals({
-    daoId: treasuryDaoID,
-    category: "stake-delegation",
-    enabled: false,
-  });
+
+  const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
   const [proposalData, setProposalData] = useState(null);
-  const [isDeleted, setIsDeleted] = useState(false);
 
   const functionCallApproversGroup = getApproversAndThreshold("call");
   const deleteGroup = getApproversAndThreshold("call", true);
@@ -59,145 +47,123 @@ const ProposalDetailsPage = ({
 
   const proposalPeriod = daoPolicy?.proposal_period;
 
+  // Process raw proposal data when it changes
   useEffect(() => {
-    const fetchProposalData = async () => {
-      if (proposalPeriod && !proposalData) {
-        try {
-          const item = await Near.view(treasuryDaoID, "get_proposal", {
-            id: parseInt(id),
-          });
+    const processProposalData = async () => {
+      if (!rawProposal || !proposalPeriod) return;
 
-          const notes = decodeProposalDescription("notes", item.description);
-          const withdrawAmount = decodeProposalDescription(
-            "amount",
-            item.description
-          );
-          const customNotes = decodeProposalDescription(
-            "customNotes",
-            item.description
-          );
-          const args = item?.kind?.FunctionCall;
-          const action = args?.actions?.[0];
-          const isStakeRequest = action?.method_name === "deposit_and_stake";
-          const receiverAccount = args?.receiver_id;
+      try {
+        const item = rawProposal;
 
-          let validatorAccount = receiverAccount;
-          if (validatorAccount === lockupContract) {
-            const stakingPoolId = decodeBase64(
-              action?.args
-            )?.staking_pool_account_id;
-            validatorAccount = stakingPoolId || lockupStakedPoolId || "";
-          }
+        const notes = decodeProposalDescription("notes", item.description);
+        const withdrawAmount = decodeProposalDescription(
+          "amount",
+          item.description
+        );
+        const customNotes = decodeProposalDescription(
+          "customNotes",
+          item.description
+        );
+        const args = item?.kind?.FunctionCall;
+        const action = args?.actions?.[0];
+        const isStakeRequest = action?.method_name === "deposit_and_stake";
+        const receiverAccount = args?.receiver_id;
 
-          let amount = action?.deposit;
-          if (!isStakeRequest || receiverAccount?.includes("lockup.near")) {
-            let value = decodeBase64(action?.args);
-            amount = value?.amount;
-          }
-
-          const isWithdrawRequest =
-            action?.method_name === "withdraw_all_from_staking_pool" ||
-            action?.method_name === "withdraw_all";
-
-          if (isWithdrawRequest) {
-            amount = withdrawAmount || 0;
-          }
-
-          const isLockup = receiverAccount === lockupContract;
-          const treasuryWallet = isLockup ? lockupContract : treasuryDaoID;
-
-          // Check if proposal is expired
-          let status = item.status;
-          if (status === "InProgress") {
-            const endTime = Big(item.submission_time ?? "0")
-              .plus(proposalPeriod ?? "0")
-              .toFixed();
-            const timestampInMilliseconds = Big(endTime) / Big(1_000_000);
-            const currentTimeInMilliseconds = Date.now();
-            if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
-              status = "Expired";
-            }
-          }
-
-          // Determine request type
-          let requestType;
-          if (isStakeRequest) {
-            requestType = RequestType.STAKE;
-          } else if (isWithdrawRequest) {
-            requestType = RequestType.WITHDRAW;
-          } else if (action?.method_name === "select_staking_pool") {
-            requestType = RequestType.WHITELIST;
-          } else {
-            requestType = RequestType.UNSTAKE;
-          }
-
-          setProposalData({
-            id: item.id,
-            proposer: item.proposer,
-            votes: item.votes,
-            amount,
-            submissionTime: item.submission_time,
-            validatorAccount,
-            action,
-            notes: customNotes || notes,
-            requestType,
-            treasuryWallet,
-            status,
-            proposal: item,
-          });
-        } catch (error) {
-          console.error("Error fetching proposal:", error);
-          setIsDeleted(true);
+        let validatorAccount = receiverAccount;
+        if (validatorAccount === lockupContract) {
+          const stakingPoolId = decodeBase64(
+            action?.args
+          )?.staking_pool_account_id;
+          validatorAccount = stakingPoolId || lockupStakedPoolId || "";
         }
+
+        let amount = action?.deposit;
+        if (!isStakeRequest || receiverAccount?.includes("lockup.near")) {
+          let value = decodeBase64(action?.args);
+          amount = value?.amount;
+        }
+
+        const isWithdrawRequest =
+          action?.method_name === "withdraw_all_from_staking_pool" ||
+          action?.method_name === "withdraw_all";
+
+        if (isWithdrawRequest) {
+          amount = withdrawAmount || 0;
+        }
+
+        const isLockup = receiverAccount === lockupContract;
+        const treasuryWallet = isLockup ? lockupContract : treasuryDaoID;
+
+        // Check if proposal is expired
+        let status = item.status;
+        if (status === "InProgress") {
+          const endTime = Big(item.submission_time ?? "0")
+            .plus(proposalPeriod ?? "0")
+            .toFixed();
+          const timestampInMilliseconds = Big(endTime) / Big(1_000_000);
+          const currentTimeInMilliseconds = Date.now();
+          if (Big(timestampInMilliseconds).lt(currentTimeInMilliseconds)) {
+            status = "Expired";
+          }
+        }
+
+        // Determine request type
+        let requestType;
+        if (isStakeRequest) {
+          requestType = RequestType.STAKE;
+        } else if (isWithdrawRequest) {
+          requestType = RequestType.WITHDRAW;
+        } else if (action?.method_name === "select_staking_pool") {
+          requestType = RequestType.WHITELIST;
+        } else {
+          requestType = RequestType.UNSTAKE;
+        }
+
+        setProposalData({
+          id: item.id,
+          proposer: item.proposer,
+          votes: item.votes,
+          amount,
+          submissionTime: item.submission_time,
+          validatorAccount,
+          action,
+          notes: customNotes || notes,
+          requestType,
+          treasuryWallet,
+          status,
+          proposal: item,
+        });
+      } catch (error) {
+        console.error("Error processing proposal data:", error);
       }
     };
 
-    fetchProposalData();
+    processProposalData();
   }, [
-    id,
+    rawProposal,
     proposalPeriod,
-    proposalData,
-    treasuryDaoID,
     lockupContract,
     lockupStakedPoolId,
+    treasuryDaoID,
   ]);
-
-  // Reset proposal data when ID changes
-  useEffect(() => {
-    if (proposalData && proposalData.id !== id) {
-      setProposalData(null);
-    }
-  }, [id, proposalData]);
-
-  function refreshData() {
-    setProposalData(null);
-    // Invalidate proposals cache
-    invalidateCategory();
-  }
-
-  function updateVoteSuccess(status, proposalId) {
-    setVoteProposalId?.(proposalId);
-    setToastStatus?.(status);
-    refreshData();
-  }
-
-  async function checkProposalStatus(proposalId) {
-    try {
-      const result = await Near.view(treasuryDaoID, "get_proposal", {
-        id: proposalId,
-      });
-      updateVoteSuccess(result.status, proposalId);
-    } catch (error) {
-      // deleted request (thus proposal won't exist)
-      updateVoteSuccess("Removed", proposalId);
-    }
-  }
 
   return (
     <ProposalDetails
+      proposalData={proposalData}
+      isDeleted={isDeleted}
       currentTab={currentTab}
       proposalPeriod={proposalPeriod}
       page="stake-delegation"
+      isCompactVersion={isCompactVersion}
+      approversGroup={functionCallApproversGroup}
+      proposalStatusLabel={{
+        approved: `${proposalData?.requestType} Request Executed`,
+        rejected: `${proposalData?.requestType} Request Rejected`,
+        deleted: `${proposalData?.requestType} Request Deleted`,
+        failed: `${proposalData?.requestType} Request Failed`,
+        expired: `${proposalData?.requestType} Request Expired`,
+      }}
+      onClose={onClose}
       VoteActions={
         (hasVotingPermission || hasDeletePermission) &&
         proposalData?.status === "InProgress" ? (
@@ -208,7 +174,7 @@ const ProposalDetailsPage = ({
             hasVotingPermission={hasVotingPermission}
             proposalCreator={proposalData?.proposer}
             proposal={proposalData?.proposal}
-            checkProposalStatus={() => checkProposalStatus(proposalData?.id)}
+            context="stake"
             avoidCheckForBalance={true}
             isProposalDetailsPage={true}
           />
@@ -261,18 +227,6 @@ const ProposalDetailsPage = ({
           </div>
         )
       }
-      proposalData={proposalData}
-      isDeleted={isDeleted}
-      isCompactVersion={isCompactVersion}
-      approversGroup={functionCallApproversGroup}
-      proposalStatusLabel={{
-        approved: `${proposalData?.requestType} Request Executed`,
-        rejected: `${proposalData?.requestType} Request Rejected`,
-        deleted: `${proposalData?.requestType} Request Deleted`,
-        failed: `${proposalData?.requestType} Request Failed`,
-        expired: `${proposalData?.requestType} Request Expired`,
-      }}
-      onClose={onClose}
     />
   );
 };

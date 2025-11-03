@@ -1,10 +1,10 @@
-import Navbar from "@/components/layout/Navbar";
+"use client";
+
+import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 
 export default function DaoLayout({ children }) {
-  return (
-    <div className="min-vh-100 d-flex flex-column">
-      <Navbar />
-      <main className="flex-grow-1">{children}</main>
-    </div>
-  );
+  // Handle transaction redirects and show toasts globally for all DAO pages
+  useTransactionHandler();
+
+  return <>{children}</>;
 }
