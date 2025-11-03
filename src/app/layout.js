@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { DaoProvider } from "@/context/DaoContext";
 import { SocialAccountProvider } from "@/context/SocialAccountContext";
 import { QueryClientProvider } from "@/context/QueryClientProvider";
-import { ProposalToastProvider } from "@/context/ProposalToastContext";
 import Navbar from "@/components/layout/Navbar";
 import Script from "next/script";
 import { Inter } from "next/font/google";
@@ -21,12 +20,10 @@ export default function RootLayout({ children }) {
             <NearWalletProvider>
               <SocialAccountProvider>
                 <DaoProvider>
-                  <ProposalToastProvider>
-                    <div className="min-vh-100 d-flex flex-column">
-                      <Navbar />
-                      <main className="flex-grow-1">{children}</main>
-                    </div>
-                  </ProposalToastProvider>
+                  <div className="min-vh-100 d-flex flex-column">
+                    <Navbar />
+                    <main className="flex-grow-1">{children}</main>
+                  </div>
                 </DaoProvider>
               </SocialAccountProvider>
             </NearWalletProvider>
