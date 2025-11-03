@@ -1,10 +1,21 @@
 "use client";
 
+import { Suspense } from "react";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
+import { ProposalToastProvider } from "@/context/ProposalToastContext";
+
+function TransactionHandler() {
+  useTransactionHandler();
+  return null;
+}
 
 export default function DaoLayout({ children }) {
-  // Handle transaction redirects and show toasts globally for all DAO pages
-  useTransactionHandler();
-
-  return <>{children}</>;
+  return (
+    <ProposalToastProvider>
+      <Suspense fallback={null}>
+        <TransactionHandler />
+      </Suspense>
+      {children}
+    </ProposalToastProvider>
+  );
 }
