@@ -481,12 +481,14 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
     // Step 13: Select receive token (USDC)
     // The form now shows ETH selected in Send section
-    // Click on the Receive section dropdown
-    // Find the dropdown button in the Receive section
-    const receiveSection = page.locator('text="Receive"').locator('..');
-    const receiveDropdown = receiveSection.locator('[role="button"]').or(receiveSection.locator('button')).first();
-    await expect(receiveDropdown).toBeVisible({ timeout: 10000 });
-    await receiveDropdown.click();
+    // Now we need to select token in the Receive section
+    // Look for "Select token" text that appears AFTER "Receive" heading
+    await page.waitForTimeout(1000); // Wait for form to update after ETH selection
+
+    // Click the second "Select token" button (the one in Receive section)
+    const receiveTokenButton = page.locator('text="Receive"').locator('..').getByText("Select token");
+    await expect(receiveTokenButton).toBeVisible({ timeout: 10000 });
+    await receiveTokenButton.click();
     await page.waitForTimeout(1000);
     console.log("✓ Opened receive token dropdown");
 
