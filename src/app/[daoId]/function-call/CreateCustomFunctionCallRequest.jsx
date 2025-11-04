@@ -153,7 +153,6 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
       // Get proposal bond from DAO policy
       const proposalBond = daoPolicy?.proposal_bond || 0;
 
-      // Submit the proposal using Near.call
       const calls = [
         {
           receiverId: treasuryDaoID,
@@ -166,9 +165,9 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                 args: {
                   proposal: proposalData,
                 },
+                gas: "300000000000000", // 300 Tgas
+                deposit: proposalBond, // Use proposal bond from DAO policy
               },
-              gas: "300000000000000", // 300 Tgas
-              deposit: proposalBond, // Use proposal bond from DAO policy
             },
           ],
         },
@@ -484,7 +483,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                     </label>
                     <input
                       type="number"
-                      step="0.000000000000000000000001"
+                      step="any"
                       className={`form-control ${
                         errors.actions?.[index]?.deposit ||
                         errors[`actions.${index}.deposit`]

@@ -775,9 +775,9 @@ const Members = () => {
                       },
                     },
                   },
+                  gas: "300000000000000",
+                  deposit: daoPolicy?.proposal_bond || "0",
                 },
-                gas: "300000000000000",
-                deposit: daoPolicy?.proposal_bond || "0",
               },
             ],
           },
@@ -831,9 +831,9 @@ const Members = () => {
                       },
                     },
                   },
+                  gas: "300000000000000",
+                  deposit: daoPolicy?.proposal_bond || "0",
                 },
-                gas: "300000000000000",
-                deposit: daoPolicy?.proposal_bond || "0",
               },
             ],
           },
@@ -874,35 +874,14 @@ const Members = () => {
             </div>
           }
           onClose={() => setShowProposalsOverrideConfirmModal(false)}
-          footer={
-            <div className="d-flex gap-2 justify-content-end">
-              <button
-                className="btn btn-outline-secondary"
-                onClick={() => setShowProposalsOverrideConfirmModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn theme-btn"
-                onClick={() => {
-                  setShowProposalsOverrideConfirmModal(false);
-                  executeAction(pendingAction);
-                }}
-              >
-                Proceed Anyway
-              </button>
-            </div>
-          }
         >
           <WarningTable
             tableProps={[
               {
-                title: "Pending Requests",
                 proposals: proposals,
               },
             ]}
-            warningText="You have pending requests that need to be resolved before creating a new one."
-            descriptionText="Please complete or resolve the existing pending requests before proceeding."
+            warningText="To avoid conflicts, you need to complete or resolve the existing pending requests before proceeding. These requests are currently active and must be approved or rejected first.."
           />
         </Modal>
       )}

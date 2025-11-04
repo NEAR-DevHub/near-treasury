@@ -66,15 +66,20 @@ export const ProposalToastProvider = ({ children }) => {
       });
 
       // Invalidate cache to refresh the table and proposal details
-      if (category) {
-        queryClient.invalidateQueries({
+      if (category === "function-call") {
+        // Function-call uses null category + proposalType ["FunctionCall"]
+        await queryClient.invalidateQueries({
+          queryKey: ["proposals", daoId, undefined, ["FunctionCall"]],
+        });
+      } else {
+        await queryClient.invalidateQueries({
           queryKey: ["proposals", daoId, category],
         });
       }
 
       // Also invalidate single proposal queries (for ProposalDetailsPage)
       if (actualProposalId !== null && actualProposalId !== undefined) {
-        queryClient.invalidateQueries({
+        await queryClient.invalidateQueries({
           queryKey: ["proposal", daoId, actualProposalId],
         });
       }

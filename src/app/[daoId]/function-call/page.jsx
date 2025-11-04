@@ -46,7 +46,6 @@ const FunctionCall = () => {
     proposals,
     total: totalLength,
     isLoading,
-    invalidateCategory,
   } = useProposals({
     daoId: treasuryDaoID,
     proposalType: ["FunctionCall"],

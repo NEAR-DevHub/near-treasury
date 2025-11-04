@@ -10,6 +10,7 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { getValidatorDetails } from "@/api/backend";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
+import Big from "big.js";
 
 const CreateWithdrawRequest = ({ onCloseCanvas = () => {} }) => {
   const {
@@ -113,6 +114,9 @@ const CreateWithdrawRequest = ({ onCloseCanvas = () => {} }) => {
                 proposal: {
                   description: encodeToMarkdown({
                     proposal_action: "withdraw",
+                    amount: Big(validator.availableToWithdrawBalance)
+                      .mul(Big(10).pow(24))
+                      .toFixed(),
                   }),
                   kind: {
                     FunctionCall: {

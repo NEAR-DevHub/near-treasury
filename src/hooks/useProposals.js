@@ -68,6 +68,7 @@ export function useProposals({
     "proposals",
     daoId,
     category,
+    proposalType,
     statuses,
     page,
     pageSize,
@@ -75,7 +76,6 @@ export function useProposals({
     normalizedFilters,
     debouncedSearch?.trim() || "",
     normalizedAmountValues,
-    proposalType,
     accountId,
   ];
 

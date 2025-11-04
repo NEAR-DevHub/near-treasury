@@ -3,12 +3,7 @@
 import { decodeProposalDescription } from "@/helpers/daoHelpers";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 
-const WarningTable = ({
-  tableProps,
-  warningText,
-  descriptionText,
-  includeExpiryDate,
-}) => {
+const WarningTable = ({ tableProps, warningText, includeExpiryDate }) => {
   return (
     <div className="d-flex flex-column gap-3 text-color">
       {warningText && (
@@ -19,7 +14,6 @@ const WarningTable = ({
           {warningText}
         </div>
       )}
-      {descriptionText && <p className="mb-0">{descriptionText}</p>}
       {tableProps?.map(({ title, proposals, testId }, index) => (
         <div key={title || index} className="d-flex flex-column gap-2">
           {title && proposals.length > 0 && (

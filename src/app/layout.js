@@ -16,18 +16,18 @@ export default function RootLayout({ children }) {
     <html lang="en" className={inter.className}>
       <body>
         <QueryClientProvider>
-          <ThemeProvider>
-            <NearWalletProvider>
-              <SocialAccountProvider>
-                <DaoProvider>
+          <NearWalletProvider>
+            <SocialAccountProvider>
+              <DaoProvider>
+                <ThemeProvider>
                   <div className="min-vh-100 d-flex flex-column">
                     <Navbar />
                     <main className="flex-grow-1">{children}</main>
                   </div>
-                </DaoProvider>
-              </SocialAccountProvider>
-            </NearWalletProvider>
-          </ThemeProvider>
+                </ThemeProvider>
+              </DaoProvider>
+            </SocialAccountProvider>
+          </NearWalletProvider>
         </QueryClientProvider>
         <Script
           src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"

@@ -207,8 +207,10 @@ const SettingsProposalDetailsPage = ({ id, isCompactVersion, onClose }) => {
             </>
           ) : (
             <>
-              <label>{type === "add" ? "Assigned" : "Revoked"} Roles</label>
-              <div className="d-flex flex-wrap gap-2 mt-1">
+              <label className="proposal-label">
+                {type === "add" ? "Assigned" : "Revoked"} Roles
+              </label>
+              <div className="d-flex flex-wrap gap-2 mt-1 fw-semibold">
                 {(type === "add" ? newRoles : oldRoles).join(", ")}
               </div>
             </>

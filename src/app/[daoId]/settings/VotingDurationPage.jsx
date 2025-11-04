@@ -311,9 +311,9 @@ const VotingDurationPage = () => {
                     {proposalsThatWillExpire.length > 0 && (
                       <li>
                         <b>{proposalsThatWillExpire.length} active requests</b>{" "}
-                        under the old voting duration will move to the
-                        "Archived" tab and close for voting. These requests were
-                        created outside the new voting period and are no longer
+                        under the old voting duration will move to the "History"
+                        tab and close for voting. These requests were created
+                        outside the new voting period and are no longer
                         considered active.
                       </li>
                     )}

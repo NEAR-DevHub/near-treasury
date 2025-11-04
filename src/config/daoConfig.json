@@ -18,6 +18,12 @@
       "showReferenceProposal": true,
       "showProposalSelection": true,
       "showFunctionCall": true
+    },
+    "testing-astradao.sputnik-dao.near": {
+      "showKYC": true,
+      "showReferenceProposal": true,
+      "showProposalSelection": true,
+      "showFunctionCall": true
     }
   }
 }

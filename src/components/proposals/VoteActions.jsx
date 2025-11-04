@@ -197,14 +197,13 @@ const VoteActions = ({
             // deleted request (thus proposal won't exist)
             showToast("Removed", proposalId, context);
           }
+          setTxnCreated(false);
+          refreshDaoBalances();
+          refreshLockupBalances();
+          refetchDaoPolicy();
+          refetchIntentsBalances();
+          refetchDaoConfig();
         }, 2000); // 2 second delay to allow indexer to process
-
-        setTxnCreated(false);
-        refreshDaoBalances();
-        refreshLockupBalances();
-        refetchDaoPolicy();
-        refetchIntentsBalances();
-        refetchDaoConfig();
       }
     } catch (error) {
       console.error("Error acting on proposal:", error);
