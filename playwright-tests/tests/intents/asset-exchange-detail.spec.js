@@ -130,4 +130,76 @@ test.describe("Asset Exchange Proposal Details", () => {
 
     console.log("✓ Asset exchange proposal #30 displays all details correctly");
   });
+
+  test("displays NEAR Intents asset exchange proposal #43 with correct destination network", async ({ page }) => {
+    test.setTimeout(60_000);
+
+    // Navigate to proposal #43: 10 USDC (Near) → 10 USDC (Base)
+    // This test verifies the destination network display bug reported in issue #39
+    // Expected: Should show "Base" as the receive network
+    // Actual bug: Shows "Near" instead
+    await page.goto(
+      `http://localhost:3000/${DAO_ID}/asset-exchange?tab=history&id=43`,
+      { waitUntil: 'networkidle' }
+    );
+
+    console.log("Testing asset exchange proposal #43 - destination network display");
+
+    // Wait for the page to load
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(5_000);
+
+    // Hard expectation: Source Wallet should be visible
+    const sourceWalletLabel = page.getByText("Source Wallet", { exact: false });
+    await expect(sourceWalletLabel.first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("NEAR Intents")).toBeVisible();
+    console.log("✓ Source Wallet (NEAR Intents) is visible");
+
+    // Hard expectation: Send section should display USDC on Near
+    await expect(page.getByText("Send", { exact: true })).toBeVisible();
+    await expect(page.getByText("10", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("USDC", { exact: false }).first()).toBeVisible();
+    console.log("✓ Send amount (10 USDC) is visible");
+
+    // Hard expectation: Send network should be Near
+    // The send token is on Near (source)
+    await expect(page.getByText("Near", { exact: false }).first()).toBeVisible();
+    console.log("✓ Send network is visible");
+
+    // Hard expectation: Receive section should display USDC
+    await expect(page.getByText("Receive", { exact: true })).toBeVisible();
+    await expect(page.getByText("9.99998", { exact: false })).toBeVisible();
+    console.log("✓ Receive amount (9.99998 USDC) is visible");
+
+    // THIS IS THE BUG: Receive network should be "Base" but currently shows "Near"
+    // The proposal description contains: "Destination Network: eth:8453" (Base)
+    // But the UI incorrectly displays "Near"
+
+    // First, let's verify the bug exists by checking what's currently displayed
+    const receiveNetworkText = await page.locator('text=/Receive/').locator('..').locator('..').textContent();
+    console.log("Receive section content:", receiveNetworkText);
+
+    // Check if "Base" is displayed (it should be, but currently isn't due to bug)
+    const hasBase = await page.getByText("Base", { exact: true }).isVisible().catch(() => false);
+
+    if (hasBase) {
+      console.log("✅ FIXED: Receive network correctly shows 'Base'");
+      await expect(page.getByText("Base", { exact: true })).toBeVisible();
+    } else {
+      console.log("❌ BUG CONFIRMED: Receive network does not show 'Base' (issue #39)");
+      console.log("Expected: Base (eth:8453)");
+      console.log("This test will fail until the bug is fixed");
+
+      // This assertion will fail, documenting the bug
+      await expect(page.getByText("Base", { exact: true })).toBeVisible({
+        timeout: 2000
+      });
+    }
+
+    // Verify the proposal metadata contains the correct destination network
+    await expect(page.getByText("Destination Network: eth:8453", { exact: false })).toBeVisible();
+    console.log("✓ Proposal description contains correct destination network (eth:8453)");
+
+    console.log("✓ Asset exchange proposal #43 test complete");
+  });
 });
