@@ -15,6 +15,7 @@ import Profile from "@/components/ui/Profile";
 import DropDown from "@/components/dropdowns/DropDown";
 import { logger } from "@/helpers/logger";
 import Tooltip from "@/components/ui/Tooltip";
+import WarningTable from "./WarningTable";
 
 const options = [
   {
@@ -268,32 +269,34 @@ const Thresholds = () => {
     };
 
     try {
-      const result = await signAndSendTransactions([
-        {
-          receiverId: treasuryDaoID,
-          signerId: accountId,
-          actions: [
-            {
-              type: "FunctionCall",
-              params: {
-                methodName: "add_proposal",
-                args: {
-                  proposal: {
-                    description: encodeToMarkdown(description),
-                    kind: {
-                      ChangePolicy: {
-                        policy: updatedPolicy,
+      const result = await signAndSendTransactions({
+        transactions: [
+          {
+            receiverId: treasuryDaoID,
+            signerId: accountId,
+            actions: [
+              {
+                type: "FunctionCall",
+                params: {
+                  methodName: "add_proposal",
+                  args: {
+                    proposal: {
+                      description: encodeToMarkdown(description),
+                      kind: {
+                        ChangePolicy: {
+                          policy: updatedPolicy,
+                        },
                       },
                     },
                   },
+                  gas: "200000000000000",
+                  deposit,
                 },
-                gas: 200000000000000,
-                deposit,
               },
-            },
-          ],
-        },
-      ]);
+            ],
+          },
+        ],
+      });
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         checkProposals();
@@ -401,25 +404,16 @@ const Thresholds = () => {
           heading="Resolve Before Proceeding"
           isOpen={showWarningModal}
           onClose={() => setShowWarningModal(false)}
-          minWidth="700px"
+          size="lg"
         >
-          <div className="p-3">
-            <p className="mb-3">
-              This action will override your previous pending proposals.
-              Complete existing one before creating a new to avoid conflicting
-              or incomplete updates.
-            </p>
-            <div className="d-flex flex-column gap-2">
-              {proposals.map((proposal) => (
-                <div key={proposal.id} className="p-3 border rounded">
-                  <div className="fw-bold">Proposal #{proposal.id}</div>
-                  <div className="text-sm text-secondary">
-                    {proposal.description}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <WarningTable
+            tableProps={[
+              {
+                proposals: proposals,
+              },
+            ]}
+            warningText="To avoid conflicts, you need to complete or resolve the existing pending requests before proceeding. These requests are currently active and must be approved or rejected first."
+          />
         </Modal>
       )}
 

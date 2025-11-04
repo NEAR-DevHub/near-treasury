@@ -9,10 +9,12 @@ import Theme from "./Theme";
 import Preferences from "./Preferences";
 import SettingsFeed from "./feed";
 import Members from "./Members";
+import ProposalDetailsPage from "./feed/ProposalDetailsPage";
 
 const SettingsPage = () => {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") || "pending-requests";
+  const id = searchParams.get("id");
 
   const [leftNavbarOptions] = useState([
     {
@@ -66,6 +68,14 @@ const SettingsPage = () => {
         return <div>Coming Soon</div>;
     }
   }, [tab]);
+
+  // Show proposal details page if id param exists
+  if (id !== null) {
+    const proposalId = parseInt(id);
+    if (!isNaN(proposalId)) {
+      return <ProposalDetailsPage id={proposalId} />;
+    }
+  }
 
   return (
     <div className="d-flex gap-2 flex-wrap flex-md-nowrap text-color mt-4">

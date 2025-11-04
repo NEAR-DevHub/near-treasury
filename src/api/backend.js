@@ -142,9 +142,30 @@ export const getNearStakedPools = async (accountId) => {
     }
     
     logger.info("API call: getNearStakedPool", { accountId });
-    const response = await fetch(`https://staking-pools-api.neartreasury.com/v1/account/${accountId}/staking`);
-    const stakingData = await response.json();
-    return (stakingData?.pools ?? []).map((i) => i.pool_id);
+    
+    const [fastnearResponse, stakingApiResponse] = await Promise.allSettled([
+      fetch(`https://api.fastnear.com/v1/account/${accountId}/staking`),
+      fetch(`https://staking-pools-api.neartreasury.com/v1/account/${accountId}/staking`)
+    ]);
+    
+    const allPools = [];
+    
+    // Process fastnear data
+    if (fastnearResponse.status === 'fulfilled' && fastnearResponse.value.ok) {
+      const fastnearData = await fastnearResponse.value.json();
+      const fastnearPools = (fastnearData?.pools ?? []).map((i) => i.pool_id);
+      allPools.push(...fastnearPools);
+    }
+    
+    // Process staking-pools-api data
+    if (stakingApiResponse.status === 'fulfilled' && stakingApiResponse.value.ok) {
+      const stakingData = await stakingApiResponse.value.json();
+      const stakingPools = (stakingData?.pools ?? []).map((i) => i.pool_id);
+      allPools.push(...stakingPools);
+    }
+    
+    // Return unique pool IDs
+    return [...new Set(allPools)];
   } catch (error) {
     logger.error("Error getting near staked pool:", error);
     return [];

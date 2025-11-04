@@ -223,7 +223,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
     const withdrawDescription = {
       proposal_action: "withdraw",
       showAfterProposalIdApproved: lastProposalId,
-      customNotes: `Following [#${lastProposalId}] unstake request`,
+      customNotes: `Following [#${lastProposalId}](?id=${lastProposalId}) unstake request`,
       amount: amountInYocto,
     };
 

@@ -122,22 +122,22 @@ export const DaoProvider = ({ children }) => {
       let locked = allLockedStaked
         ? 0
         : Big(lockupStakedBalances.total)
-            .minus(lockupBalances.contractLockedParsed)
+            .minus(lockupBalances?.contractLockedParsed)
             .abs()
             .mul(Big(10).pow(24))
             .toFixed();
-      let total = Big(lockupBalances.total)
+      let total = Big(lockupBalances?.total)
         .plus(stakedTokensYoctoNear)
         .toFixed();
       let available = Big(total)
         .minus(stakedTokensYoctoNear)
         .minus(locked)
-        .minus(lockupBalances.storage)
+        .minus(lockupBalances?.storage)
         .toFixed();
       if (available < 0) {
         available = 0;
       }
-      let storage = lockupBalances.storage;
+      let storage = lockupBalances?.storage;
       const sumTotal = Big(locked)
         .plus(available)
         .plus(stakedTokensYoctoNear)

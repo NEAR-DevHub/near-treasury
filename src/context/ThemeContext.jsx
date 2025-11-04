@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { LOCAL_STORAGE_KEYS } from "@/constants/localStorage";
+import { useDao } from "./DaoContext";
 
 const ThemeContext = createContext();
 
@@ -16,6 +17,7 @@ export const useTheme = () => {
 export const ThemeProvider = ({ children }) => {
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [primaryColor, setPrimaryColor] = useState("#01BF7A");
+  const { daoConfig } = useDao();
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -25,6 +27,11 @@ export const ThemeProvider = ({ children }) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (daoConfig) {
+      setPrimaryColor(daoConfig.metadata?.primaryColor || "#01BF7A");
+    }
+  }, [daoConfig]);
   // Apply theme to document
   useEffect(() => {
     const root = document.documentElement;
