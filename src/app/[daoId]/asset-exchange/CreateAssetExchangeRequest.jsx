@@ -447,10 +447,14 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       const deposit = daoPolicy?.proposal_bond || 0;
       const gas = "300000000000000"; // 300 TGas
 
+      // Use quote.amountIn (in smallest units) instead of proposalPayload.amountIn (formatted decimal)
+      // The 1Click API returns amountIn in smallest units in the quote object
+      const amountInSmallestUnit = proposalQuote.quote?.amountIn || "0";
+
       // Build mt_transfer args
       const mtTransferArgs = {
-        receiver_id: proposalQuote.depositAddress,
-        amount: proposalQuote.amountIn, // Amount in smallest units
+        receiver_id: proposalQuote.quote?.depositAddress,
+        amount: amountInSmallestUnit, // Amount in smallest units
         token_id: proposalQuote.tokenIn, // Keep nep141: prefix if present
       };
 

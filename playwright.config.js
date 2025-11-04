@@ -29,7 +29,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   // Reporter configuration
-  reporter: 'html',
+  reporter: 'list',
 
   // Shared settings for all tests
   use: {
