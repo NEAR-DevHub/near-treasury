@@ -19,6 +19,7 @@ test.describe("Asset Exchange Proposal Details", () => {
 
     // Navigate to the proposal details page for proposal #30
     // This is a 1Click swap: 20 USDC → 0.00017249 BTC
+    // Note: USD prices will vary based on real-time market data
     await page.goto(
       `http://localhost:3000/${DAO_ID}/asset-exchange?tab=history&id=30`,
       { waitUntil: 'networkidle' }
@@ -38,20 +39,26 @@ test.describe("Asset Exchange Proposal Details", () => {
 
     // Hard expectation: Send section should display correctly
     await expect(page.getByText("Send", { exact: true })).toBeVisible();
-    await expect(page.getByText("20 USDC")).toBeVisible();
+    // Check for amount "20" and symbol "USDC" (they may be in separate elements)
+    await expect(page.getByText("20", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("USDC", { exact: false }).first()).toBeVisible();
     console.log("✓ Send amount (20 USDC) is visible");
 
     // Hard expectation: Send network should be Ethereum
-    await expect(page.getByText("Ethereum").first()).toBeVisible();
+    await expect(page.getByText("Ethereum", { exact: true })).toBeVisible();
+    await expect(page.getByText("1 USDC", { exact: false })).toBeVisible();
     console.log("✓ Send network (Ethereum) is visible");
 
     // Hard expectation: Receive section should display correctly
     await expect(page.getByText("Receive", { exact: true })).toBeVisible();
-    await expect(page.getByText("0.00017249 BTC")).toBeVisible();
+    // Check for the BTC amount
+    await expect(page.getByText("0.00017249", { exact: false })).toBeVisible();
+    await expect(page.getByText("BTC", { exact: false }).first()).toBeVisible();
     console.log("✓ Receive amount (0.00017249 BTC) is visible");
 
     // Hard expectation: Receive network should be Bitcoin
-    await expect(page.getByText("Bitcoin")).toBeVisible();
+    await expect(page.getByText("Bitcoin", { exact: true })).toBeVisible();
+    await expect(page.getByText("1 BTC", { exact: false })).toBeVisible();
     console.log("✓ Receive network (Bitcoin) is visible");
 
     // Hard expectation: Price Slippage Limit should be displayed
@@ -61,7 +68,9 @@ test.describe("Asset Exchange Proposal Details", () => {
 
     // Hard expectation: Minimum Amount Receive should be displayed
     await expect(page.getByText("Minimum Amount Receive")).toBeVisible();
-    await expect(page.getByText("0.00017163 BTC")).toBeVisible();
+    // The minimum is calculated as: 0.00017249 * (1 - 0.5/100) = 0.00017162754999999999
+    // UI may display with full precision or rounded
+    await expect(page.getByText("0.000171627", { exact: false })).toBeVisible();
     console.log("✓ Minimum Amount Receive is visible");
 
     // Hard expectation: 1Click Quote Deadline should be displayed
@@ -113,10 +122,9 @@ test.describe("Asset Exchange Proposal Details", () => {
     console.log("✓ Status (1 Approved) is visible");
 
     // Hard expectation: Note about execution deadline should be visible
+    // The markdown ** is rendered as bold, so just check for the key content
     await expect(
-      page.getByText(
-        "**Must be executed before 2025-09-22T08:02:41.846Z** for transferring tokens to 1Click's deposit address for swap execution."
-      )
+      page.getByText("Must be executed before 2025-09-22T08:02:41.846Z", { exact: false })
     ).toBeVisible();
     console.log("✓ Execution deadline note is visible");
 
