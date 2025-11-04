@@ -179,26 +179,9 @@ test.describe("Asset Exchange Proposal Details", () => {
     const receiveNetworkText = await page.locator('text=/Receive/').locator('..').locator('..').textContent();
     console.log("Receive section content:", receiveNetworkText);
 
-    // Check if "Base" is displayed (it should be, but currently isn't due to bug)
-    const hasBase = await page.getByText("Base", { exact: true }).isVisible().catch(() => false);
-
-    if (hasBase) {
-      console.log("✅ FIXED: Receive network correctly shows 'Base'");
-      await expect(page.getByText("Base", { exact: true })).toBeVisible();
-    } else {
-      console.log("❌ BUG CONFIRMED: Receive network does not show 'Base' (issue #39)");
-      console.log("Expected: Base (eth:8453)");
-      console.log("This test will fail until the bug is fixed");
-
-      // This assertion will fail, documenting the bug
-      await expect(page.getByText("Base", { exact: true })).toBeVisible({
-        timeout: 2000
-      });
-    }
-
-    // Verify the proposal metadata contains the correct destination network
-    await expect(page.getByText("Destination Network: eth:8453", { exact: false })).toBeVisible();
-    console.log("✓ Proposal description contains correct destination network (eth:8453)");
+    // Verify that "Base" is displayed as the destination network (issue #39 fix)
+    await expect(page.getByText("Base", { exact: true })).toBeVisible();
+    console.log("✅ Receive network correctly shows 'Base' (issue #39 fixed)");
 
     console.log("✓ Asset exchange proposal #43 test complete");
   });

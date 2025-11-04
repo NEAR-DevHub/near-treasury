@@ -5,6 +5,7 @@ import { useProposal } from "@/hooks/useProposal";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
+import { fetchTokenMetadataByDefuseAssetId, fetchBlockchainByNetwork } from "@/api/backend";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
 import VoteActions from "@/components/proposals/VoteActions";
@@ -22,6 +23,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   const [proposalData, setProposalData] = useState(null);
   const [intentsAssets, setIntentsAssets] = useState([]);
+  const [destinationNetworkInfo, setDestinationNetworkInfo] = useState(null);
 
   const proposalPeriod = daoPolicy?.proposal_period;
 
@@ -68,6 +70,67 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
       setIntentsAssets(assets);
     });
   }, []);
+
+  // Fetch destination network info for 1Click proposals
+  useEffect(() => {
+    const fetchDestinationNetworkInfo = async () => {
+      if (!proposalData?.quoteDeadline || !proposalData?.destinationNetwork) {
+        return;
+      }
+
+      try {
+        // Find the asset for tokenOut to get its defuse asset ID
+        const asset = intentsAssets.find(
+          (a) =>
+            a.symbol?.toLowerCase() === proposalData?.tokenOut?.toLowerCase() ||
+            a.name?.toLowerCase() === proposalData?.tokenOut?.toLowerCase()
+        );
+
+        if (!asset) {
+          console.warn("Asset not found for tokenOut:", proposalData.tokenOut);
+          return;
+        }
+
+        // Find the network with matching chainId to get its defuse asset ID
+        const destinationNet = asset.networks?.find(
+          (network) => network.chainId === proposalData.destinationNetwork
+        );
+
+        if (!destinationNet?.id) {
+          console.warn("Destination network not found for chainId:", proposalData.destinationNetwork);
+          return;
+        }
+
+        // Fetch token metadata to get the chainName
+        const tokenMetadata = await fetchTokenMetadataByDefuseAssetId(destinationNet.id);
+        const metadata = Array.isArray(tokenMetadata) && tokenMetadata.length > 0
+          ? tokenMetadata[0]
+          : tokenMetadata;
+
+        if (metadata?.chainName) {
+          // Fetch blockchain info using the chainName
+          const networkResults = await fetchBlockchainByNetwork(
+            [metadata.chainName],
+            "dark" // TODO: Use theme context when available
+          );
+          const networkData = Array.isArray(networkResults)
+            ? networkResults[0]
+            : networkResults;
+
+          if (networkData && !networkData.error && networkData.name) {
+            setDestinationNetworkInfo({
+              name: networkData.name,
+              icon: networkData.icon,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch destination network info:", error);
+      }
+    };
+
+    fetchDestinationNetworkInfo();
+  }, [proposalData, intentsAssets]);
 
   const functionCallApproversGroup = getApproversAndThreshold("call");
   const deleteGroup = getApproversAndThreshold("call", true);
@@ -279,9 +342,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                     price={networkInfo[proposalData?.tokenOut]?.price}
                     amountWithDecimals={proposalData?.amountOut}
                     showUSDValue={true}
-                    networkName={
-                      networkInfo[proposalData?.tokenOut]?.networkInfo?.label
-                    }
+                    networkName={destinationNetworkInfo?.name}
                   />
                 ) : (
                   <TokenAmount
