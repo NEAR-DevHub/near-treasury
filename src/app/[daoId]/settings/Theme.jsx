@@ -63,13 +63,10 @@ const Theme = () => {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
       const response = await fetch("https://ipfs.near.social/add", {
         method: "POST",
         headers: { Accept: "application/json" },
-        body: formData,
+        body: file,
       });
 
       const result = await response.json();

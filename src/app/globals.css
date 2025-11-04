@@ -1302,8 +1302,6 @@ fieldset:disabled:not(.no-transparent) {
   height: 32px;
   object-fit: contain;
   vertical-align: middle;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
 }
 
 /* Appearance color box for theme proposals */
