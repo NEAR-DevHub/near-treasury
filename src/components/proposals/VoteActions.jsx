@@ -78,8 +78,11 @@ const VoteActions = ({
       );
     } else if (isIntentsRequest && intentsBalances) {
       // Find the balance for the current contract in intents balances
+      // Match by either contract_id or symbol (for backward compatibility)
       const contractBalance = intentsBalances.find(
-        (balance) => balance.contract_id === currentContract
+        (balance) =>
+          balance.contract_id === currentContract ||
+          balance.ft_meta?.symbol?.toLowerCase() === currentContract?.toLowerCase()
       );
       setUserBalance(
         isHumanReadableCurrentAmount
