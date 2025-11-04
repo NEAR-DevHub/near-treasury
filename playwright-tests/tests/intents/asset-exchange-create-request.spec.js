@@ -606,6 +606,31 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
     await expect(page.getByText("USDC").first()).toBeVisible({ timeout: 10000 });
     console.log("✓ Proposal appears in Pending Requests table with ETH → USDC");
 
+    // Step 21.5: Verify initial balance on Dashboard before swap
+    console.log("\n=== Verifying Initial Balance on Dashboard ===\n");
+    await page.goto(`http://localhost:3000/${daoAccountId}/dashboard`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(3000);
+    console.log("✓ Navigated to dashboard");
+
+    // Scroll down to NEAR Intents section
+    const intentsSection = page.locator('text=/NEAR Intents/i').first();
+    await expect(intentsSection).toBeVisible({ timeout: 10000 });
+    await intentsSection.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    console.log("✓ Scrolled to NEAR Intents section");
+
+    // Verify ETH balance shows 5 ETH
+    // The balance and token symbol are in separate elements, so check for both
+    await expect(page.getByText("ETH", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("5", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    console.log("✓ Dashboard shows initial ETH balance: 5 ETH");
+
+    // Navigate back to asset exchange page
+    await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
     // Step 22: Approve the proposal
     console.log("\n=== Approving Proposal ===\n");
 
@@ -692,6 +717,26 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
     // Should be 5 ETH - 0.15 ETH = 4.85 ETH
     expect(ethBalanceAfter).toBe("4850000000000000000");
     console.log("✓ DAO ETH balance decreased correctly by 0.15 ETH");
+
+    // Step 23: Verify balance changed on Dashboard after swap
+    console.log("\n=== Verifying Balance Changed on Dashboard ===\n");
+    await page.goto(`http://localhost:3000/${daoAccountId}/dashboard`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(3000);
+    console.log("✓ Navigated to dashboard");
+
+    // Scroll down to NEAR Intents section
+    const intentsSectionAfter = page.locator('text=/NEAR Intents/i').first();
+    await expect(intentsSectionAfter).toBeVisible({ timeout: 10000 });
+    await intentsSectionAfter.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    console.log("✓ Scrolled to NEAR Intents section");
+
+    // Verify ETH balance now shows 4.85 ETH (decreased from 5 ETH)
+    // The balance and token symbol are in separate elements, so check for both
+    await expect(page.getByText("ETH", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("4.85", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    console.log("✓ Dashboard shows updated ETH balance: 4.85 ETH");
 
     console.log("\n=== Test Complete ===\n");
   });
