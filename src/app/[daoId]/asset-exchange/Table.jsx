@@ -160,6 +160,26 @@ const Table = ({
         const displaySymbolIn = symbolByAddress[tokenInLower] || tokenIn;
         const priceIn = oneClickPrices[displaySymbolIn] || undefined;
 
+        // Extract the actual contract ID for intents requests (same logic as ProposalDetailsPage)
+        let intentsTokenContractId = null;
+        if (quoteDeadlineStr && item.kind?.FunctionCall) {
+          const action = item.kind.FunctionCall?.actions?.[0];
+          if (action && action.method_name === "mt_transfer") {
+            const args = action.args;
+            if (args) {
+              try {
+                const decodedArgs = JSON.parse(atob(args));
+                const tokenId = decodedArgs?.token_id;
+                intentsTokenContractId = tokenId?.startsWith("nep141:")
+                  ? tokenId.replace("nep141:", "")
+                  : tokenId;
+              } catch (e) {
+                console.error("Failed to decode proposal args:", e);
+              }
+            }
+          }
+        }
+
         return (
           <tr
             key={item.id}
@@ -295,7 +315,7 @@ const Table = ({
                     hasVotingPermission={hasVotingPermission}
                     proposalCreator={item.proposer}
                     currentAmount={amountIn}
-                    currentContract={tokenIn}
+                    currentContract={intentsTokenContractId || tokenIn}
                     requiredVotes={requiredVotes}
                     isHumanReadableCurrentAmount={true}
                     context="exchange"

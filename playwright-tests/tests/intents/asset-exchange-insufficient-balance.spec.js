@@ -652,14 +652,18 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     await page.waitForTimeout(1000);
     console.log("✓ Clicked Approve button");
 
-    // Handle "Insufficient Balance" warning modal
-    // The UI checks if the wallet has enough tokens, but tokens are in the intents contract
+    // CRITICAL: Verify that "Insufficient Balance" modal DOES appear
+    // Treasury has 5 ETH and we're trying to swap 6 ETH, so balance is insufficient
+    const insufficientBalanceModal = page.getByText("Insufficient Balance");
+    await expect(insufficientBalanceModal).toBeVisible({ timeout: 5000 });
+    console.log("✅ PASS: Insufficient Balance modal appeared as expected (5 ETH available, trying to swap 6 ETH)");
+
+    // Click "Proceed Anyway" to continue with the test
     const proceedAnywayButton = page.getByRole("button", { name: "Proceed Anyway" });
-    if (await proceedAnywayButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await proceedAnywayButton.click();
-      await page.waitForTimeout(1000);
-      console.log("✓ Clicked 'Proceed Anyway' to bypass balance warning");
-    }
+    await expect(proceedAnywayButton).toBeVisible({ timeout: 2000 });
+    await proceedAnywayButton.click();
+    await page.waitForTimeout(1000);
+    console.log("✓ Clicked 'Proceed Anyway' to bypass balance warning");
 
     // Confirm the transaction
     const confirmButton = page.getByRole("button", { name: "Confirm" });
