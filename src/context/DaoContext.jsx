@@ -86,6 +86,10 @@ export const DaoProvider = ({ children }) => {
           window.location.href = "/?error=invalid-dao";
         }
       });
+    } else {
+      // Clear daoId when no daoId in URL (e.g., navigating to home page)
+      setDaoId(null);
+      setCustomConfig(getDaoConfig(null));
     }
   }, [params]);
 
@@ -392,6 +396,24 @@ export const DaoProvider = ({ children }) => {
   }
 
   useEffect(() => {
+    // Clear all previous DAO state
+    setLockupContract(null);
+    setFtLockups(null);
+    setDaoNearBalances(null);
+    setDaoFtBalances(null);
+    setDaoStakedBalances(null);
+    setDaoStakedPools(null);
+    setLockupNearBalances(null);
+    setLockupStakedBalances(null);
+    setLockupStakedPools(null);
+    setLockupContractState(null);
+    setLockupStakedPoolId(null);
+    setLastProposalId(null);
+    setDaoPolicy(null);
+    setIntentsBalances(null);
+    setDaoConfig(null);
+
+    // Fetch new DAO data if daoId exists
     if (daoId) {
       checkAndSetLockupContract();
       getDaoBalances();
