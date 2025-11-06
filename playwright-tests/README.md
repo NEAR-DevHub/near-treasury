@@ -65,6 +65,7 @@ Test Categories:
 ## Configuration
 
 The test suite is configured to:
+
 - Run against `http://localhost:3000` by default
 - Automatically start the Next.js dev server before tests
 - Test on Chromium, Firefox, and WebKit
@@ -78,6 +79,7 @@ The test suite is organized into different categories based on testing approach.
 > **Note**: As the test suite grows, tests may be further organized into dedicated folders by category (e.g., `tests/read-only-mainnet/`, `tests/read-only-mocked/`). The examples below show the current organization and serve as patterns for future tests.
 
 ### 1. Integration Tests with Sandbox (`tests/intents/payment-request-ui.spec.js`)
+
 - **Use case**: End-to-end flows that create new blockchain state
 - **Setup**: Uses near-sandbox to create isolated blockchain environment
 - **Characteristics**:
@@ -87,6 +89,7 @@ The test suite is organized into different categories based on testing approach.
   - Perfect for testing complete user journeys
 
 ### 2. Read-Only Tests with Mainnet Data (`tests/intents/payment-request-detail.spec.js`)
+
 - **Use case**: Testing UI rendering of existing historical data
 - **Setup**: No sandbox, no mocking - uses real mainnet data
 - **Characteristics**:
@@ -96,6 +99,7 @@ The test suite is organized into different categories based on testing approach.
   - Perfect for detail pages, display logic, read-only views
 
 ### 3. Read-Only Tests with RPC Mocking (`tests/intents/intents-dashboard.spec.js`)
+
 - **Use case**: Testing UI with controlled, predictable data
 - **Setup**: Mock RPC responses to return specific test data
 - **Characteristics**:
@@ -105,6 +109,7 @@ The test suite is organized into different categories based on testing approach.
   - Perfect for testing different UI states (empty, loaded, multi-chain)
 
 ### 4. Component Tests (`tests/components/`)
+
 - **Use case**: Testing individual UI components in isolation
 - **Setup**: Direct component interaction, no blockchain
 - **Characteristics**:
@@ -118,14 +123,17 @@ The test suite is organized into different categories based on testing approach.
 ### Decision Tree
 
 **Q: Are you creating new blockchain state (proposals, transfers, votes)?**
+
 - ✅ **YES** → Use Integration Tests with Sandbox ([See Section](#test-type-2-ui-tests-with-sandbox-integration))
   - Examples: Creating payment requests, voting, executing proposals
   - File pattern: `tests/intents/*-ui.spec.js`
 
 **Q: Are you testing display of existing data?**
+
 - ✅ **YES** → Continue to next question
 
 **Q: Does the data change frequently or need to be controlled?**
+
 - ✅ **YES** (e.g., current portfolio balances) → Use RPC Mocking ([See Section](#read-only-tests-with-rpc-mocking))
   - Examples: Dashboard portfolio display, current token balances
   - File pattern: `tests/intents/*-dashboard.spec.js`
@@ -134,6 +142,7 @@ The test suite is organized into different categories based on testing approach.
   - File pattern: `tests/intents/*-detail.spec.js`
 
 **Q: Are you testing a UI component in isolation?**
+
 - ✅ **YES** → Use Component Tests ([See Section](#component-tests))
   - Examples: Input validation, formatting, address validation
   - File pattern: `tests/components/*.spec.js`
@@ -141,6 +150,7 @@ The test suite is organized into different categories based on testing approach.
 ### Read-Only Tests with Mainnet Data
 
 **When to use:**
+
 - Testing detail pages for historical data (proposals, transactions)
 - Data that won't change over time
 - Want fastest possible tests without mocking complexity
@@ -159,14 +169,18 @@ test.describe("Payment Request Detail Page", () => {
     // Proposal ID 2: 0.005 ETH payment created on specific date
     await page.goto(
       `http://localhost:3000/${DAO_ID}/payments?tab=history&id=2`,
-      { waitUntil: 'networkidle' }
+      { waitUntil: "networkidle" }
     );
 
     // Wait for page to fully load with real data
-    await expect(page.getByText("Payment Request Funded")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Payment Request Approved")).toBeVisible({
+      timeout: 15000,
+    });
 
     // Test UI renders correctly with real mainnet data
-    await expect(page.getByText("0xa029Ca6D14b97749889702eE16E7d168a1094aFE")).toBeVisible();
+    await expect(
+      page.getByText("0xa029Ca6D14b97749889702eE16E7d168a1094aFE")
+    ).toBeVisible();
     await expect(page.getByText("0.005")).toBeVisible();
 
     console.log("✓ Detail page displays correctly with mainnet data");
@@ -175,12 +189,14 @@ test.describe("Payment Request Detail Page", () => {
 ```
 
 **Advantages:**
+
 - ✅ No mocking code needed
 - ✅ Tests against real production data
 - ✅ Very fast (< 30 seconds)
 - ✅ Catches regressions in real data handling
 
 **When NOT to use:**
+
 - ❌ Data might change (current balances, active proposals)
 - ❌ Need to test edge cases not present in mainnet
 - ❌ Testing create/update/delete operations
@@ -188,6 +204,7 @@ test.describe("Payment Request Detail Page", () => {
 ### Read-Only Tests with RPC Mocking
 
 **When to use:**
+
 - Testing UI with current/changing data (portfolio balances)
 - Need deterministic, controlled test data
 - Want to test multiple scenarios (empty, loaded, multi-chain)
@@ -197,17 +214,23 @@ test.describe("Payment Request Detail Page", () => {
 
 ```javascript
 import { test, expect } from "@playwright/test";
-import { createMockIntentsTokens, mockIntentsRpc, MOCK_TOKENS } from "../../util/mock-intents-rpc.js";
+import {
+  createMockIntentsTokens,
+  mockIntentsRpc,
+  MOCK_TOKENS,
+} from "../../util/mock-intents-rpc.js";
 
 const TEST_DAO_ID = "testing-astradao.sputnik-dao.near";
 
 test.describe("Intents Dashboard Display", () => {
-  test("should display NEAR Intents card with token balances", async ({ page }) => {
+  test("should display NEAR Intents card with token balances", async ({
+    page,
+  }) => {
     // Mock RPC to return specific token balances
     const mockData = createMockIntentsTokens([
-      MOCK_TOKENS.BTC,   // 1 BTC
-      MOCK_TOKENS.ETH,   // 1 ETH
-      MOCK_TOKENS.SOL,   // 1 SOL
+      MOCK_TOKENS.BTC, // 1 BTC
+      MOCK_TOKENS.ETH, // 1 ETH
+      MOCK_TOKENS.SOL, // 1 SOL
     ]);
     await mockIntentsRpc(page, mockData, TEST_DAO_ID);
 
@@ -227,10 +250,11 @@ test.describe("Intents Dashboard Display", () => {
     const mockData = createMockIntentsTokens([
       {
         symbol: "USDC",
-        tokenId: "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+        tokenId:
+          "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
         balance: "1000000", // 1 USDC on NEAR
       },
-      MOCK_TOKENS.USDC_BASE,      // 1 USDC on Base
+      MOCK_TOKENS.USDC_BASE, // 1 USDC on Base
       {
         symbol: "USDC",
         tokenId: "eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near",
@@ -251,7 +275,9 @@ test.describe("Intents Dashboard Display", () => {
     expect(intentsText).toMatch(/USDC.*[23]/); // 2-3 tokens aggregated
   });
 
-  test("should not display NEAR Intents card when no assets", async ({ page }) => {
+  test("should not display NEAR Intents card when no assets", async ({
+    page,
+  }) => {
     // Mock empty balances
     const mockData = createMockIntentsTokens([]);
     await mockIntentsRpc(page, mockData, TEST_DAO_ID);
@@ -270,8 +296,16 @@ test.describe("Intents Dashboard Display", () => {
 ```javascript
 export const MOCK_TOKENS = {
   BTC: { symbol: "BTC", tokenId: "nep141:btc.omft.near", balance: "100000000" },
-  ETH: { symbol: "ETH", tokenId: "nep141:eth.omft.near", balance: "1000000000000000000" },
-  SOL: { symbol: "SOL", tokenId: "nep141:sol.omft.near", balance: "1000000000" },
+  ETH: {
+    symbol: "ETH",
+    tokenId: "nep141:eth.omft.near",
+    balance: "1000000000000000000",
+  },
+  SOL: {
+    symbol: "SOL",
+    tokenId: "nep141:sol.omft.near",
+    balance: "1000000000",
+  },
   USDC_BASE: {
     symbol: "USDC",
     tokenId: "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
@@ -281,8 +315,8 @@ export const MOCK_TOKENS = {
 
 export function createMockIntentsTokens(tokens) {
   return {
-    tokens_for_owner: tokens.map(t => ({ token_id: t.tokenId })),
-    batch_balance_of: tokens.map(t => t.balance),
+    tokens_for_owner: tokens.map((t) => ({ token_id: t.tokenId })),
+    batch_balance_of: tokens.map((t) => t.balance),
   };
 }
 
@@ -321,12 +355,14 @@ export async function mockIntentsRpc(page, mockData, daoId) {
 ```
 
 **Advantages:**
+
 - ✅ Deterministic - same data every run
 - ✅ Can test edge cases (empty, partial data, errors)
 - ✅ No external dependencies
 - ✅ Fast (< 30 seconds)
 
 **When NOT to use:**
+
 - ❌ Testing against real historical data
 - ❌ Need to verify actual blockchain state
 - ❌ Creating new blockchain transactions
@@ -334,6 +370,7 @@ export async function mockIntentsRpc(page, mockData, daoId) {
 ### Component Tests
 
 **When to use:**
+
 - Testing input validation
 - Testing formatting logic
 - Testing user interactions with form elements
@@ -355,7 +392,9 @@ test("validates Bitcoin address format", async ({ page }) => {
   await expect(page.getByText("Invalid Bitcoin address")).toBeVisible();
 
   // Enter valid address
-  await page.getByRole("textbox", { name: "Recipient" }).fill("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+  await page
+    .getByRole("textbox", { name: "Recipient" })
+    .fill("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
 
   // Verify error cleared
   await expect(page.getByText("Invalid Bitcoin address")).not.toBeVisible();
@@ -363,6 +402,7 @@ test("validates Bitcoin address format", async ({ page }) => {
 ```
 
 **Advantages:**
+
 - ✅ Very fast (< 10 seconds)
 - ✅ Isolated from backend
 - ✅ Easy to test edge cases
@@ -373,6 +413,7 @@ test("validates Bitcoin address format", async ({ page }) => {
 ### Overview
 
 The test suite supports two types of tests:
+
 1. **Sandbox-only tests**: Pure contract testing without UI (fast, isolated)
 2. **UI tests with sandbox**: Full end-to-end tests with browser + sandbox blockchain
 
@@ -402,19 +443,32 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
 
   test("create payment request to transfer BTC", async () => {
     // 1. Import contracts from mainnet
-    const omftContractId = await sandbox.importMainnetContract("omft.near", "omft.near");
+    const omftContractId = await sandbox.importMainnetContract(
+      "omft.near",
+      "omft.near"
+    );
 
     // 2. Initialize contracts
-    await sandbox.functionCall(omftContractId, omftContractId, "new", { /* args */ });
+    await sandbox.functionCall(omftContractId, omftContractId, "new", {
+      /* args */
+    });
 
     // 3. Create accounts
     const creatorAccountId = await sandbox.createAccount("testcreator.near");
 
     // 4. Execute transactions
-    await sandbox.functionCall(creatorAccountId, daoAccountId, "add_proposal", { /* args */ });
+    await sandbox.functionCall(creatorAccountId, daoAccountId, "add_proposal", {
+      /* args */
+    });
 
     // 5. Verify state
-    const balance = await sandbox.viewFunction(contractId, "mt_batch_balance_of", { /* args */ });
+    const balance = await sandbox.viewFunction(
+      contractId,
+      "mt_batch_balance_of",
+      {
+        /* args */
+      }
+    );
     expect(balance).toEqual(["32000000000"]);
   });
 });
@@ -430,7 +484,12 @@ These tests combine browser UI interactions with a sandboxed blockchain.
 
 ```javascript
 import { test, expect } from "@playwright/test";
-import { NearSandbox, injectTestWallet, interceptIndexerAPI, parseNEAR } from "../../util/sandbox.js";
+import {
+  NearSandbox,
+  injectTestWallet,
+  interceptIndexerAPI,
+  parseNEAR,
+} from "../../util/sandbox.js";
 
 let sandbox;
 let contractVariables; // Store contract IDs, account IDs, etc.
@@ -444,14 +503,20 @@ test.describe("Payment Request UI Flow", () => {
     await sandbox.start();
 
     // Import and setup contracts
-    const omftContractId = await sandbox.importMainnetContract("omft.near", "omft.near");
-    const intentsContractId = await sandbox.importMainnetContract("intents.near", "intents.near");
+    const omftContractId = await sandbox.importMainnetContract(
+      "omft.near",
+      "omft.near"
+    );
+    const intentsContractId = await sandbox.importMainnetContract(
+      "intents.near",
+      "intents.near"
+    );
 
     // Initialize contracts, create accounts, deposit tokens
     // ... (same as sandbox-only tests)
 
     // Store for use in tests
-    contractVariables = { omftContractId, intentsContractId, /* ... */ };
+    contractVariables = { omftContractId, intentsContractId /* ... */ };
   });
 
   test.afterAll(async () => {
@@ -493,7 +558,7 @@ test("should create and approve payment request", async ({ page }) => {
 ```javascript
 // Set localStorage to use test wallet
 await page.evaluate(() => {
-  localStorage.setItem('selected-wallet', 'test-wallet');
+  localStorage.setItem("selected-wallet", "test-wallet");
 });
 
 // Reload to apply localStorage changes
@@ -507,8 +572,10 @@ await page.waitForTimeout(3000); // Wait for React hydration
 ```javascript
 // Navigate and fill form
 await page.getByText("Create Request").click();
-await page.getByRole('textbox', { name: 'Title' }).fill("Payment request title");
-await page.getByRole('spinbutton', { name: 'Total Amount' }).fill("2");
+await page
+  .getByRole("textbox", { name: "Title" })
+  .fill("Payment request title");
+await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2");
 
 // Submit form (transaction will be signed by injected wallet)
 await page.getByRole("button", { name: "Submit" }).click();
@@ -517,30 +584,34 @@ await page.getByRole("button", { name: "Submit" }).click();
 await page.waitForTimeout(3000);
 
 // Verify success
-await expect(page.getByText("Payment request has been successfully created.")).toBeVisible();
+await expect(
+  page.getByText("Payment request has been successfully created.")
+).toBeVisible();
 ```
 
 #### Step 5: Handle Conditional UI States
 
 ```javascript
 // Check if proposal appears in table or needs navigation
-const proposalInTable = await page.locator('tbody tr')
-  .filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' })
+const proposalInTable = await page
+  .locator("tbody tr")
+  .filter({ hasText: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" })
   .first()
   .isVisible()
   .catch(() => false);
 
 if (proposalInTable) {
-  await page.locator('tbody tr')
-    .filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' })
+  await page
+    .locator("tbody tr")
+    .filter({ hasText: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" })
     .first()
     .click();
 } else {
-  await page.getByText('View Request').click();
+  await page.getByText("View Request").click();
 }
 
 // Handle expand button if sidebar opens
-const expandButton = page.locator('.bi.bi-arrows-angle-expand');
+const expandButton = page.locator(".bi.bi-arrows-angle-expand");
 if (await expandButton.isVisible().catch(() => false)) {
   await expandButton.click();
 }
@@ -584,7 +655,10 @@ await sandbox.start();
 const accountId = await sandbox.createAccount("myaccount.near");
 
 // Import mainnet contract
-const contractId = await sandbox.importMainnetContract("contract.near", "localname.near");
+const contractId = await sandbox.importMainnetContract(
+  "contract.near",
+  "localname.near"
+);
 
 // Execute state-changing function
 await sandbox.functionCall(
@@ -592,8 +666,8 @@ await sandbox.functionCall(
   receiverId,
   methodName,
   args,
-  gas = "300000000000000",
-  deposit = "0"
+  (gas = "300000000000000"),
+  (deposit = "0")
 );
 
 // Query contract state
@@ -663,17 +737,12 @@ const daoAccountId = await sandbox.createDao({
 #### Pattern: Deposit Tokens to DAO
 
 ```javascript
-await sandbox.functionCall(
-  omftContractId,
-  omftContractId,
-  "ft_deposit",
-  {
-    owner_id: intentsContractId,
-    token: "btc",
-    amount: "32000000000",
-    msg: JSON.stringify({ receiver_id: daoAccountId }),
-  }
-);
+await sandbox.functionCall(omftContractId, omftContractId, "ft_deposit", {
+  owner_id: intentsContractId,
+  token: "btc",
+  amount: "32000000000",
+  msg: JSON.stringify({ receiver_id: daoAccountId }),
+});
 ```
 
 #### Pattern: Verify Event Logs

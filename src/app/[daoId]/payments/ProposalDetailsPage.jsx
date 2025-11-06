@@ -5,7 +5,10 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { useProposal } from "@/hooks/useProposal";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
-import { fetchBlockchainByNetwork, fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
+import {
+  fetchBlockchainByNetwork,
+  fetchTokenMetadataByDefuseAssetId,
+} from "@/api/backend";
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -48,6 +51,20 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   );
 
   const proposalPeriod = daoPolicy?.proposal_period || 0;
+
+  // Clear proposal data when ID changes to show loader
+  useEffect(() => {
+    setProposalData(null);
+    setNetworkInfo({
+      blockchain: null,
+      blockchainIcon: null,
+    });
+    setTransactionInfo({
+      nearTxHash: null,
+      targetTxHash: null,
+    });
+    setEstimatedFee(null);
+  }, [id]);
 
   // Process raw proposal data when it changes
   useEffect(() => {
@@ -235,9 +252,10 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                 );
 
                 // tokenMetadata is an array, get the first result
-                const metadata = Array.isArray(tokenMetadata) && tokenMetadata.length > 0
-                  ? tokenMetadata[0]
-                  : tokenMetadata;
+                const metadata =
+                  Array.isArray(tokenMetadata) && tokenMetadata.length > 0
+                    ? tokenMetadata[0]
+                    : tokenMetadata;
 
                 if (metadata && metadata.chainName) {
                   const networkResults = await fetchBlockchainByNetwork(
@@ -506,9 +524,21 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   return (
     <ProposalDetails
+      proposalData={proposalData}
+      isDeleted={isDeleted}
       currentTab={currentTab}
       proposalPeriod={proposalPeriod}
       page="payments"
+      isCompactVersion={isCompactVersion}
+      onClose={onClose}
+      approversGroup={transferApproversGroup}
+      proposalStatusLabel={{
+        approved: "Payment Request Approved",
+        rejected: "Payment Request Rejected",
+        deleted: "Payment Request Deleted",
+        failed: "Payment Request Failed",
+        expired: "Payment Request Expired",
+      }}
       VoteActions={
         (hasVotingPermission || hasDeletePermission) &&
         proposalData?.status === "InProgress" ? (
@@ -663,18 +693,6 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
           </div>
         </div>
       }
-      proposalData={proposalData}
-      isDeleted={isDeleted}
-      isCompactVersion={isCompactVersion}
-      approversGroup={transferApproversGroup}
-      proposalStatusLabel={{
-        approved: "Payment Request Funded",
-        rejected: "Payment Request Rejected",
-        deleted: "Payment Request Deleted",
-        failed: "Payment Request Failed",
-        expired: "Payment Request Expired",
-      }}
-      onClose={onClose}
     />
   );
 };

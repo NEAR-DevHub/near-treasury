@@ -425,7 +425,7 @@ export const DaoProvider = ({ children }) => {
     refetchLastProposalId: getLastProposalId,
     refetchDaoPolicy: getDaoPolicy,
     refetchIntentsBalances: fetchIntentsBalances,
-    refetchDaoConfig: getDaoConfig,
+    refetchDaoConfig: getDaoMetadata,
     hasPermission,
     getApproversAndThreshold,
     lockupStakedPoolId,

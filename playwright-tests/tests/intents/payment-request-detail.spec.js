@@ -28,7 +28,7 @@ test.describe("Payment Request Detail Page", () => {
     // Hard expectation: Page should load
     await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
     // Wait for status to be visible (indicates page fully loaded)
-    await expect(page.getByText("Payment Request Funded")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Payment Request Approved")).toBeVisible({ timeout: 15000 });
 
     // Hard expectation: Recipient address should be visible
     await expect(page.getByText("0xa029Ca6D14b97749889702eE16E7d168a1094aFE")).toBeVisible({ timeout: 10000 });
@@ -75,7 +75,7 @@ test.describe("Payment Request Detail Page", () => {
 
     // Hard expectation: Page should load and status should be visible
     await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("Payment Request Funded")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Payment Request Approved")).toBeVisible({ timeout: 15000 });
 
     // Hard expectation: Token amount should be displayed in Funding Ask
     await expect(page.getByText("Funding Ask")).toBeVisible({ timeout: 10000 });
@@ -102,9 +102,9 @@ test.describe("Payment Request Detail Page", () => {
     await expect(networkValue).toContainText("Near");
     console.log("✓ Network name is visible");
 
-    // Hard expectation: Payment Request Funded status should be visible
-    await expect(page.getByText("Payment Request Funded")).toBeVisible();
-    console.log("✓ Payment Request Funded status is visible");
+    // Hard expectation: Payment Request Approved status should be visible
+    await expect(page.getByText("Payment Request Approved")).toBeVisible();
+    console.log("✓ Payment Request Approved status is visible");
 
     // Hard expectation: Transaction Links section should be displayed
     await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 10000 });
@@ -131,7 +131,7 @@ test.describe("Payment Request Detail Page", () => {
 
     // Hard expectation: Page should load and status should be visible
     await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("Payment Request Funded")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Payment Request Approved")).toBeVisible({ timeout: 15000 });
 
     // Hard expectation: Recipient name and address should be visible (use .first() to avoid strict mode)
     await expect(page.getByText("petersalomonsen.near").first()).toBeVisible({ timeout: 10000 });
@@ -142,9 +142,9 @@ test.describe("Payment Request Detail Page", () => {
     await expect(avatar.first()).toBeVisible({ timeout: 5000 });
     console.log("✓ Recipient avatar is visible");
 
-    // Hard expectation: Payment Request Funded status should be visible
-    await expect(page.getByText("Payment Request Funded")).toBeVisible();
-    console.log("✓ Payment Request Funded status is visible");
+    // Hard expectation: Payment Request Approved status should be visible
+    await expect(page.getByText("Payment Request Approved")).toBeVisible();
+    console.log("✓ Payment Request Approved status is visible");
 
     // Hard expectation: Transaction Links section should be displayed
     await expect(page.getByText("Transaction Links")).toBeVisible({ timeout: 15000 });

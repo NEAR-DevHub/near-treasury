@@ -5,7 +5,10 @@ import { useProposal } from "@/hooks/useProposal";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { decodeBase64, decodeProposalDescription } from "@/helpers/daoHelpers";
-import { fetchTokenMetadataByDefuseAssetId, fetchBlockchainByNetwork } from "@/api/backend";
+import {
+  fetchTokenMetadataByDefuseAssetId,
+  fetchBlockchainByNetwork,
+} from "@/api/backend";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
 import VoteActions from "@/components/proposals/VoteActions";
@@ -26,6 +29,13 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const [destinationNetworkInfo, setDestinationNetworkInfo] = useState(null);
 
   const proposalPeriod = daoPolicy?.proposal_period;
+
+  // Clear proposal data when ID changes to show loader
+  useEffect(() => {
+    setProposalData(null);
+    setIntentsAssets([]);
+    setDestinationNetworkInfo(null);
+  }, [id]);
 
   const networkInfo = useMemo(() => {
     if (
@@ -97,15 +107,21 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
         );
 
         if (!destinationNet?.id) {
-          console.warn("Destination network not found for chainId:", proposalData.destinationNetwork);
+          console.warn(
+            "Destination network not found for chainId:",
+            proposalData.destinationNetwork
+          );
           return;
         }
 
         // Fetch token metadata to get the chainName
-        const tokenMetadata = await fetchTokenMetadataByDefuseAssetId(destinationNet.id);
-        const metadata = Array.isArray(tokenMetadata) && tokenMetadata.length > 0
-          ? tokenMetadata[0]
-          : tokenMetadata;
+        const tokenMetadata = await fetchTokenMetadataByDefuseAssetId(
+          destinationNet.id
+        );
+        const metadata =
+          Array.isArray(tokenMetadata) && tokenMetadata.length > 0
+            ? tokenMetadata[0]
+            : tokenMetadata;
 
         if (metadata?.chainName) {
           // Fetch blockchain info using the chainName
@@ -152,7 +168,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   const proposalStatusLabel = useMemo(
     () => ({
-      approved: "Asset Exchange Request Executed",
+      approved: "Asset Exchange Request Approved",
       rejected: "Asset Exchange Request Rejected",
       deleted: "Asset Exchange Request Deleted",
       failed: "Asset Exchange Request Failed",

@@ -29,6 +29,7 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
   const { showToast } = useProposalToastContext();
 
   const [validators, setValidators] = useState([]);
+  const [isLoadingValidators, setIsLoadingValidators] = useState(true);
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [lockupAlreadyStaked, setLockupAlreadyStaked] = useState(false);
@@ -80,9 +81,11 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
 
   // Fetch validators
   useEffect(() => {
+    setIsLoadingValidators(true);
     getValidators()
       .then((data) => setValidators(data || []))
-      .catch((err) => console.error("Error fetching validators:", err));
+      .catch((err) => console.error("Error fetching validators:", err))
+      .finally(() => setIsLoadingValidators(false));
   }, []);
 
   // Get available balance for validation only
@@ -331,6 +334,7 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
             disabled={lockupAlreadyStaked || isTxnCreated}
             showStakingInfo={false}
             selectedWallet={selectedWallet?.value}
+            isLoading={isLoadingValidators}
           />
           <input
             type="hidden"
