@@ -72,7 +72,7 @@ function getRoleWiseData(daoPolicy) {
           : (threshold[0] / threshold[1]) * 100
         : threshold,
       requiredVotes: isRatio
-        ? Math.floor((threshold[0] / threshold[1]) * role.kind?.Group.length) +
+        ? Math.floor((threshold[0] / threshold[1]) * role.kind?.Group?.length) +
           1
         : threshold ?? 1,
       option: isRatio ? "percentage" : "number",

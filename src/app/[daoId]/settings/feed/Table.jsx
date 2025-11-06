@@ -25,13 +25,14 @@ const SettingsFeedTable = ({
   onSelectRequest,
   handleSortClick,
   sortDirection,
-  settingsApproverGroup,
-  deleteGroup,
 }) => {
   const { accountId } = useNearWallet();
-  const { daoPolicy } = useDao();
+  const { daoPolicy, getApproversAndThreshold } = useDao();
 
   const [columnsVisibility, setColumnsVisibility] = useState([]);
+
+  const settingsApproverGroup = getApproversAndThreshold("policy");
+  const deleteGroup = getApproversAndThreshold("policy", true);
 
   const hasVotingPermission = (
     settingsApproverGroup?.approverAccounts ?? []
@@ -79,6 +80,7 @@ const SettingsFeedTable = ({
 
   const requiredVotes = settingsApproverGroup?.requiredVotes;
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
+  const hideVotesCol = isPendingRequests && requiredVotes === 1;
 
   const proposalPeriod = daoPolicy?.proposal_period;
 
@@ -148,7 +150,7 @@ const SettingsFeedTable = ({
                   {requiredVotes}
                 </td>
               )}
-              {isPendingRequests && (
+              {isPendingRequests && !hideVotesCol && (
                 <td className={`${isVisible("Votes")} text-center`}>
                   <Votes
                     votes={item.votes}
@@ -240,7 +242,7 @@ const SettingsFeedTable = ({
                   Required Votes
                 </td>
               )}
-              {isPendingRequests && (
+              {isPendingRequests && !hideVotesCol && (
                 <td className={`${isVisible("Votes")} text-center`}>Votes</td>
               )}
               <td
