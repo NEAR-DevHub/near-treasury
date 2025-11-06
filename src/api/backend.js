@@ -1,6 +1,6 @@
 import { logger } from "@/helpers/logger";
 
-const BACKEND_API_BASE = 'https://ref-sdk-test-cold-haze-1300-2.fly.dev/api';
+const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_API;
 
 /**
  * Get all validators
