@@ -4,7 +4,10 @@ import { useMemo } from "react";
 import Tooltip from "@/components/ui/Tooltip";
 import { useDao } from "@/context/DaoContext";
 import { TOOLTIP_TEXT } from "@/constants/ui";
-import { LOCKUP_MIN_BALANCE_FOR_STORAGE } from "@/helpers/nearHelpers";
+import {
+  formatNearAmount,
+  LOCKUP_MIN_BALANCE_FOR_STORAGE,
+} from "@/helpers/nearHelpers";
 
 /**
  * Reusable balance display component for stake delegation
@@ -22,13 +25,13 @@ const BalanceDisplay = ({ selectedWallet }) => {
   // Calculate balances based on selected wallet
   const balances = useMemo(() => {
     if (selectedWallet?.value === lockupContract) {
-      const locked = lockupNearBalances?.contractLockedParsed || 0;
       const total = lockupNearBalances?.totalParsed || 0;
+      const staked = lockupStakedBalances?.totalParsed || 0;
       const available = Math.max(
         0,
         parseFloat(total) -
-          parseFloat(locked) -
-          parseFloat(LOCKUP_MIN_BALANCE_FOR_STORAGE)
+          parseFloat(staked) -
+          parseFloat(formatNearAmount(LOCKUP_MIN_BALANCE_FOR_STORAGE))
       ).toFixed(2);
 
       return {

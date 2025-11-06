@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 import { mkdirSync, existsSync } from 'fs';
+import { config } from 'dotenv';
+
+/**
+ * Load environment variables from .env.test
+ * This makes env vars available to both tests and the Next.js dev server
+ */
+config({ path: '.env.test' });
 
 /**
  * Set temp directory to project-local folder for near-sandbox
