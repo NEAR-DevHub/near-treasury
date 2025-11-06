@@ -34,6 +34,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
   const { signAndSendTransactions, accountId } = useNearWallet();
   const { showToast } = useProposalToastContext();
   const [validators, setValidators] = useState([]);
+  const [isLoadingValidators, setIsLoadingValidators] = useState(true);
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
@@ -79,6 +80,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
         : daoStakedPools;
 
     if (stakedPools && stakedPools.length > 0) {
+      setIsLoadingValidators(true);
       // Filter validators to only show those with staked balance
       getValidators()
         .then((allValidators) => {
@@ -89,9 +91,11 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
           );
           setValidators(validatorsWithStake);
         })
-        .catch((err) => console.error("Error fetching validators:", err));
+        .catch((err) => console.error("Error fetching validators:", err))
+        .finally(() => setIsLoadingValidators(false));
     } else {
       setValidators([]);
+      setIsLoadingValidators(false);
     }
   }, [selectedWallet, lockupContract, daoStakedPools, lockupStakedPools]);
 
@@ -388,6 +392,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
             disabled={isTxnCreated || validators.length === 0}
             showStakingInfo={true}
             selectedWallet={selectedWallet?.value}
+            isLoading={isLoadingValidators}
           />
           <input
             type="hidden"

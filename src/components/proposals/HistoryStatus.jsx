@@ -17,15 +17,8 @@ const HistoryStatus = ({ status, isPaymentsPage = false }) => {
     return "expire-status";
   };
 
-  // Display label transformation for payments page
+  // Display label transformation
   const getDisplayLabel = () => {
-    if (status === "Approved") {
-      if (isPaymentsPage) {
-        return "Funded";
-      } else {
-        return "Executed";
-      }
-    }
     if (status === "InProgress") {
       return "Expired";
     }

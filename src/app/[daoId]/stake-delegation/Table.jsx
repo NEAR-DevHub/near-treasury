@@ -111,6 +111,7 @@ const StakeDelegationTable = ({
 
   const requiredVotes = functionCallApproversGroup?.requiredVotes || 0;
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
+  const hideVotesCol = isPendingRequests && requiredVotes === 1;
   const proposalPeriod = daoPolicy?.proposal_period;
 
   const hasOneDeleteIcon =
@@ -235,7 +236,7 @@ const StakeDelegationTable = ({
                   {requiredVotes}
                 </td>
               )}
-              {isPendingRequests && (
+              {isPendingRequests && !hideVotesCol && (
                 <td className={`${isVisible("Votes")} text-center`}>
                   <Votes
                     votes={item.votes}
@@ -329,7 +330,7 @@ const StakeDelegationTable = ({
                 Required Votes
               </td>
             )}
-            {isPendingRequests && (
+            {isPendingRequests && !hideVotesCol && (
               <td className={`${isVisible("Votes")} text-center`}>Votes</td>
             )}
             <td

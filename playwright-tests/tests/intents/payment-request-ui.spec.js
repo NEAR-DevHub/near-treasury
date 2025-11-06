@@ -679,9 +679,9 @@ test.describe("Payment Request UI Flow", () => {
 
     // Wait for success message
     await expect(
-      page.getByText("The payment request has been successfully executed.")
+      page.getByText("The payment request has been successfully approved.")
     ).toBeVisible({ timeout: 15_000 });
-    console.log("✓ Payment request executed successfully");
+    console.log("✓ Payment request approved successfully");
 
     // Verify balance after approval (should be 318 BTC = 320 - 2)
     await page.waitForTimeout(1000);
@@ -870,9 +870,9 @@ test.describe("Payment Request UI Flow", () => {
 
     // Verify execution
     await expect(
-      page.getByText("The payment request has been successfully executed.")
+      page.getByText("The payment request has been successfully approved.")
     ).toBeVisible({ timeout: 15_000 });
-    console.log("✓ USDC payment request executed successfully");
+    console.log("✓ USDC payment request approved successfully");
 
     // Verify balance after approval (should be 97,500 USDC = 100,000 - 2,500)
     await page.waitForTimeout(1000);
@@ -1063,9 +1063,9 @@ test.describe("Payment Request UI Flow", () => {
 
     // Verify execution
     await expect(
-      page.getByText("The payment request has been successfully executed.")
+      page.getByText("The payment request has been successfully approved.")
     ).toBeVisible({ timeout: 15_000 });
-    console.log("✓ wNEAR payment request executed successfully");
+    console.log("✓ wNEAR payment request approved successfully");
 
     // Verify balance after approval (should be 41.3 wNEAR = 91.3 - 50)
     await page.waitForTimeout(1000);

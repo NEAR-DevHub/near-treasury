@@ -380,7 +380,18 @@ const CreatePaymentRequest = ({
       },
     ];
 
-    if (!selectedTokenIsIntent && !isReceiverRegistered && !isNEAR) {
+    // Add storage deposit transaction if needed for:
+    // 1. Regular (non-Intent) FT transfers
+    // 2. Intent withdrawals on NEAR network (when blockchain is "near" or null/undefined)
+    const isIntentNearWithdrawal =
+      selectedTokenIsIntent &&
+      (selectedTokenBlockchain === "near" || !selectedTokenBlockchain);
+    const needsStorageDeposit =
+      !isReceiverRegistered &&
+      !isNEAR &&
+      (!selectedTokenIsIntent || isIntentNearWithdrawal);
+
+    if (needsStorageDeposit) {
       const depositInYocto = Big(0.125).mul(Big(10).pow(24)).toFixed();
       calls.push({
         receiverId: tokenId,
@@ -437,26 +448,45 @@ const CreatePaymentRequest = ({
     }
     return true;
   }
-
   useEffect(() => {
-    if (
-      !selectedTokenIsIntent &&
+    // Check storage registration for:
+    // 1. Regular (non-Intent) FT transfers
+    // 2. Intent withdrawals on NEAR network (when selectedTokenBlockchain is "near" or null)
+    const shouldCheckStorage =
       tokenId &&
       tokenId !== tokenMapping.NEAR &&
       receiver &&
-      isReceiverAccountValid
-    ) {
+      isReceiverAccountValid &&
+      (!selectedTokenIsIntent ||
+        selectedTokenBlockchain === "near" ||
+        !selectedTokenBlockchain);
+
+    if (shouldCheckStorage) {
       Near.view(tokenId, "storage_balance_of", {
         account_id: receiver,
-      }).then((storage) => {
-        if (!storage) {
+      })
+        .then((storage) => {
+          if (!storage) {
+            setValue("isReceiverRegistered", false);
+          } else {
+            setValue("isReceiverRegistered", true);
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking storage balance:", error);
           setValue("isReceiverRegistered", false);
-        } else {
-          setValue("isReceiverRegistered", true);
-        }
-      });
+        });
+    } else {
+      // Reset registration status if checks don't apply
+      setValue("isReceiverRegistered", true);
     }
-  }, [receiver, tokenId, selectedTokenIsIntent, isReceiverAccountValid]);
+  }, [
+    receiver,
+    tokenId,
+    selectedTokenIsIntent,
+    selectedTokenBlockchain,
+    isReceiverAccountValid,
+  ]);
 
   // Trigger validation when account validity changes
   useEffect(() => {

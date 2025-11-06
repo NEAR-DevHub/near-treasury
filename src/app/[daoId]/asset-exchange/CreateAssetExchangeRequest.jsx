@@ -17,6 +17,7 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import { Near } from "@/api/near";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
+import { formatDateTimeWithTimezone } from "@/components/ui/DateTimeDisplay";
 
 const formatNumberWithCommas = (value) => {
   const num = Number(value || 0);
@@ -1105,7 +1106,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 <div className="d-flex justify-content-between">
                   <span className="text-secondary">Quote Expires</span>
                   <span>
-                    {new Date(proposalQuote?.quote?.deadline).toLocaleString()}
+                    {formatDateTimeWithTimezone(proposalQuote?.quote?.deadline)}
                   </span>
                 </div>
                 {/* <div className="d-flex justify-content-between">

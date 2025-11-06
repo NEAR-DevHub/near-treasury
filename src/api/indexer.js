@@ -1,7 +1,6 @@
 import { logger } from "@/helpers/logger";
 
-const SPUTNIK_INDEXER_BASE = "https://sputnik-indexer.fly.dev";
-
+const SPUTNIK_INDEXER_BASE = process.env.NEXT_PUBLIC_SPUTNIK_INDEXER;
 /**
  * Get list of approvers for a DAO's proposals
  */

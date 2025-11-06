@@ -13,7 +13,10 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { getValidators } from "@/api/backend";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
-import { LOCKUP_MIN_BALANCE_FOR_STORAGE } from "@/helpers/nearHelpers";
+import {
+  formatNearAmount,
+  LOCKUP_MIN_BALANCE_FOR_STORAGE,
+} from "@/helpers/nearHelpers";
 
 const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
   const {
@@ -23,12 +26,14 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
     lockupNearBalances,
     lastProposalId,
     daoPolicy,
+    lockupStakedBalances,
     lockupStakedPoolId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
   const { showToast } = useProposalToastContext();
 
   const [validators, setValidators] = useState([]);
+  const [isLoadingValidators, setIsLoadingValidators] = useState(true);
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [lockupAlreadyStaked, setLockupAlreadyStaked] = useState(false);
@@ -80,21 +85,23 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
 
   // Fetch validators
   useEffect(() => {
+    setIsLoadingValidators(true);
     getValidators()
       .then((data) => setValidators(data || []))
-      .catch((err) => console.error("Error fetching validators:", err));
+      .catch((err) => console.error("Error fetching validators:", err))
+      .finally(() => setIsLoadingValidators(false));
   }, []);
 
   // Get available balance for validation only
   const getAvailableBalance = () => {
     if (selectedWallet?.value === lockupContract) {
-      const locked = lockupNearBalances?.contractLockedParsed || 0;
       const total = lockupNearBalances?.totalParsed || 0;
+      const staked = lockupStakedBalances?.totalParsed || 0;
       return Math.max(
         0,
         parseFloat(total) -
-          parseFloat(locked) -
-          parseFloat(LOCKUP_MIN_BALANCE_FOR_STORAGE)
+          parseFloat(staked) -
+          parseFloat(formatNearAmount(LOCKUP_MIN_BALANCE_FOR_STORAGE))
       ).toFixed(2);
     }
     return daoNearBalances?.availableParsed || 0;
@@ -331,6 +338,7 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
             disabled={lockupAlreadyStaked || isTxnCreated}
             showStakingInfo={false}
             selectedWallet={selectedWallet?.value}
+            isLoading={isLoadingValidators}
           />
           <input
             type="hidden"

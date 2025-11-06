@@ -41,6 +41,11 @@ const SettingsProposalDetailsPage = ({ id, isCompactVersion, onClose }) => {
     OTHER: "Settings",
   };
 
+  // Clear proposal data when ID changes to show loader
+  useEffect(() => {
+    setProposalData(null);
+  }, [id]);
+
   // Process raw proposal data when it changes
   useEffect(() => {
     const processProposalData = async () => {
@@ -196,11 +201,13 @@ const SettingsProposalDetailsPage = ({ id, isCompactVersion, onClose }) => {
         <div className="card p-3 border-top-0 pt-1 rounded-top-0 text-color">
           {type === "edit" ? (
             <>
-              <label>Old Roles:</label>
+              <label className="proposal-label">Old Roles:</label>
               <div className="d-flex flex-wrap gap-2 mt-1">
                 {(oldRoles || []).join(", ")}
               </div>
-              <label className="border-top mt-2 pt-2">New Roles:</label>
+              <label className="proposal-label border-top mt-2 pt-2">
+                New Roles:
+              </label>
               <div className="d-flex flex-wrap gap-2 mt-1">
                 {(newRoles || []).join(", ")}
               </div>
@@ -327,7 +334,7 @@ const SettingsProposalDetailsPage = ({ id, isCompactVersion, onClose }) => {
         proposalPeriod={proposalPeriod}
         approversGroup={settingsApproverGroup}
         proposalStatusLabel={{
-          approved: `${proposalData?.requestType} Request Executed`,
+          approved: `${proposalData?.requestType} Request Approved`,
           rejected: `${proposalData?.requestType} Request Rejected`,
           deleted: `${proposalData?.requestType} Request Deleted`,
           failed: `${proposalData?.requestType} Request Failed`,
