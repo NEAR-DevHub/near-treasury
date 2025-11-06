@@ -32,6 +32,7 @@ const Table = ({
 
   const requiredVotes = callApproversGroup?.requiredVotes;
   const hideApproversCol = isPendingRequests && requiredVotes === 1;
+  const hideVotesCol = isPendingRequests && requiredVotes === 1;
 
   const proposalPeriod = daoPolicy?.proposal_period;
 
@@ -132,7 +133,7 @@ const Table = ({
                   {requiredVotes}
                 </td>
               )}
-              {isPendingRequests && (
+              {isPendingRequests && !hideVotesCol && (
                 <td className={isVisible("Votes") + " text-center"}>
                   <Votes
                     votes={item.votes}
@@ -214,7 +215,7 @@ const Table = ({
                 Required Votes
               </td>
             )}
-            {isPendingRequests && (
+            {isPendingRequests && !hideVotesCol && (
               <td className={isVisible("Votes") + " text-center"}>Votes</td>
             )}
             <td

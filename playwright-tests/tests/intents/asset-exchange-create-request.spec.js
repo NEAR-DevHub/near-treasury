@@ -672,7 +672,7 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
 
     // Wait for execution result - either success or failure notification
     await expect(
-      page.getByText(/request (has been|is) (successfully executed|failed)|vote.*counted/i)
+      page.getByText(/request (has been|is) (successfully approved|failed)|vote.*counted/i)
     ).toBeVisible({ timeout: 30000 });
     console.log("✓ Proposal approval transaction completed");
 
@@ -689,9 +689,9 @@ test.describe("Create Asset Exchange Request (1Click)", () => {
       throw new Error("Proposal execution failed unexpectedly!");
     }
 
-    // Verify the proposal executed successfully
+    // Verify the proposal approved successfully
     expect(proposal.status).toBe("Approved");
-    console.log("✓ Proposal executed successfully");
+    console.log("✓ Proposal approved successfully");
 
     // Verify the mt_transfer succeeded by checking deposit address balance
     const depositBalance = await sandbox.viewFunction(

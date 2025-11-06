@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import Profile from "@/components/ui/Profile";
 import TokenIcon from "@/components/proposals/TokenIcon";
 import HistoryStatus from "@/components/proposals/HistoryStatus";
+import MultiSelectDropdown from "@/components/ui/MultiSelectDropdown";
 
-// TODO: fix clicking on search loses focus on the input
-// TODO: fix selecting one option from multiple options scrolls to top
-// Filters dropdown with include/exclude and multiple filter types
+// Static constants (moved outside component to prevent recreation)
+const STATUS_OPTIONS = ["Approved", "Rejected", "Failed", "Expired"];
+const AMOUNT_OPTIONS = [
+  { label: "Is", value: "is" },
+  { label: "Between", value: "between" },
+  { label: "More than", value: ">" },
+  { label: "Less than", value: "<" },
+];
+
 const FiltersDropdown = ({
   label,
   options = [],
@@ -23,96 +30,126 @@ const FiltersDropdown = ({
   isPendingRequests = false,
   isPaymentsPage = false,
 }) => {
-  const [search, setSearch] = useState("");
-
-  // Local UI state
   const [isMainDropdownOpen, setIsMainDropdownOpen] = useState(false);
   const [isIncludeDropdownOpen, setIsIncludeDropdownOpen] = useState(false);
   const [isTokenDropdownOpen, setIsTokenDropdownOpen] = useState(false);
   const [isAmountTypeDropdownOpen, setIsAmountTypeDropdownOpen] =
     useState(false);
 
-  // Toggles
-  const toggleMainDropdown = () => {
+  const amountInputRefs = useRef({});
+
+  // Memoized computed values
+  const hideInclude = useMemo(() => type === "vote" || type === "date", [type]);
+
+  const voteOptions = useMemo(
+    () => [
+      "Approved",
+      "Rejected",
+      isPendingRequests ? "Awaiting Decision" : "Not Voted",
+    ],
+    [isPendingRequests]
+  );
+
+  const includeOptions = useMemo(
+    () => [
+      { value: true, label: multiple ? "is any" : "is" },
+      { value: false, label: multiple ? "is not all" : "is not" },
+    ],
+    [multiple]
+  );
+
+  // Memoized toggle functions
+  const toggleMainDropdown = useCallback(() => {
     setIsMainDropdownOpen((prev) => !prev);
-  };
+  }, []);
 
-  const toggleIncludeDropdown = () => {
+  const toggleIncludeDropdown = useCallback(() => {
     setIsIncludeDropdownOpen((prev) => !prev);
-  };
+  }, []);
 
-  const toggleTokenDropdown = () => {
+  const toggleTokenDropdown = useCallback(() => {
     setIsTokenDropdownOpen((prev) => !prev);
-  };
+  }, []);
 
-  const toggleAmountTypeDropdown = () => {
+  const toggleAmountTypeDropdown = useCallback(() => {
     setIsAmountTypeDropdownOpen((prev) => !prev);
-  };
+  }, []);
 
-  const closeAllDropdowns = () => {
+  const closeAllDropdowns = useCallback(() => {
     setIsMainDropdownOpen(false);
     setIsIncludeDropdownOpen(false);
     setIsTokenDropdownOpen(false);
     setIsAmountTypeDropdownOpen(false);
-  };
+  }, []);
 
-  const hideInclude = type === "vote" || type === "date";
+  // Memoized handlers
+  const handleSelection = useCallback(
+    (item, e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
 
-  const statusOptions = ["Approved", "Rejected", "Failed", "Expired"];
-  const voteOptions = [
-    "Approved",
-    "Rejected",
-    isPendingRequests ? "Awaiting Decision" : "Not Voted",
-  ];
-  const includeOptions = [
-    { value: true, label: multiple ? "is any" : "is" },
-    { value: false, label: multiple ? "is not all" : "is not" },
-  ];
-  const amountOptions = [
-    { label: "Is", value: "is" },
-    { label: "Between", value: "between" },
-    { label: "More than", value: ">" },
-    { label: "Less than", value: "<" },
-  ];
+      if (multiple) {
+        const newValues = selected.includes(item)
+          ? selected.filter((v) => v !== item)
+          : [...selected, item];
+        setSelected(newValues);
+      } else {
+        setSelected(selected.includes(item) ? [] : [item]);
+        // Don't close main dropdown if it's token/amount type (user needs to enter amount)
+        if (type !== "token" && type !== "amount") {
+          closeAllDropdowns();
+        }
+      }
+    },
+    [multiple, selected, setSelected, closeAllDropdowns, type]
+  );
 
-  const handleSelection = (item, e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    if (multiple) {
-      const newValues = selected.includes(item)
-        ? selected.filter((v) => v !== item)
-        : [...selected, item];
+  const handleDateChange = useCallback(
+    (index, value) => {
+      const newValues = [...selected];
+      newValues[index] = value;
       setSelected(newValues);
-    } else {
-      setSelected(selected.includes(item) ? [] : [item]);
-      closeAllDropdowns();
-    }
-  };
+    },
+    [selected, setSelected]
+  );
 
-  const handleDateChange = (index, value) => {
-    const newValues = [...selected];
-    newValues[index] = value;
-    setSelected(newValues);
-  };
+  const handleAmountTypeChange = useCallback(
+    (option) => {
+      setAmountValues({
+        min: "",
+        max: "",
+        equal: "",
+        value: option.value,
+      });
+    },
+    [setAmountValues]
+  );
 
-  const handleAmountTypeChange = (option) => {
-    setAmountValues({
-      min: "",
-      max: "",
-      equal: "",
-      value: option.value,
-    });
-  };
+  const handleAmountValueChange = useCallback(
+    (field, value) => {
+      const activeElement = document.activeElement;
+      const focusedInputName = activeElement?.name;
 
-  const handleAmountValueChange = (field, value) => {
-    setAmountValues({
-      ...amountValues,
-      [field]: value,
-    });
-  };
+      setAmountValues({
+        ...amountValues,
+        [field]: value,
+      });
+
+      if (focusedInputName) {
+        requestAnimationFrame(() => {
+          const inputToFocus = amountInputRefs.current[focusedInputName];
+          if (inputToFocus && document.activeElement !== inputToFocus) {
+            inputToFocus.focus();
+            const len = inputToFocus.value.length;
+            inputToFocus.setSelectionRange(len, len);
+          }
+        });
+      }
+    },
+    [amountValues, setAmountValues]
+  );
 
   const AmountOptions = ({ showDelete }) => {
     return (
@@ -136,7 +173,7 @@ const FiltersDropdown = ({
                 >
                   <div className="d-flex align-items-center gap-1">
                     {
-                      amountOptions.find(
+                      AMOUNT_OPTIONS.find(
                         (option) => option.value === amountValues.value
                       )?.label
                     }
@@ -145,7 +182,7 @@ const FiltersDropdown = ({
                 </button>
                 {isAmountTypeDropdownOpen && (
                   <div className="dropdown-menu show">
-                    {amountOptions.map((option) => (
+                    {AMOUNT_OPTIONS.map((option) => (
                       <div
                         key={option.value}
                         className="dropdown-item cursor-pointer"
@@ -182,6 +219,8 @@ const FiltersDropdown = ({
                 <div>
                   <label>From</label>
                   <input
+                    ref={(el) => (amountInputRefs.current["amount-min"] = el)}
+                    name="amount-min"
                     type="number"
                     className="form-control form-control-sm"
                     placeholder="0"
@@ -190,11 +229,14 @@ const FiltersDropdown = ({
                       handleAmountValueChange("min", e.target.value)
                     }
                     onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                   />
                 </div>
                 <div>
                   <label>To</label>
                   <input
+                    ref={(el) => (amountInputRefs.current["amount-max"] = el)}
+                    name="amount-max"
                     type="number"
                     className="form-control form-control-sm"
                     placeholder="0"
@@ -203,11 +245,28 @@ const FiltersDropdown = ({
                       handleAmountValueChange("max", e.target.value)
                     }
                     onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                   />
                 </div>
               </div>
             ) : (
               <input
+                ref={(el) => {
+                  const field =
+                    amountValues.value === ">"
+                      ? "amount-min"
+                      : amountValues.value === "<"
+                      ? "amount-max"
+                      : "amount-equal";
+                  amountInputRefs.current[field] = el;
+                }}
+                name={
+                  amountValues.value === ">"
+                    ? "amount-min"
+                    : amountValues.value === "<"
+                    ? "amount-max"
+                    : "amount-equal"
+                }
                 type="number"
                 className="form-control form-control-sm"
                 placeholder="0"
@@ -228,6 +287,7 @@ const FiltersDropdown = ({
                   handleAmountValueChange(field, e.target.value);
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               />
             )}
           </div>
@@ -240,72 +300,21 @@ const FiltersDropdown = ({
   const OptionRender = () => {
     switch (type) {
       case "account":
-        const filteredAccounts = (options || []).filter((account) =>
-          (account || "")?.toLowerCase().includes(search.toLowerCase())
-        );
-
         return (
-          <div>
-            <div className="position-relative px-3 py-2">
-              <input
-                type="text"
-                className="form-control ps-5"
-                placeholder="Search by account address"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ fontSize: "14px" }}
-              />
-              <i
-                className="bi bi-search position-absolute text-secondary"
-                style={{
-                  left: "25px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-              />
-            </div>
-            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {filteredAccounts.map((account) => (
-                <div
-                  key={account}
-                  className="d-flex align-items-center gap-2 dropdown-item cursor-pointer"
-                  tabIndex={-1}
-                  onMouseDown={(e) => handleSelection(account, e)}
-                  style={{ padding: "8px 12px", outline: "none" }}
-                >
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    role="switch"
-                    checked={selected.includes(account)}
-                    readOnly
-                    style={{
-                      minWidth: "18px",
-                      minHeight: "18px",
-                      pointerEvents: "none",
-                    }}
-                  />
-                  <div className="text-truncate">
-                    <Profile
-                      accountId={account}
-                      showKYC={false}
-                      displayImage={true}
-                      displayName={true}
-                      profileClass="text-secondary"
-                      displayHoverCard={false}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MultiSelectDropdown
+            options={options}
+            selected={selected}
+            onChange={setSelected}
+            placeholder="Search by account address"
+            getOptionKey={(account) => account}
+            getOptionLabel={(account) => account}
+            renderOption={(account) => (
+              <div className="text-truncate">{account}</div>
+            )}
+          />
         );
 
       case "token":
-        const filteredTokens = options.filter((token) =>
-          (token || "").toLowerCase().includes(search.toLowerCase())
-        );
-
         return (
           <div
             className="pb-2 d-flex flex-column gap-2 px-3 pt-1"
@@ -339,7 +348,7 @@ const FiltersDropdown = ({
                   className="dropdown-menu show w-100"
                   style={{ maxHeight: "200px", overflowY: "auto" }}
                 >
-                  {filteredTokens.map((token) => (
+                  {options.map((token) => (
                     <div
                       key={token}
                       className="dropdown-item cursor-pointer"
@@ -363,14 +372,10 @@ const FiltersDropdown = ({
         );
 
       case "status":
-        const filteredStatuses = statusOptions.filter((status) =>
-          (status || "").toLowerCase().includes(search.toLowerCase())
-        );
-
         return (
           <div>
             <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {filteredStatuses.map((status) => (
+              {STATUS_OPTIONS.map((status) => (
                 <div
                   key={status}
                   className="dropdown-item"
@@ -390,14 +395,10 @@ const FiltersDropdown = ({
         );
 
       case "vote":
-        const filteredVotes = voteOptions.filter((vote) =>
-          (vote || "").toLowerCase().includes(search.toLowerCase())
-        );
-
         return (
           <div>
             <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {filteredVotes.map((vote) => (
+              {voteOptions.map((vote) => (
                 <div
                   key={vote}
                   className="d-flex align-items-center gap-2 dropdown-item"
@@ -472,36 +473,30 @@ const FiltersDropdown = ({
         );
 
       case "options":
-        const filteredOptions = multiple
-          ? (options || []).filter((option) =>
-              (option || "")?.toLowerCase().includes(search.toLowerCase())
-            )
-          : options || [];
+        if (multiple) {
+          return (
+            <MultiSelectDropdown
+              options={options}
+              selected={selected}
+              onChange={setSelected}
+              placeholder="Search by name"
+              getOptionKey={(option) => option}
+              getOptionLabel={(option) => option}
+            />
+          );
+        }
 
+        // Single select (no search)
         return (
           <div>
-            {multiple && (
-              <div className="position-relative px-3 py-2">
-                <input
-                  type="text"
-                  className="form-control ps-5"
-                  placeholder="Search by name"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{ fontSize: "14px" }}
-                />
-                <i
-                  className="bi bi-search position-absolute text-secondary"
-                  style={{
-                    left: "25px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
-            )}
-            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {filteredOptions.map((option) => (
+            <div
+              style={{
+                maxHeight: "200px",
+                overflowY: "auto",
+                overflowAnchor: "none",
+              }}
+            >
+              {options.map((option) => (
                 <div
                   key={option}
                   className="d-flex align-items-center gap-2 dropdown-item cursor-pointer"
@@ -509,20 +504,6 @@ const FiltersDropdown = ({
                   onMouseDown={(e) => handleSelection(option, e)}
                   style={{ padding: "8px 12px", outline: "none" }}
                 >
-                  {multiple && (
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      role="switch"
-                      checked={selected.includes(option)}
-                      readOnly
-                      style={{
-                        minWidth: "18px",
-                        minHeight: "18px",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  )}
                   <div className="text-truncate">
                     <span>{option}</span>
                   </div>
@@ -548,26 +529,29 @@ const FiltersDropdown = ({
     }
   };
 
-  const getAmountDisplay = () => {
-    if (amountValues && amountValues.value) {
-      if (
-        amountValues.value === "between" &&
-        amountValues.min &&
-        amountValues.max
-      ) {
-        return `${amountValues.min}-${amountValues.max}`;
-      } else if (amountValues.value === ">" && amountValues.min) {
-        return `> ${amountValues.min}`;
-      } else if (amountValues.value === "<" && amountValues.max) {
-        return `< ${amountValues.max}`;
-      } else if (amountValues.value === "is" && amountValues.equal) {
-        return `${amountValues.equal}`;
-      }
-    }
-    return "";
-  };
+  // Memoized amount display
+  const getAmountDisplay = useMemo(() => {
+    if (!amountValues?.value) return "";
 
-  const getDisplayValue = () => {
+    if (
+      amountValues.value === "between" &&
+      amountValues.min &&
+      amountValues.max
+    ) {
+      return `${amountValues.min}-${amountValues.max}`;
+    } else if (amountValues.value === ">" && amountValues.min) {
+      return `> ${amountValues.min}`;
+    } else if (amountValues.value === "<" && amountValues.max) {
+      return `< ${amountValues.max}`;
+    } else if (amountValues.value === "is" && amountValues.equal) {
+      return `${amountValues.equal}`;
+    }
+
+    return "";
+  }, [amountValues]);
+
+  // Memoized display value
+  const getDisplayValue = useMemo(() => {
     if (type === "account") {
       return (
         <div className="d-flex align-items-center">
@@ -589,11 +573,9 @@ const FiltersDropdown = ({
         </div>
       );
     } else if (type === "token") {
-      const amountDisplay = getAmountDisplay();
-      if (amountDisplay) {
-        return <TokenIcon address={selected[0]} number={amountDisplay} />;
+      if (getAmountDisplay) {
+        return <TokenIcon address={selected[0]} number={getAmountDisplay} />;
       }
-
       return <TokenIcon address={selected[0]} />;
     } else if (type === "date") {
       if (selected[0] || selected[1]) {
@@ -607,17 +589,12 @@ const FiltersDropdown = ({
       }
       return "";
     } else if (type === "status") {
-      return selected[0] === "Approved"
-        ? isPaymentsPage
-          ? "Funded"
-          : "Executed"
-        : selected[0];
+      return selected[0];
     } else if (type === "type") {
       return selected[0];
     } else if (type === "amount") {
-      const amountDisplay = getAmountDisplay();
-      if (amountDisplay) {
-        return <TokenIcon address="" number={amountDisplay} />;
+      if (getAmountDisplay) {
+        return <TokenIcon address="" number={getAmountDisplay} />;
       }
       return "";
     } else if (type === "options") {
@@ -630,7 +607,7 @@ const FiltersDropdown = ({
     } else {
       return selected.join(", ");
     }
-  };
+  }, [type, selected, getAmountDisplay]);
 
   return (
     <div
@@ -661,7 +638,7 @@ const FiltersDropdown = ({
                 </span>
               )}
               <span className="text-secondary">:</span>
-              <span>{getDisplayValue()}</span>
+              <span>{getDisplayValue}</span>
             </div>
           )}
         </div>

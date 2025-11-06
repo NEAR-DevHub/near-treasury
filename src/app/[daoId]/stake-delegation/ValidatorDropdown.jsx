@@ -15,27 +15,24 @@ const ValidatorDropdown = ({
   disabled = false,
   showStakingInfo = false, // For unstake page to show staked amounts
   selectedWallet = null,
+  isLoading = false,
 }) => {
   const { lockupContract, daoStakedPools, lockupStakedPools } = useDao();
   const [validatorsWithDetails, setValidatorsWithDetails] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // Get the correct staked pools based on selected wallet
   const stakedPools =
     selectedWallet === lockupContract ? lockupStakedPools : daoStakedPools;
 
-  // Combine validator options with staking info
+  // Combine validator options with staking info (synchronous, no loading needed)
   useEffect(() => {
     if (!options || options.length === 0) {
       setValidatorsWithDetails([]);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
     // Options already include fee from the validators endpoint
-    // Just need to add staking balances
+    // Just need to add staking balances (this is instant, no loading needed)
     const enrichedValidators = options.map((option) => {
       // Find staked balances for this pool (for unstake page)
       const poolBalance = stakedPools?.find((p) => p.poolId === option.pool_id);
@@ -51,7 +48,6 @@ const ValidatorDropdown = ({
     });
 
     setValidatorsWithDetails(enrichedValidators);
-    setLoading(false);
   }, [options, stakedPools]);
 
   // Render validator option in modal
@@ -122,8 +118,8 @@ const ValidatorDropdown = ({
       }
       searchPlaceholder="Search validators"
       enableSearch={true}
-      disabled={disabled || loading}
-      isLoading={loading}
+      disabled={disabled || isLoading}
+      isLoading={isLoading}
       emptyMessage="No validators available"
       modalSize="lg"
     />

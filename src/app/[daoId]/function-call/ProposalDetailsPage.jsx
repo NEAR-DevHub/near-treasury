@@ -31,6 +31,11 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   const proposalPeriod = daoPolicy?.proposal_period || 0;
 
+  // Clear proposal data when ID changes to show loader
+  useEffect(() => {
+    setProposalData(null);
+  }, [id]);
+
   // Process raw proposal data when it changes
   useEffect(() => {
     const processProposalData = async () => {
@@ -110,7 +115,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
       onClose={onClose}
       approversGroup={callApproversGroup}
       proposalStatusLabel={{
-        approved: "Function Call Request Executed",
+        approved: "Function Call Request Approved",
         rejected: "Function Call Request Rejected",
         deleted: "Function Call Request Deleted",
         failed: "Function Call Request Failed",

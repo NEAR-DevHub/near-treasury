@@ -674,7 +674,7 @@ test.describe("Asset Exchange Insufficient Balance", () => {
 
     // Wait for execution result - either success or failure notification
     await expect(
-      page.getByText(/request (has been|is) (successfully executed|failed)|vote.*counted/i)
+      page.getByText(/request (has been|is) (successfully approved|failed)|vote.*counted/i)
     ).toBeVisible({ timeout: 30000 });
     console.log("✓ Proposal approval transaction completed");
 

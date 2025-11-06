@@ -12,6 +12,7 @@ import { useDao } from "@/context/DaoContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { Near } from "@/api/near";
 import Big from "big.js";
+import { formatDateTimeWithTimezone } from "@/components/ui/DateTimeDisplay";
 
 const VoteActions = ({
   votes = {},
@@ -353,16 +354,7 @@ const VoteActions = ({
                   <span>
                     Voting is not available due to expired swap quote. The
                     1Click API quote for this request expired on{" "}
-                    {`${quoteDeadline.toLocaleString("en-US", {
-                      month: "short",
-                      day: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                      timeZone: "UTC",
-                    })} UTC`}
-                    .
+                    {formatDateTimeWithTimezone(quoteDeadline)}.
                     <Tooltip
                       tooltip={
                         <div>
@@ -385,17 +377,8 @@ const VoteActions = ({
                     <div>
                       Voting is not available due to expired swap quote. The
                       1Click API quote for this request expired on{" "}
-                      {`${quoteDeadline.toLocaleString("en-US", {
-                        month: "short",
-                        day: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                        timeZone: "UTC",
-                      })} UTC`}
-                      . Executing the swap at an outdated rate could result in
-                      loss of funds.
+                      {formatDateTimeWithTimezone(quoteDeadline)}. Executing the
+                      swap at an outdated rate could result in loss of funds.
                     </div>
                   }
                 >

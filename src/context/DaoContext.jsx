@@ -122,7 +122,7 @@ export const DaoProvider = ({ children }) => {
       let locked = allLockedStaked
         ? 0
         : Big(lockupStakedBalances.total)
-            .minus(lockupBalances?.contractLockedParsed)
+            .minus(contractLockedParsed)
             .abs()
             .mul(Big(10).pow(24))
             .toFixed();
@@ -149,6 +149,7 @@ export const DaoProvider = ({ children }) => {
       setLockupNearBalances({
         storage,
         contractLocked: contractLocked,
+        contractLockedParsed: contractLockedParsed,
         storageParsed: formatNearAmount(storage),
         available: available,
         availableParsed: formatNearAmount(available),
@@ -425,7 +426,7 @@ export const DaoProvider = ({ children }) => {
     refetchLastProposalId: getLastProposalId,
     refetchDaoPolicy: getDaoPolicy,
     refetchIntentsBalances: fetchIntentsBalances,
-    refetchDaoConfig: getDaoConfig,
+    refetchDaoConfig: getDaoMetadata,
     hasPermission,
     getApproversAndThreshold,
     lockupStakedPoolId,

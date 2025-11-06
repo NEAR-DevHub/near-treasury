@@ -289,7 +289,7 @@ input[type="number"] {
   background-color: var(--bg-page-color) !important;
   border-color: var(--theme-color) !important;
   color: var(--text-color) !important;
-  box-shadow: 0 0 0 0.2rem rgba(1, 191, 122, 0.25) !important;
+  box-shadow: 0 0 0 0.001rem var(--theme-color) !important;
 }
 
 /* Utility: remove focus outline and shadow where applied */
@@ -314,7 +314,7 @@ input[type="number"] {
   background-color: var(--bg-page-color) !important;
   border-color: var(--theme-color) !important;
   color: var(--text-color) !important;
-  box-shadow: 0 0 0 0.2rem rgba(1, 191, 122, 0.25) !important;
+  box-shadow: 0 0 0 0.001rem var(--theme-color) !important;
 }
 
 .form-check-input {

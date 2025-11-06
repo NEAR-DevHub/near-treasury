@@ -22,7 +22,7 @@ test.describe("Payment Request Detail Page - Full Page View", () => {
 
     // Hard expectation: Page should load and status should be visible
     await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("Payment Request Funded")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Payment Request Approved")).toBeVisible({ timeout: 15000 });
 
     // Hard expectation: Recipient name and address should be visible
     await expect(page.getByText("petersalomonsen.near").first()).toBeVisible({ timeout: 10000 });
@@ -33,9 +33,9 @@ test.describe("Payment Request Detail Page - Full Page View", () => {
     await expect(avatar.first()).toBeVisible({ timeout: 5000 });
     console.log("✓ Recipient avatar is visible");
 
-    // Hard expectation: Payment Request Funded status should be visible
-    await expect(page.getByText("Payment Request Funded")).toBeVisible();
-    console.log("✓ Payment Request Funded status is visible");
+    // Hard expectation: Payment Request Approved status should be visible
+    await expect(page.getByText("Payment Request Approved")).toBeVisible();
+    console.log("✓ Payment Request Approved status is visible");
 
     console.log("✓ Regular payment request displays all details correctly");
   });
@@ -59,7 +59,7 @@ test.describe("Payment Request Detail Page - Full Page View", () => {
     await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history&id=8`, { waitUntil: 'networkidle' });
 
     // Wait for page to load
-    await expect(page.getByText("Payment Request Funded")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Payment Request Approved")).toBeVisible({ timeout: 15000 });
 
     // Hard expectation: Back button must exist
     const backButton = page.getByRole("button", { name: /back|close/i }).first();
@@ -108,7 +108,7 @@ test.describe("Payment Request Detail Page - Compact View (Overlay)", () => {
     console.log("✓ Compact detail view opened with proposal ID heading");
 
     // Verify detail content is visible
-    await expect(page.getByText(/Payment Request (Funded|Failed|Rejected)/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Payment Request (Approved|Failed|Rejected)/)).toBeVisible({ timeout: 5000 });
     console.log("✓ Payment status visible in compact view");
 
     // Hard expectation: Close button (X icon) should exist

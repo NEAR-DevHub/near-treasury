@@ -47,6 +47,11 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   const proposalPeriod = daoPolicy?.proposal_period;
 
+  // Clear proposal data when ID changes to show loader
+  useEffect(() => {
+    setProposalData(null);
+  }, [id]);
+
   // Process raw proposal data when it changes
   useEffect(() => {
     const processProposalData = async () => {
@@ -157,7 +162,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
       isCompactVersion={isCompactVersion}
       approversGroup={functionCallApproversGroup}
       proposalStatusLabel={{
-        approved: `${proposalData?.requestType} Request Executed`,
+        approved: `${proposalData?.requestType} Request Approved`,
         rejected: `${proposalData?.requestType} Request Rejected`,
         deleted: `${proposalData?.requestType} Request Deleted`,
         failed: `${proposalData?.requestType} Request Failed`,

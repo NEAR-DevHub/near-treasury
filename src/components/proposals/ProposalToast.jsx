@@ -28,7 +28,7 @@ const ProposalToast = ({
 
     return {
       InProgress: "Your vote is counted.",
-      Approved: `The ${label} has been successfully executed.`,
+      Approved: `The ${label} has been successfully approved.`,
       Rejected: `The ${label} has been rejected.`,
       Removed: `The ${label} has been successfully deleted.`,
       ProposalAdded: `${
@@ -110,12 +110,23 @@ const ProposalToast = ({
   };
 
   const getIcon = () => {
-    if (status === "Approved") {
+    // Show success icon for approved proposals and successfully created proposals
+    if (
+      status === "Approved" ||
+      status === "ProposalAdded" ||
+      status === "StakeProposalAdded" ||
+      status === "UnstakeProposalAdded" ||
+      status === "WithdrawProposalAdded" ||
+      status?.startsWith("BulkProposalAdded")
+    ) {
       return <i className="bi bi-check2 mb-0 success-icon"></i>;
     }
+
+    // Show error icon for errors
     if (status === "ErrorAddingProposal" || status === "ErrorVoting") {
       return <i className="bi bi-exclamation-octagon mb-0 error-icon"></i>;
     }
+
     return null;
   };
 

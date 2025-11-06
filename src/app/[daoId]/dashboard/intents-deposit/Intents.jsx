@@ -8,6 +8,7 @@ import { getAggregatedIntentsAssets } from "@/helpers/treasuryHelpers";
 import DropdownWithModal from "@/components/dropdowns/DropdownWithModal";
 import DepositAddress from "@/app/[daoId]/dashboard/intents-deposit/DepositAddress";
 import FAQSection from "@/components/ui/FAQSection";
+import Skeleton from "@/components/ui/Skeleton";
 
 const placeholderAssetIcon =
   "https://ipfs.near.social/ipfs/bafkreib7ahtyc3p6txuwcnn6kmfo5naiyjzomqnpt26crv27prd5f3ogt4";
@@ -455,7 +456,7 @@ const Intents = () => {
                 <StepIndicator
                   step={3}
                   isActive={currentStep === 3}
-                  isCompleted={false}
+                  isCompleted={intentsDepositAddress !== ""}
                 />
               </div>
               <div className="flex-1 w-75">
@@ -468,12 +469,19 @@ const Intents = () => {
                       Always double-check your deposit address — it may change
                       without notice.
                     </div>
-                    {intentsDepositAddress && (
+                    {isLoadingAddress ? (
+                      <div className="d-flex flex-column gap-2">
+                        <Skeleton
+                          className="w-100 rounded-3"
+                          style={{ height: "80px" }}
+                        />
+                      </div>
+                    ) : intentsDepositAddress ? (
                       <DepositAddress
                         address={intentsDepositAddress}
                         warningMessage={`Only deposit from the ${selectedNetworkFullInfo.name} network.`}
                       />
-                    )}
+                    ) : null}
                   </div>
                 ) : (
                   <div className="text-secondary h5 fw-bold mb-0">

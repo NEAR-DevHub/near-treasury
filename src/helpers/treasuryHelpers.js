@@ -63,7 +63,17 @@ export async function getUserTreasuries(accountId) {
 export async function getAggregatedIntentsAssets({ intentsBalances = [], theme = "light" } = {}) {
   try {
     const supported = await fetchSupportedTokens();
-    const tokens = (supported?.tokens || []).filter((t) => t.standard === "nep141");
+    const allTokens = (supported?.tokens || []).filter((t) => t.standard === "nep141");
+    
+    // Deduplicate by intents_token_id to avoid double-counting balances
+    // Some tokens (like NEAR/wNEAR) may have duplicate entries with the same intents_token_id
+    const tokenMap = {};
+    allTokens.forEach((t) => {
+      if (t.intents_token_id && !tokenMap[t.intents_token_id]) {
+        tokenMap[t.intents_token_id] = t;
+      }
+    });
+    const tokens = Object.values(tokenMap);
 
     const defuseIds = tokens.map((t) => t.intents_token_id).filter(Boolean);
     const metadataList = defuseIds.length
@@ -119,10 +129,13 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
     // Group by CANONICAL SYMBOL to avoid duplicates like wNEAR/NEAR entries for the same token
     // Canonical key prefers metadata.symbol (uppercased); falls back to asset_name uppercased
     const assetMap = {};
+    
     tokens.forEach((t) => {
       const meta = metadataMap[t.intents_token_id];
       if (!meta) return;
+      
       const canonicalSymbol = (meta.symbol || t.asset_name || "").toUpperCase();
+      
       if (!assetMap[canonicalSymbol]) {
         assetMap[canonicalSymbol] = {
           asset_name: meta.symbol || t.asset_name || "",
@@ -149,6 +162,7 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
       if (raw) {
         const decimals = meta.decimals || 18;
         amountReadable = Big(raw).div(Big(10).pow(decimals)).toString();
+        
         // add to asset total
         assetMap[canonicalSymbol].totalAmount = Big(assetMap[canonicalSymbol].totalAmount || "0")
           .plus(amountReadable)

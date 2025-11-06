@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Skeleton from "@/components/ui/Skeleton";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import { useTheme } from "@/context/ThemeContext";
@@ -17,6 +17,10 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { formatAmountToReadableFormat } from "@/helpers/formatters";
+import {
+  formatChartDate,
+  formatDateTimeWithTimezone,
+} from "@/components/ui/DateTimeDisplay";
 
 ChartJS.register(
   CategoryScale,
@@ -45,7 +49,7 @@ const Chart = ({
   const { isDarkTheme } = useTheme();
   const [selectedToken, setSelectedToken] = useState("near");
   const [selectedPeriod, setSelectedPeriod] = useState("1Y");
-  const [hoveredBalance, setHoveredBalance] = useState(null);
+  const chartRef = useRef(null);
 
   // Period configuration
   const periodMap = {
@@ -136,7 +140,6 @@ const Chart = ({
   // Handle token change
   const handleTokenChange = (token) => {
     setSelectedToken(token);
-    setHoveredBalance(null);
     if (onTokenChange) {
       onTokenChange(token);
     }
@@ -145,7 +148,6 @@ const Chart = ({
   // Handle period change
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
-    setHoveredBalance(null);
     if (onPeriodChange) {
       onPeriodChange(period);
     }
@@ -186,8 +188,78 @@ const Chart = ({
   };
 
   // Get current balance to display
-  const displayBalance = hoveredBalance || chartData.currentBalance;
+  const displayBalance = chartData.currentBalance;
   const selectedTokenInfo = tokens.find((t) => t.contract === selectedToken);
+
+  // Memoize chart options to prevent infinite re-renders
+  const chartOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: "index",
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: getCSSVariable("--bg-page-color"),
+          titleColor: getCSSVariable("--text-color"),
+          bodyColor: getCSSVariable("--text-color"),
+          borderColor: getCSSVariable("--border-color"),
+          borderWidth: 1,
+          displayColors: false,
+          callbacks: {
+            title: (context) => {
+              const dataIndex = context[0].dataIndex;
+              const dataPoint = chartData.history[dataIndex];
+              return dataPoint
+                ? formatDateTimeWithTimezone(dataPoint.timestamp)
+                : "";
+            },
+            label: (context) => {
+              return `Token Balance: ${formatAmountToReadableFormat(
+                context.parsed.y
+              )}`;
+            },
+          },
+        },
+      },
+      layout: {
+        padding: {
+          top: 10,
+          bottom: 10,
+          left: 0,
+          right: 0,
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          ticks: {
+            display: true,
+            color: getCSSVariable("--text-color"),
+            maxTicksLimit: chartData.history.length,
+          },
+        },
+        y: {
+          display: false,
+          grid: {
+            display: false,
+          },
+        },
+      },
+      animation: {
+        duration: 0,
+      },
+    }),
+    [chartData.history, isDarkTheme]
+  );
 
   return (
     <div className="card card-body">
@@ -306,9 +378,10 @@ const Chart = ({
           style={{ height: "400px" }}
         >
           <Line
+            ref={chartRef}
             data={{
               labels: chartData.history.map((item) =>
-                new Date(item.timestamp).toLocaleDateString()
+                formatChartDate(item.timestamp, selectedPeriod)
               ),
               datasets: [
                 {
@@ -330,81 +403,7 @@ const Chart = ({
                 },
               ],
             }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: {
-                intersect: false,
-                mode: "index",
-              },
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: true,
-                  backgroundColor: getCSSVariable("--bg-page-color"),
-                  titleColor: getCSSVariable("--text-color"),
-                  bodyColor: getCSSVariable("--text-color"),
-                  borderColor: getCSSVariable("--border-color"),
-                  borderWidth: 1,
-                  displayColors: false,
-                  callbacks: {
-                    title: (context) => {
-                      const dataIndex = context[0].dataIndex;
-                      const dataPoint = chartData.history[dataIndex];
-                      return dataPoint
-                        ? new Date(dataPoint.timestamp).toLocaleString()
-                        : "";
-                    },
-                    label: (context) => {
-                      const dataIndex = context.dataIndex;
-                      const dataPoint = chartData.history[dataIndex];
-
-                      if (dataPoint) {
-                        setHoveredBalance({
-                          balance: dataPoint.balance,
-                          timestamp: dataPoint.timestamp,
-                        });
-                      }
-
-                      return `Token Balance: ${formatAmountToReadableFormat(
-                        context.parsed.y
-                      )}`;
-                    },
-                  },
-                },
-              },
-              layout: {
-                padding: {
-                  top: 10,
-                  bottom: 10,
-                  left: 0,
-                  right: 0,
-                },
-              },
-              scales: {
-                x: {
-                  grid: {
-                    display: false,
-                  },
-                  ticks: {
-                    display: true,
-                    color: getCSSVariable("--text-color"),
-                    maxTicksLimit: chartData.history.length,
-                  },
-                },
-                y: {
-                  display: false,
-                  grid: {
-                    display: false,
-                  },
-                },
-              },
-              animation: {
-                duration: 0,
-              },
-            }}
+            options={chartOptions}
           />
         </div>
       )}
