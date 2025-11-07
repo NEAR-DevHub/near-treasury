@@ -180,7 +180,7 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     }
   });
 
-  test("should show Type 1 warning (user NEAR balance too low) when approving payment", async ({
+  test("should show Type 1 warning (user NEAR balance too low) when approving payment in all views", async ({
     page,
   }) => {
     test.setTimeout(120000);
@@ -230,10 +230,13 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
       `Page shows treasury content: ${pageContent.includes("No Treasuries Found")}`
     );
 
+    // === TEST 1: TABLE VIEW ===
+    console.log("\n=== Testing Table View ===");
+
     // Find and click Approve button in table
-    const approveButton = page.getByRole("button", { name: "Approve" }).first();
-    await expect(approveButton).toBeVisible({ timeout: 10000 });
-    await approveButton.click();
+    const approveButtonTable = page.getByRole("button", { name: "Approve" }).first();
+    await expect(approveButtonTable).toBeVisible({ timeout: 10000 });
+    await approveButtonTable.click();
 
     // Assert Type 1 warning modal appears
     await expect(
@@ -250,18 +253,107 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await expect(page.getByText(/You need at least/i)).toBeVisible();
 
     // User can dismiss the warning by clicking the close button
-    const closeButton = page.getByRole("button", { name: "Close" });
+    let closeButton = page.getByRole("button", { name: "Close" });
     await expect(closeButton).toBeVisible({ timeout: 5000 });
-    await closeButton.click();
+    await closeButton.click({ force: true });
 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).not.toBeVisible();
 
-    console.log("✓ Type 1 warning displayed and dismissed correctly");
+    console.log("✓ Type 1 warning displayed and dismissed correctly in table view");
+
+    // === TEST 2: OVERLAY VIEW ===
+    console.log("\n=== Testing Overlay View ===");
+
+    // Click on the first row to open overlay modal
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow).toBeVisible({ timeout: 10000 });
+    await firstRow.click();
+
+    // Wait for overlay modal to open
+    await page.waitForTimeout(1000);
+
+    // Find and click Approve button in overlay (use .last() since overlay is rendered after table)
+    const approveButtonOverlay = page.getByRole("button", { name: "Approve" }).last();
+    await expect(approveButtonOverlay).toBeVisible({ timeout: 10000 });
+    await approveButtonOverlay.click();
+
+    // Assert Type 1 warning modal appears in overlay context
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).toBeVisible({ timeout: 5000 });
+
+    await expect(
+      page.getByText(
+        /you don't have enough NEAR to complete actions on your treasury/i
+      )
+    ).toBeVisible();
+
+    // Dismiss the warning
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click({ force: true });
+
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).not.toBeVisible();
+
+    console.log("✓ Type 1 warning displayed and dismissed correctly in overlay view");
+
+    // Close the overlay by clicking outside or pressing ESC
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // === TEST 3: FULLPAGE VIEW ===
+    console.log("\n=== Testing Fullpage View ===");
+
+    // Navigate back to table view
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`);
+    await page.waitForTimeout(2000);
+
+    // Click on the first row to open overlay
+    const firstRowForExpand = page.locator('tbody tr').first();
+    await expect(firstRowForExpand).toBeVisible({ timeout: 10000 });
+    await firstRowForExpand.click();
+    await page.waitForTimeout(1000);
+
+    // Click the expand button to go to full page view
+    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
+    await expect(expandButton).toBeVisible({ timeout: 5000 });
+    await expandButton.click();
+    await page.waitForTimeout(2000);
+
+    // Find and click Approve button on fullpage
+    const approveButtonFullpage = page.getByRole("button", { name: "Approve" });
+    await expect(approveButtonFullpage).toBeVisible({ timeout: 10000 });
+    await approveButtonFullpage.click();
+
+    // Assert Type 1 warning modal appears in fullpage context
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).toBeVisible({ timeout: 5000 });
+
+    await expect(
+      page.getByText(
+        /you don't have enough NEAR to complete actions on your treasury/i
+      )
+    ).toBeVisible();
+
+    // Dismiss the warning
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click({ force: true });
+
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).not.toBeVisible();
+
+    console.log("✓ Type 1 warning displayed and dismissed correctly in fullpage view");
+    console.log("\n✓ All three views tested successfully!");
   });
 
-  test("should show Type 1 warning (user NEAR balance too low) when rejecting payment", async ({
+  test("should show Type 1 warning (user NEAR balance too low) when rejecting payment in all views", async ({
     page,
   }) => {
     test.setTimeout(120000);
@@ -298,10 +390,13 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     );
     await page.waitForTimeout(3000);
 
-    // Click Reject button
-    const rejectButton = page.getByRole("button", { name: "Reject" }).first();
-    await expect(rejectButton).toBeVisible({ timeout: 10000 });
-    await rejectButton.click();
+    // === TEST 1: TABLE VIEW ===
+    console.log("\n=== Testing Reject in Table View ===");
+
+    // Click Reject button in table
+    const rejectButtonTable = page.getByRole("button", { name: "Reject" }).first();
+    await expect(rejectButtonTable).toBeVisible({ timeout: 10000 });
+    await rejectButtonTable.click();
 
     // Assert warning appears
     await expect(
@@ -309,18 +404,95 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     ).toBeVisible({ timeout: 5000 });
 
     // Dismiss and verify it can be closed
-    const closeButton = page.getByRole("button", { name: "Close" });
+    let closeButton = page.getByRole("button", { name: "Close" });
     await expect(closeButton).toBeVisible({ timeout: 5000 });
-    await closeButton.click();
+    await closeButton.click({ force: true });
 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).not.toBeVisible();
 
-    console.log("✓ Type 1 warning shown for Reject action");
+    console.log("✓ Type 1 warning shown for Reject in table view");
+
+    // === TEST 2: OVERLAY VIEW ===
+    console.log("\n=== Testing Reject in Overlay View ===");
+
+    // Click on the first row to open overlay modal
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow).toBeVisible({ timeout: 10000 });
+    await firstRow.click();
+
+    // Wait for overlay modal to open
+    await page.waitForTimeout(1000);
+
+    // Find and click Reject button in overlay (use .last() since overlay is rendered after table)
+    const rejectButtonOverlay = page.getByRole("button", { name: "Reject" }).last();
+    await expect(rejectButtonOverlay).toBeVisible({ timeout: 10000 });
+    await rejectButtonOverlay.click();
+
+    // Assert warning appears
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).toBeVisible({ timeout: 5000 });
+
+    // Dismiss
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click({ force: true });
+
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).not.toBeVisible();
+
+    console.log("✓ Type 1 warning shown for Reject in overlay view");
+
+    // Close the overlay
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // === TEST 3: FULLPAGE VIEW ===
+    console.log("\n=== Testing Reject in Fullpage View ===");
+
+    // Navigate back to table view
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`);
+    await page.waitForTimeout(2000);
+
+    // Click on the second row (reject test proposal) to open overlay
+    const secondRow = page.locator('tbody tr').nth(1);
+    await expect(secondRow).toBeVisible({ timeout: 10000 });
+    await secondRow.click();
+    await page.waitForTimeout(1000);
+
+    // Click the expand button to go to full page view
+    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
+    await expect(expandButton).toBeVisible({ timeout: 5000 });
+    await expandButton.click();
+    await page.waitForTimeout(2000);
+
+    // Find and click Reject button on fullpage
+    const rejectButtonFullpage = page.getByRole("button", { name: "Reject" });
+    await expect(rejectButtonFullpage).toBeVisible({ timeout: 10000 });
+    await rejectButtonFullpage.click();
+
+    // Assert warning appears
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).toBeVisible({ timeout: 5000 });
+
+    // Dismiss
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click({ force: true });
+
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).not.toBeVisible();
+
+    console.log("✓ Type 1 warning shown for Reject in fullpage view");
+    console.log("\n✓ All three views tested successfully for Reject!");
   });
 
-  test("should show Type 1 warning (user NEAR balance too low) when deleting payment", async ({
+  test("should show Type 1 warning (user NEAR balance too low) when deleting payment in all views", async ({
     page,
   }) => {
     test.setTimeout(120000);
@@ -366,10 +538,13 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     );
     await page.waitForTimeout(3000);
 
-    // Click Delete button (trash icon)
-    const deleteButton = page.getByTestId("delete-btn").first();
-    await expect(deleteButton).toBeVisible({ timeout: 10000 });
-    await deleteButton.click();
+    // === TEST 1: TABLE VIEW ===
+    console.log("\n=== Testing Delete in Table View ===");
+
+    // Click Delete button (trash icon) in table
+    const deleteButtonTable = page.getByTestId("delete-btn").first();
+    await expect(deleteButtonTable).toBeVisible({ timeout: 10000 });
+    await deleteButtonTable.click();
 
     // Assert warning appears
     await expect(
@@ -377,15 +552,92 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     ).toBeVisible({ timeout: 5000 });
 
     // Dismiss
-    const closeButton = page.getByRole("button", { name: "Close" });
+    let closeButton = page.getByRole("button", { name: "Close" });
     await expect(closeButton).toBeVisible({ timeout: 5000 });
-    await closeButton.click();
+    await closeButton.click({ force: true });
 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).not.toBeVisible();
 
-    console.log("✓ Type 1 warning shown for Delete action");
+    console.log("✓ Type 1 warning shown for Delete in table view");
+
+    // === TEST 2: OVERLAY VIEW ===
+    console.log("\n=== Testing Delete in Overlay View ===");
+
+    // Click on the first row to open overlay modal
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow).toBeVisible({ timeout: 10000 });
+    await firstRow.click();
+
+    // Wait for overlay modal to open
+    await page.waitForTimeout(1000);
+
+    // Find and click Delete button in overlay (use .last() since overlay is rendered after table)
+    const deleteButtonOverlay = page.getByTestId("delete-btn").last();
+    await expect(deleteButtonOverlay).toBeVisible({ timeout: 10000 });
+    await deleteButtonOverlay.click();
+
+    // Assert warning appears
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).toBeVisible({ timeout: 5000 });
+
+    // Dismiss - use force click since modal might be animating
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click({ force: true });
+
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).not.toBeVisible();
+
+    console.log("✓ Type 1 warning shown for Delete in overlay view");
+
+    // Close the overlay
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // === TEST 3: FULLPAGE VIEW ===
+    console.log("\n=== Testing Delete in Fullpage View ===");
+
+    // Navigate back to table view
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`);
+    await page.waitForTimeout(2000);
+
+    // Click on the first row (delete test proposal - we're still viewing this one) to open overlay
+    const rowForExpand = page.locator('tbody tr').first();
+    await expect(rowForExpand).toBeVisible({ timeout: 10000 });
+    await rowForExpand.click();
+    await page.waitForTimeout(1000);
+
+    // Click the expand button to go to full page view
+    const expandButtonDelete = page.locator('.bi.bi-arrows-angle-expand');
+    await expect(expandButtonDelete).toBeVisible({ timeout: 5000 });
+    await expandButtonDelete.click();
+    await page.waitForTimeout(2000);
+
+    // Find and click Delete button on fullpage
+    const deleteButtonFullpage = page.getByTestId("delete-btn");
+    await expect(deleteButtonFullpage).toBeVisible({ timeout: 10000 });
+    await deleteButtonFullpage.click();
+
+    // Assert warning appears
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).toBeVisible({ timeout: 5000 });
+
+    // Dismiss
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click({ force: true });
+
+    await expect(
+      page.getByRole("heading", { name: /Insufficient Funds/i })
+    ).not.toBeVisible();
+
+    console.log("✓ Type 1 warning shown for Delete in fullpage view");
+    console.log("\n✓ All three views tested successfully for Delete!");
   });
 
   test("should show Type 2 warning (treasury balance too low) with Proceed Anyway option", async ({
