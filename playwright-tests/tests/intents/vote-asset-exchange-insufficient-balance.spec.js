@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test } from "../../util/test.js";
+import { expect } from "@playwright/test";
 import {
   NearSandbox,
   injectTestWallet,
