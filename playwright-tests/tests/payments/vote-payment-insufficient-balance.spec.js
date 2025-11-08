@@ -253,6 +253,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     // Should show required balance threshold
     await expect(page.getByText(/You need at least/i)).toBeVisible();
 
+    // Wait for video recording
+    await page.waitForTimeout(1000);
+
     // User can dismiss the warning by clicking the close button
     let closeButton = page.getByRole("button", { name: "Close" });
     await expect(closeButton).toBeVisible({ timeout: 5000 });
@@ -290,6 +293,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
         /you don't have enough NEAR to complete actions on your treasury/i
       )
     ).toBeVisible();
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Dismiss the warning
     closeButton = page.getByRole("button", { name: "Close" });
@@ -340,6 +346,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
         /you don't have enough NEAR to complete actions on your treasury/i
       )
     ).toBeVisible();
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Dismiss the warning
     closeButton = page.getByRole("button", { name: "Close" });
@@ -404,6 +413,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
 
+    // Wait for video recording
+    await page.waitForTimeout(1000);
+
     // Dismiss and verify it can be closed
     let closeButton = page.getByRole("button", { name: "Close" });
     await expect(closeButton).toBeVisible({ timeout: 5000 });
@@ -435,6 +447,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Dismiss
     closeButton = page.getByRole("button", { name: "Close" });
@@ -479,6 +494,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Dismiss
     closeButton = page.getByRole("button", { name: "Close" });
@@ -552,6 +570,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
 
+    // Wait for video recording
+    await page.waitForTimeout(1000);
+
     // Dismiss
     let closeButton = page.getByRole("button", { name: "Close" });
     await expect(closeButton).toBeVisible({ timeout: 5000 });
@@ -583,6 +604,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Dismiss - use force click since modal might be animating
     closeButton = page.getByRole("button", { name: "Close" });
@@ -627,6 +651,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await expect(
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Dismiss
     closeButton = page.getByRole("button", { name: "Close" });
@@ -703,6 +730,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     const proceedButton = page.getByRole("button", { name: /Proceed Anyway/i });
     await expect(proceedButton).toBeVisible();
 
+    // Wait for video recording
+    await page.waitForTimeout(1000);
+
     // Test Cancel path
     const cancelButton = page.getByRole("button", { name: "Cancel" });
     await expect(cancelButton).toBeVisible();
@@ -759,6 +789,9 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await expect(
       page.getByRole("heading", { name: /Insufficient Balance/i })
     ).toBeVisible({ timeout: 5000 });
+
+    // Wait for video recording
+    await page.waitForTimeout(1000);
 
     // Click "Proceed Anyway"
     await page.getByRole("button", { name: /Proceed Anyway/i }).click();
