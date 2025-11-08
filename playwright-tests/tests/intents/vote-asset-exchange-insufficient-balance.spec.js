@@ -831,12 +831,14 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).toBeVisible({ timeout: 5000 });
 
+    // Get Close button reference before waiting
+    closeButton = page.getByRole("button", { name: "Close" });
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+
     // Wait for video recording
     await page.waitForTimeout(1000);
 
     // Dismiss
-    closeButton = page.getByRole("button", { name: "Close" });
-    await expect(closeButton).toBeVisible({ timeout: 5000 });
     await closeButton.click({ force: true });
 
     await expect(
