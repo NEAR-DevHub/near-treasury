@@ -243,9 +243,9 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
                   },
                   name: "Approver",
                   permissions: [
-                    "transfer:VoteApprove",
-                    "transfer:VoteReject",
-                    "transfer:VoteRemove",
+                    "call:VoteApprove",
+                    "call:VoteReject",
+                    "call:VoteRemove",
                   ],
                   vote_policy: {},
                 },
@@ -335,26 +335,35 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
   }) => {
     test.setTimeout(120000);
 
-    // Create an asset exchange proposal (50 NEAR to voterAccountId)
-    const proposalAmount = await parseNEAR("50");
+    // Create an asset exchange proposal (0.5 ETH → 1500 USDC)
     const addProposalResult = await sandbox.functionCall(
       creatorAccountId,
       daoAccountId,
       "add_proposal",
       {
         proposal: {
-          description: "Test asset exchange for insufficient balance warning",
+          description: `* Proposal Action: asset-exchange <br>* Notes: **Must be executed before ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}** for transferring tokens to 1Click's deposit address for swap execution. <br>* Token In: ETH <br>* Token Out: USDC <br>* Amount In: 0.5 <br>* Amount Out: 1500 <br>* Slippage: 1 <br>* Quote Deadline: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} <br>* Destination Network: eth:1 <br>* Time Estimate: 10 seconds <br>* Deposit Address: 19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177 <br>* Signature: ed25519:mock-signature-12345`,
           kind: {
-            Transfer: {
-              token_id: "",
-              receiver_id: voterAccountId,
-              amount: proposalAmount,
-            },
-          },
-        },
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "mt_transfer",
+                  args: Buffer.from(JSON.stringify({
+                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                    amount: "500000000000000000",
+                    token_id: "nep141:eth.omft.near"
+                  })).toString("base64"),
+                  deposit: "1",
+                  gas: "100000000000000"
+                }
+              ]
+            }
+          }
+        }
       },
       "300000000000000",
-      await parseNEAR("0.1") // Match the DAO's proposal_bond
+      await parseNEAR("0.1")
     );
     console.log(JSON.stringify(addProposalResult, null, 1));
     console.log("✓ Asset exchange proposal created");
@@ -508,25 +517,35 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
   }) => {
     test.setTimeout(120000);
 
-    // Create an asset exchange proposal
+    // Create an asset exchange proposal (1 ETH → 3000 USDC)
     await sandbox.functionCall(
       creatorAccountId,
       daoAccountId,
       "add_proposal",
       {
         proposal: {
-          description: "Test asset exchange for reject with insufficient balance",
+          description: `* Proposal Action: asset-exchange <br>* Notes: **Must be executed before ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}** for transferring tokens to 1Click's deposit address for swap execution. <br>* Token In: ETH <br>* Token Out: USDC <br>* Amount In: 1 <br>* Amount Out: 3000 <br>* Slippage: 1 <br>* Quote Deadline: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} <br>* Destination Network: eth:1 <br>* Time Estimate: 10 seconds <br>* Deposit Address: 19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177 <br>* Signature: ed25519:mock-signature-12345`,
           kind: {
-            Transfer: {
-              token_id: "",
-              receiver_id: voterAccountId,
-              amount: await parseNEAR("30"),
-            },
-          },
-        },
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "mt_transfer",
+                  args: Buffer.from(JSON.stringify({
+                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                    amount: "1000000000000000000",
+                    token_id: "nep141:eth.omft.near"
+                  })).toString("base64"),
+                  deposit: "1",
+                  gas: "100000000000000"
+                }
+              ]
+            }
+          }
+        }
       },
       "300000000000000",
-      await parseNEAR("0.1") // Match DAO proposal_bond
+      await parseNEAR("0.1")
     );
 
     await page.waitForTimeout(2000);
@@ -647,25 +666,35 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
   }) => {
     test.setTimeout(120000);
 
-    // Create an asset exchange proposal with low-balance creator (starts with 1 NEAR)
+    // Create an asset exchange proposal with low-balance creator (starts with 1 NEAR) (0.3 ETH → 900 USDC)
     await sandbox.functionCall(
       lowBalanceCreatorAccountId,
       daoAccountId,
       "add_proposal",
       {
         proposal: {
-          description: "Test asset exchange for delete with insufficient balance",
+          description: `* Proposal Action: asset-exchange <br>* Notes: **Must be executed before ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}** for transferring tokens to 1Click's deposit address for swap execution. <br>* Token In: ETH <br>* Token Out: USDC <br>* Amount In: 0.3 <br>* Amount Out: 900 <br>* Slippage: 1 <br>* Quote Deadline: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} <br>* Destination Network: eth:1 <br>* Time Estimate: 10 seconds <br>* Deposit Address: 19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177 <br>* Signature: ed25519:mock-signature-12345`,
           kind: {
-            Transfer: {
-              token_id: "",
-              receiver_id: voterAccountId,
-              amount: await parseNEAR("20"),
-            },
-          },
-        },
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "mt_transfer",
+                  args: Buffer.from(JSON.stringify({
+                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                    amount: "300000000000000000",
+                    token_id: "nep141:eth.omft.near"
+                  })).toString("base64"),
+                  deposit: "1",
+                  gas: "100000000000000"
+                }
+              ]
+            }
+          }
+        }
       },
       "300000000000000",
-      await parseNEAR("0.1") // Match DAO proposal_bond
+      await parseNEAR("0.1")
     );
 
     // Now drain the creator's balance to below 0.1 NEAR by transferring most of it away
@@ -795,26 +824,35 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
   }) => {
     test.setTimeout(120000);
 
-    // Create an asset exchange proposal for MORE than the treasury has (Treasury has 50 NEAR, request 75 NEAR)
-    const excessiveAmount = await parseNEAR("75");
+    // Create an asset exchange proposal for MORE than the treasury has (Treasury has 5 ETH, request 10 ETH → 30000 USDC)
     await sandbox.functionCall(
       creatorAccountId,
       daoAccountId,
       "add_proposal",
       {
         proposal: {
-          description: "Asset exchange exceeding treasury balance",
+          description: `* Proposal Action: asset-exchange <br>* Notes: **Must be executed before ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}** for transferring tokens to 1Click's deposit address for swap execution. <br>* Token In: ETH <br>* Token Out: USDC <br>* Amount In: 10 <br>* Amount Out: 30000 <br>* Slippage: 1 <br>* Quote Deadline: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} <br>* Destination Network: eth:1 <br>* Time Estimate: 10 seconds <br>* Deposit Address: 19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177 <br>* Signature: ed25519:mock-signature-12345`,
           kind: {
-            Transfer: {
-              token_id: "",
-              receiver_id: voterAccountId,
-              amount: excessiveAmount,
-            },
-          },
-        },
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "mt_transfer",
+                  args: Buffer.from(JSON.stringify({
+                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                    amount: "10000000000000000000",
+                    token_id: "nep141:eth.omft.near"
+                  })).toString("base64"),
+                  deposit: "1",
+                  gas: "100000000000000"
+                }
+              ]
+            }
+          }
+        }
       },
       "300000000000000",
-      await parseNEAR("0.1") // Match DAO proposal_bond
+      await parseNEAR("0.1")
     );
 
     await page.waitForTimeout(2000);
@@ -869,25 +907,35 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
   }) => {
     test.setTimeout(120000);
 
-    // Create an asset exchange proposal exceeding treasury balance
+    // Create an asset exchange proposal exceeding treasury balance (8 ETH → 24000 USDC, exceeds 5 ETH treasury)
     await sandbox.functionCall(
       creatorAccountId,
       daoAccountId,
       "add_proposal",
       {
         proposal: {
-          description: "Asset exchange to test Proceed Anyway flow",
+          description: `* Proposal Action: asset-exchange <br>* Notes: **Must be executed before ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}** for transferring tokens to 1Click's deposit address for swap execution. <br>* Token In: ETH <br>* Token Out: USDC <br>* Amount In: 8 <br>* Amount Out: 24000 <br>* Slippage: 1 <br>* Quote Deadline: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} <br>* Destination Network: eth:1 <br>* Time Estimate: 10 seconds <br>* Deposit Address: 19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177 <br>* Signature: ed25519:mock-signature-12345`,
           kind: {
-            Transfer: {
-              token_id: "",
-              receiver_id: voterAccountId,
-              amount: await parseNEAR("75"), // Exceeds treasury's 50 NEAR
-            },
-          },
-        },
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "mt_transfer",
+                  args: Buffer.from(JSON.stringify({
+                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                    amount: "8000000000000000000",
+                    token_id: "nep141:eth.omft.near"
+                  })).toString("base64"),
+                  deposit: "1",
+                  gas: "100000000000000"
+                }
+              ]
+            }
+          }
+        }
       },
       "300000000000000",
-      await parseNEAR("0.1") // Match DAO proposal_bond
+      await parseNEAR("0.1")
     );
 
     await page.waitForTimeout(2000);
@@ -929,25 +977,35 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
   }) => {
     test.setTimeout(120000);
 
-    // Create a normal asset exchange proposal (30 NEAR, treasury has 50 NEAR)
+    // Create a normal asset exchange proposal (2 ETH → 6000 USDC, within 5 ETH treasury)
     await sandbox.functionCall(
       creatorAccountId,
       daoAccountId,
       "add_proposal",
       {
         proposal: {
-          description: "Asset exchange with sufficient balance",
+          description: `* Proposal Action: asset-exchange <br>* Notes: **Must be executed before ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()}** for transferring tokens to 1Click's deposit address for swap execution. <br>* Token In: ETH <br>* Token Out: USDC <br>* Amount In: 2 <br>* Amount Out: 6000 <br>* Slippage: 1 <br>* Quote Deadline: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} <br>* Destination Network: eth:1 <br>* Time Estimate: 10 seconds <br>* Deposit Address: 19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177 <br>* Signature: ed25519:mock-signature-12345`,
           kind: {
-            Transfer: {
-              token_id: "",
-              receiver_id: voterAccountId,
-              amount: await parseNEAR("30"), // Within treasury's 50 NEAR
-            },
-          },
-        },
+            FunctionCall: {
+              receiver_id: intentsContractId,
+              actions: [
+                {
+                  method_name: "mt_transfer",
+                  args: Buffer.from(JSON.stringify({
+                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                    amount: "2000000000000000000",
+                    token_id: "nep141:eth.omft.near"
+                  })).toString("base64"),
+                  deposit: "1",
+                  gas: "100000000000000"
+                }
+              ]
+            }
+          }
+        }
       },
       "300000000000000",
-      await parseNEAR("0.1") // Match DAO proposal_bond
+      await parseNEAR("0.1")
     );
 
     await page.waitForTimeout(2000);
