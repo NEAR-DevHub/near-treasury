@@ -626,10 +626,10 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
     await page.waitForTimeout(2000);
 
-    // Click on the second row (reject test proposal) to open overlay
-    const secondRow = page.locator('tbody tr').nth(1);
-    await expect(secondRow).toBeVisible({ timeout: 10000 });
-    await secondRow.click();
+    // Click on the first row (reject test proposal - we're still viewing this one) to open overlay
+    const rowForExpandReject = page.locator('tbody tr').first();
+    await expect(rowForExpandReject).toBeVisible({ timeout: 10000 });
+    await rowForExpandReject.click();
     await page.waitForTimeout(1000);
 
     // Click the expand button to go to full page view
