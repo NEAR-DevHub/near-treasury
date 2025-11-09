@@ -135,7 +135,7 @@ export class NearSandbox {
     return result.nonce;
   }
 
-  async createAccount(accountId, initialBalance = "100000000000000000000000000") {
+  async createAccount(accountId, initialBalance = "100000000000000000000000000", parentAccountId = null) {
     const newKeyPair = KeyPair.fromRandom("ed25519");
     this.accountKeys.set(accountId, newKeyPair);
 
@@ -146,15 +146,21 @@ export class NearSandbox {
     ];
 
     const blockHash = await this.getLatestBlockHash();
-    const parentAccount = accountId.endsWith("test.near") ? "test.near" : "near";
+
+    // Determine parent account: use provided parent, or auto-detect based on suffix
+    const parentAccount = parentAccountId || (accountId.endsWith("test.near") ? "test.near" : "near");
+
+    // Get the key pair for the parent account (use default key for root accounts)
+    const parentKeyPair = this.accountKeys.get(parentAccount) || this.defaultKeyPair;
+
     const nonce = await this.getAccessKeyNonce(
       parentAccount,
-      this.defaultKeyPair.getPublicKey().toString()
+      parentKeyPair.getPublicKey().toString()
     );
 
     const tx = transactions.createTransaction(
       parentAccount,
-      this.defaultKeyPair.getPublicKey(),
+      parentKeyPair.getPublicKey(),
       accountId,
       nonce + 1,
       actions,
@@ -164,7 +170,7 @@ export class NearSandbox {
     // Serialize and sign the transaction
     const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
     const txHash = crypto.createHash("sha256").update(serializedTx).digest();
-    const signature = this.defaultKeyPair.sign(txHash);
+    const signature = parentKeyPair.sign(txHash);
 
     const signedTx = new transactions.SignedTransaction({
       transaction: tx,
