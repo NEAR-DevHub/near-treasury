@@ -424,39 +424,27 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       name: /Insufficient Balance/i
     });
 
-    const isWarningVisible = await insufficientBalanceHeading.isVisible().catch(() => false);
+    // This test EXPECTS the warning to appear
+    await expect(insufficientBalanceHeading).toBeVisible({ timeout: 5000 });
+    console.log("✓ EXPECTED BEHAVIOR: Insufficient balance warning appeared correctly!");
+    console.log("   Treasury has 2 USDT NEAR, but proposal needs 1 USDT TRX (network mismatch)");
 
-    if (isWarningVisible) {
-      console.log("✓ EXPECTED BEHAVIOR: Insufficient balance warning appeared correctly!");
-      console.log("   Treasury has 2 USDT NEAR, but proposal needs 1 USDT TRX (network mismatch)");
+    // Take a screenshot
+    await page.screenshot({
+      path: "test-results/usdt-network-mismatch.png",
+      fullPage: true,
+    });
 
-      // Take a screenshot
-      await page.screenshot({
-        path: "test-results/usdt-network-mismatch.png",
-        fullPage: true,
-      });
+    // Get the balance display to see what it thinks the balance is
+    const balanceText = await page.getByText(/Your current balance:/i).textContent();
+    console.log("   Warning shows:", balanceText);
 
-      // Get the balance display to see what it thinks the balance is
-      const balanceText = await page.getByText(/Your current balance:/i).textContent();
-      console.log("   Warning shows:", balanceText);
-
-      // This test EXPECTS the warning to appear
-      await expect(insufficientBalanceHeading).toBeVisible();
-
-      console.log("\n✓ Scenario successfully reproduced!");
-      console.log("  This matches prod (romakqatesting.sputnik-dao.near proposal #43):");
-      console.log(`    - Treasury has: ${tetherTokenContractId} (USDT NEAR)`);
-      console.log("    - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
-      console.log("    - Dashboard shows: 'USDT' without network indicator");
-      console.log("    - Result: User confused about which USDT network they have");
-
-    } else {
-      console.log("❌ UNEXPECTED: No insufficient balance warning appeared!");
-      console.log("   Expected warning because treasury has USDT NEAR but proposal needs USDT TRX");
-
-      // This shouldn't happen - the warning should appear for network mismatch
-      throw new Error("Test failed: Expected insufficient balance warning for network mismatch");
-    }
+    console.log("\n✓ Scenario successfully reproduced!");
+    console.log("  This matches prod (romakqatesting.sputnik-dao.near proposal #43):");
+    console.log(`    - Treasury has: ${tetherTokenContractId} (USDT NEAR)`);
+    console.log("    - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
+    console.log("    - Dashboard shows: 'USDT' without network indicator");
+    console.log("    - Result: User confused about which USDT network they have");
 
     // Wait for video recording
     await page.waitForTimeout(1000);
@@ -603,41 +591,29 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       name: /Insufficient Balance/i
     });
 
-    const isWarningVisible = await insufficientBalanceHeading.isVisible().catch(() => false);
+    // Warning should NOT appear (network matches)
+    await expect(insufficientBalanceHeading).not.toBeVisible();
+    console.log("✓ EXPECTED: No insufficient balance warning appeared!");
+    console.log("   Treasury has 2 USDT TRX and proposal needs 1 USDT TRX (network matches)");
 
-    if (isWarningVisible) {
-      console.log("⚠ WARNING APPEARED: This might be expected due to balance aggregation");
-      console.log("   Treasury has both USDT NEAR (2) and USDT TRX (2)");
-      console.log("   Proposal needs USDT TRX (1)");
-      console.log("   The warning may appear because the frontend can't distinguish networks properly");
+    // Confirm modal should appear instead
+    const confirmHeading = page.getByRole("heading", { name: /Confirm your vote/i });
+    await expect(confirmHeading).toBeVisible({ timeout: 5000 });
+    console.log("✓ Confirm modal appeared correctly");
 
-      // For now, document this as expected behavior given the current limitation
-      console.log("\n✓ Test completed - demonstrates network ambiguity issue");
-      console.log("  When multiple USDT networks exist, the system may not correctly match them");
-      await page.waitForTimeout(1500);
-    } else {
-      console.log("✓ EXPECTED: No insufficient balance warning appeared!");
-      console.log("   Treasury has 2 USDT TRX and proposal needs 1 USDT TRX (network matches)");
+    await page.waitForTimeout(1500);
 
-      // Confirm modal should appear instead
-      const confirmHeading = page.getByRole("heading", { name: /Confirm your vote/i });
-      await expect(confirmHeading).toBeVisible({ timeout: 5000 });
-      console.log("✓ Confirm modal appeared correctly");
+    // Take screenshot
+    await page.screenshot({
+      path: "test-results/usdt-network-match-confirm.png",
+      fullPage: true,
+    });
+    console.log("✓ Screenshot saved: confirm modal for matching network");
 
-      await page.waitForTimeout(1500);
-
-      // Take screenshot
-      await page.screenshot({
-        path: "test-results/usdt-network-match-confirm.png",
-        fullPage: true,
-      });
-      console.log("✓ Screenshot saved: confirm modal for matching network");
-
-      console.log("\n✓ Test passed: Network match scenario works correctly!");
-      console.log("  - Treasury has: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
-      console.log("  - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
-      console.log("  - Result: No insufficient balance warning (correct behavior)");
-    }
+    console.log("\n✓ Test passed: Network match scenario works correctly!");
+    console.log("  - Treasury has: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
+    console.log("  - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
+    console.log("  - Result: No insufficient balance warning (correct behavior)");
 
     // Wait for video recording
     await page.waitForTimeout(1000);
