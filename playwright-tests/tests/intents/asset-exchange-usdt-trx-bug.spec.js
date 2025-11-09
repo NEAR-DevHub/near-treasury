@@ -384,23 +384,16 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
 
     // Look for the NEAR Intents portfolio section
     const intentsPortfolio = page.getByTestId("intents-portfolio");
-    const hasIntentsSection = await intentsPortfolio.isVisible().catch(() => false);
+    await expect(intentsPortfolio).toBeVisible({ timeout: 10000 });
+    console.log("✓ NEAR Intents portfolio section is visible");
 
-    if (hasIntentsSection) {
-      console.log("✓ NEAR Intents portfolio section is visible");
-
-      // Check if USDT is displayed
-      const usdtText = await intentsPortfolio.getByText(/USDT/i).textContent().catch(() => null);
-      if (usdtText) {
-        console.log("✓ USDT token is displayed in Intents portfolio");
-        console.log(`  Dashboard shows: ${usdtText}`);
-        console.log("  NOTE: Dashboard shows 'USDT' but doesn't clearly indicate it's on NEAR network");
-      } else {
-        console.log("⚠ USDT not visible in portfolio (may need time to load metadata)");
-      }
-    } else {
-      console.log("⚠ NEAR Intents section not visible (balance may still be in contract)");
-    }
+    // Check if USDT is displayed
+    const usdtElement = intentsPortfolio.getByText(/USDT/i);
+    await expect(usdtElement).toBeVisible({ timeout: 10000 });
+    const usdtText = await usdtElement.textContent();
+    console.log("✓ USDT token is displayed in Intents portfolio");
+    console.log(`  Dashboard shows: ${usdtText}`);
+    console.log("  NOTE: Dashboard shows 'USDT' but doesn't clearly indicate it's on NEAR network");
 
     // Take a screenshot of the dashboard
     await page.screenshot({
@@ -477,8 +470,35 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     // For this test, we need to deposit USDT TRX and create a proposal that matches
     console.log("\n=== Setting up USDT TRX balance for second test ===");
 
-    // Deposit USDT TRX to treasury
+    // Register intents contract with OMFT for storage
     await sandbox.functionCall(
+      omftContractId,
+      omftContractId,
+      "storage_deposit",
+      {
+        account_id: intentsContractId,
+      },
+      "300000000000000",
+      await parseNEAR("0.00125")
+    );
+    console.log("✓ Registered intents.near with OMFT contract");
+
+    // Also register intents with the USDT TRX token contract
+    const usdtTrxTokenId = "tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near";
+    await sandbox.functionCall(
+      omftContractId,
+      usdtTrxTokenId,
+      "storage_deposit",
+      {
+        account_id: intentsContractId,
+      },
+      "300000000000000",
+      await parseNEAR("0.00125")
+    );
+    console.log(`✓ Registered intents.near with ${usdtTrxTokenId}`);
+
+    // Deposit USDT TRX to treasury
+    const depositUsdtTrxResult = await sandbox.functionCall(
       omftContractId,
       omftContractId,
       "ft_deposit",
@@ -496,7 +516,7 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       "300000000000000",
       "1250000000000000000000"
     );
-    console.log("✓ Deposited 2 USDT TRX to treasury");
+    console.log("✓ Deposited 2 USDT TRX to treasury", JSON.stringify(depositUsdtTrxResult));
 
     // Create a USDT TRX → TRX proposal (matching the TRX balance we just added)
     const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -545,24 +565,17 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
 
     // Look for the NEAR Intents portfolio section
     const intentsPortfolio = page.getByTestId("intents-portfolio");
-    const hasIntentsSection = await intentsPortfolio.isVisible().catch(() => false);
+    await expect(intentsPortfolio).toBeVisible({ timeout: 10000 });
+    console.log("✓ NEAR Intents portfolio section is visible");
 
-    if (hasIntentsSection) {
-      console.log("✓ NEAR Intents portfolio section is visible");
-
-      // Check if USDT is displayed
-      const usdtText = await intentsPortfolio.getByText(/USDT/i).textContent().catch(() => null);
-      if (usdtText) {
-        console.log("✓ USDT token is displayed in Intents portfolio");
-        console.log(`  Dashboard shows: ${usdtText}`);
-        console.log("  NOTE: Dashboard now shows USDT from both networks (NEAR + TRX)");
-        console.log("        but doesn't clearly distinguish between them");
-      } else {
-        console.log("⚠ USDT not visible in portfolio (may need time to load metadata)");
-      }
-    } else {
-      console.log("⚠ NEAR Intents section not visible (balance may still be in contract)");
-    }
+    // Check if USDT is displayed
+    const usdtElement = intentsPortfolio.getByText(/USDT/i);
+    await expect(usdtElement).toBeVisible({ timeout: 10000 });
+    const usdtText = await usdtElement.textContent();
+    console.log("✓ USDT token is displayed in Intents portfolio");
+    console.log(`  Dashboard shows: ${usdtText}`);
+    console.log("  NOTE: Dashboard now shows USDT from both networks (NEAR + TRX)");
+    console.log("        but doesn't clearly distinguish between them");
 
     // Take screenshot
     await page.screenshot({
