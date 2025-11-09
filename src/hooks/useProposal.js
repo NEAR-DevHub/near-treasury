@@ -4,9 +4,9 @@ import { Near } from "@/api/near";
 
 /**
  * Custom hook to fetch a single proposal with React Query
- * 
+ *
  * @param {number} proposalId - The proposal ID to fetch
- * 
+ *
  * @returns {Object} Query result with proposal data, loading state, and error
  */
 export function useProposal(proposalId) {
@@ -33,4 +33,3 @@ export function useProposal(proposalId) {
     refetch: query.refetch,
   };
 }
-

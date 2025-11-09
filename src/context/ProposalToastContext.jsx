@@ -4,6 +4,7 @@ import { createContext, useContext, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDao } from "@/context/DaoContext";
 import ProposalToast from "@/components/proposals/ProposalToast";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const ProposalToastContext = createContext(null);
 
@@ -33,7 +34,7 @@ export const ProposalToastProvider = ({ children }) => {
 
     if (!daoId) return;
 
-    // Wait 2 seconds for indexer to process the transaction
+    // Wait for indexer to process the transaction
     setTimeout(async () => {
       let actualProposalId = proposalId;
 
@@ -83,7 +84,7 @@ export const ProposalToastProvider = ({ children }) => {
           queryKey: ["proposal", daoId, actualProposalId],
         });
       }
-    }, 2000); // 2 second delay to allow indexer to process
+    }, REFRESH_DELAY);
   };
 
   const hideToast = () => {

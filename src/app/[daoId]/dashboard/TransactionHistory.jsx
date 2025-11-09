@@ -6,7 +6,7 @@ import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import NearToken from "@/components/icons/NearToken";
 import Profile from "@/components/ui/Profile";
 import Copy from "@/components/ui/Copy";
-import { accountToLockup } from "@/helpers/nearHelpers";
+import { formatTokenBalance } from "@/helpers/nearHelpers";
 import { Near } from "@/api/near";
 import { getTransactionTransferHistory } from "@/api/backend";
 import Big from "big.js";
@@ -68,14 +68,11 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
     }
   }, [page, lockupContract, treasuryDaoID]);
 
-  function convertBalanceToReadableFormat(amount) {
-    return Big(amount ?? "0").toFixed(2);
-  }
-
   function formatCurrency(amount) {
-    return Number(amount).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    return formatTokenBalance(amount, {
+      minAmount: 0.01,
+      maxDecimals: 2,
+      defaultDecimals: 2,
     });
   }
 
@@ -160,20 +157,20 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
                     const isReceived =
                       txn.receiver === treasuryDaoID ||
                       txn.receiver === lockupContract;
+                    balanceDiff = formatTokenBalance(
+                      Big(txn.amount ?? "0").toFixed()
+                    );
                     if (txn.contract) {
                       const contractMetadata =
                         contractMetadataCache[txn.contract];
                       token = contractMetadata?.symbol || "FT";
                       iconSrc = contractMetadata?.icon;
-                      balanceDiff = convertBalanceToReadableFormat(txn.amount);
-                    } else {
-                      balanceDiff = convertBalanceToReadableFormat(txn.amount);
                     }
                     const txnType = isStaked
                       ? "Staked"
                       : isDeposit
-                      ? "Deposit"
-                      : "Transfer";
+                        ? "Deposit"
+                        : "Transfer";
                     const txnLink = `https://nearblocks.io/txns/${txn.transaction_id}`;
                     return (
                       <tr key={index} className="px-3 py-3">

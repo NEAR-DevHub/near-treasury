@@ -1,5 +1,5 @@
 import { logger } from "@/helpers/logger";
-const { Social } = require('@builddao/near-social-js');
+const { Social } = require("@builddao/near-social-js");
 
 const social = new Social();
 
@@ -9,57 +9,61 @@ const profileCache = {};
 /**
  * Get profile data from NEAR Social
  * Accepts either a single account ID or multiple account IDs
- * 
+ *
  * @param {string|Array<string>} accountIds - Single account ID or array of account IDs
  * @returns {Promise<Object>} Profile data - single profile object or object with multiple profiles
  */
 export const getProfilesFromSocialDb = async (accountIds) => {
   const accounts = Array.isArray(accountIds) ? accountIds : [accountIds];
-  
+
   // Check cache first
-  const uncachedAccounts = accounts.filter(accountId => profileCache[accountId] === undefined);
-  
+  const uncachedAccounts = accounts.filter(
+    (accountId) => profileCache[accountId] === undefined
+  );
+
   if (uncachedAccounts.length === 0) {
     console.log("✅ All profiles in cache, returning cached data");
     // Return cached data
     if (Array.isArray(accountIds)) {
-      return Object.fromEntries(accounts.map(accountId => [accountId, profileCache[accountId] || {}]));
+      return Object.fromEntries(
+        accounts.map((accountId) => [accountId, profileCache[accountId] || {}])
+      );
     } else {
       return profileCache[accountIds] || {};
     }
   }
-  
+
   console.log("🚨 getProfilesFromSocialDb API call for:", uncachedAccounts);
-  
+
   try {
     // Handle both single account ID and array of account IDs
-    const keys = uncachedAccounts.map(accountId => `${accountId}/profile/*`);
-    
+    const keys = uncachedAccounts.map((accountId) => `${accountId}/profile/*`);
+
     const result = await social.get({
       keys: keys,
     });
-    
+
     // Cache the results
-    uncachedAccounts.forEach(accountId => {
+    uncachedAccounts.forEach((accountId) => {
       profileCache[accountId] = result?.[accountId]?.profile || {};
     });
-    
+
     // If single account ID was passed, return single profile
     if (!Array.isArray(accountIds)) {
       return profileCache[accountIds] || {};
     }
-    
+
     // If multiple account IDs were passed, return object with all profiles
     const profiles = {};
-    accounts.forEach(accountId => {
+    accounts.forEach((accountId) => {
       profiles[accountId] = profileCache[accountId] || {};
     });
-    
+
     return profiles;
   } catch (error) {
     logger.error("Error getting profiles:", error);
     // Cache null to prevent retries
-    uncachedAccounts.forEach(accountId => {
+    uncachedAccounts.forEach((accountId) => {
       profileCache[accountId] = {};
     });
     return Array.isArray(accountIds) ? {} : {};
@@ -69,7 +73,7 @@ export const getProfilesFromSocialDb = async (accountIds) => {
 /**
  * Search and rank accounts based on term match
  * Uses profile names and account IDs from NEAR Social
- * 
+ *
  * @param {string} term - Search term
  * @param {string} currentAccountId - Current user's account ID (for ranking)
  * @param {Array<string>} filterAccounts - Accounts to exclude from results
@@ -86,13 +90,10 @@ export const searchAccounts = async (
     if (!currentAccountId || !term) return [];
 
     logger.info("Social API call: searchAccounts", { term, currentAccountId });
-    
+
     // Fetch profiles data and following graph in a single API call
     const result = await social.get({
-      keys: [
-        '*/profile/name',
-        `${currentAccountId}/graph/follow/**`
-      ],
+      keys: ["*/profile/name", `${currentAccountId}/graph/follow/**`],
     });
 
     const profilesData = result || {};
@@ -124,7 +125,7 @@ export const searchAccounts = async (
         if (nameSearchIndex === 0) {
           score += 10;
         }
-        
+
         // Boost score for followed accounts
         if (followingData[accountId] === "") {
           score += 30;
@@ -140,7 +141,7 @@ export const searchAccounts = async (
     // Sort by score and apply filters
     results.sort((a, b) => b.score - a.score);
     let filteredResults = results.slice(0, limit);
-    
+
     if (filterAccounts?.length > 0) {
       filteredResults = filteredResults.filter(
         (item) => !filterAccounts.includes(item.accountId)
@@ -153,4 +154,3 @@ export const searchAccounts = async (
     return [];
   }
 };
-

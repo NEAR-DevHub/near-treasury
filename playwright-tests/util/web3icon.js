@@ -5,7 +5,7 @@ export async function getWeb3IconMaps() {
   const tokenIconMap = {};
   const networkIconMap = {};
   const networkNames = {};
-  const BACKEND_API_BASE = 'https://ref-sdk-test-cold-haze-1300-2.fly.dev/api';
+  const BACKEND_API_BASE = "https://ref-sdk-test-cold-haze-1300-2.fly.dev/api";
 
   const supportedTokens = await fetch("https://bridge.chaindefuser.com/rpc", {
     method: "POST",
@@ -36,14 +36,19 @@ export async function getWeb3IconMaps() {
 
   // Fetch token metadata from backend API (same as frontend does)
   const tokenIdsString = defuseAssetIds.join(",");
-  console.log(`Fetching metadata for ${defuseAssetIds.length} tokens from backend API`);
+  console.log(
+    `Fetching metadata for ${defuseAssetIds.length} tokens from backend API`
+  );
   const metadataResults = await fetch(
     `${BACKEND_API_BASE}/token-by-defuse-asset-id?defuseAssetId=${tokenIdsString}`
   ).then((r) => r.json());
 
   console.log(`Received ${metadataResults?.length || 0} metadata results`);
   if (metadataResults?.length > 0) {
-    console.log("Sample metadata result:", JSON.stringify(metadataResults[0], null, 2));
+    console.log(
+      "Sample metadata result:",
+      JSON.stringify(metadataResults[0], null, 2)
+    );
   }
 
   // Create metadata map
@@ -93,7 +98,10 @@ export async function getWeb3IconMaps() {
   // Fetch network names from backend API (same as the app uses)
   try {
     const networkString = Array.from(uniqueChainNames).join(",");
-    console.log("Fetching networks for chainNames:", Array.from(uniqueChainNames));
+    console.log(
+      "Fetching networks for chainNames:",
+      Array.from(uniqueChainNames)
+    );
     const response = await fetch(
       `${BACKEND_API_BASE}/blockchain-by-network?network=${networkString}&theme=light`
     );
@@ -117,7 +125,9 @@ export async function getWeb3IconMaps() {
         networkNames[chainId] = networkNames[chainName];
         mappedCount++;
       } else {
-        console.warn(`Missing network name for chainName "${chainName}" (chain ID: ${chainId})`);
+        console.warn(
+          `Missing network name for chainName "${chainName}" (chain ID: ${chainId})`
+        );
         missingCount++;
       }
     }

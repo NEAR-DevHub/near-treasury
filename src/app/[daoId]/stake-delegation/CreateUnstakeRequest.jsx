@@ -17,6 +17,7 @@ import {
   LOCKUP_MIN_BALANCE_FOR_STORAGE,
 } from "@/helpers/nearHelpers";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
   const {
@@ -287,9 +288,11 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         // Toast context will automatically fetch proposal ID and invalidate cache
         showToast("UnstakeProposalAdded", null, "stake");
-        setTxnCreated(false);
-        reset();
-        onCloseCanvas();
+        setTimeout(() => {
+          setTxnCreated(false);
+          reset();
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Unstake request error:", error);

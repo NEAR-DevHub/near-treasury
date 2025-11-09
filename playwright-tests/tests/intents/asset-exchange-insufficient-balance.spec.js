@@ -223,7 +223,11 @@ test.describe("Asset Exchange Insufficient Balance", () => {
                     Group: [creatorAccountId],
                   },
                   name: "Vote",
-                  permissions: ["*:VoteReject", "*:VoteApprove", "*:VoteRemove"],
+                  permissions: [
+                    "*:VoteReject",
+                    "*:VoteApprove",
+                    "*:VoteRemove",
+                  ],
                   vote_policy: {},
                 },
               ],
@@ -299,7 +303,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
       "30000000000000", // gas
       "1" // deposit (1 yoctoNEAR)
     );
-    console.log(`✓ Registered deposit address public key: ${testDepositAddress.substring(0, 20)}...`);
+    console.log(
+      `✓ Registered deposit address public key: ${testDepositAddress.substring(0, 20)}...`
+    );
 
     console.log("\n=== Sandbox Setup Complete ===\n");
   });
@@ -327,8 +333,12 @@ test.describe("Asset Exchange Insufficient Balance", () => {
       try {
         const postData = route.request().postDataJSON();
         console.log(`[RPC Route] Intercepted call to ${route.request().url()}`);
-        console.log(`[RPC Route] Method: ${postData.params?.method_name || postData.method}`);
-        console.log(`[RPC Route] Request type: ${postData.params?.request_type}`);
+        console.log(
+          `[RPC Route] Method: ${postData.params?.method_name || postData.method}`
+        );
+        console.log(
+          `[RPC Route] Request type: ${postData.params?.request_type}`
+        );
         console.log(`[RPC Route] Account ID: ${postData.params?.account_id}`);
 
         const response = await route.fetch({
@@ -344,21 +354,33 @@ test.describe("Asset Exchange Insufficient Balance", () => {
         console.log(`[RPC Route] Response status: ${response.status()}`);
 
         // Log detailed info for transaction broadcasts
-        if (postData.method === "broadcast_tx_commit" || postData.method === "EXPERIMENTAL_broadcast_tx_commit") {
+        if (
+          postData.method === "broadcast_tx_commit" ||
+          postData.method === "EXPERIMENTAL_broadcast_tx_commit"
+        ) {
           try {
             const result = JSON.parse(responseBody);
             if (result.result) {
               console.log(`[TX] Transaction status:`, result.result.status);
               if (result.result.status.Failure) {
-                console.log(`[TX] Transaction FAILED:`, JSON.stringify(result.result.status.Failure, null, 2));
+                console.log(
+                  `[TX] Transaction FAILED:`,
+                  JSON.stringify(result.result.status.Failure, null, 2)
+                );
               }
               if (result.result.receipts_outcome) {
                 result.result.receipts_outcome.forEach((receipt, i) => {
                   if (receipt.outcome.logs && receipt.outcome.logs.length > 0) {
-                    console.log(`[TX] Receipt ${i} logs:`, receipt.outcome.logs);
+                    console.log(
+                      `[TX] Receipt ${i} logs:`,
+                      receipt.outcome.logs
+                    );
                   }
                   if (receipt.outcome.status.Failure) {
-                    console.log(`[TX] Receipt ${i} FAILED:`, JSON.stringify(receipt.outcome.status.Failure, null, 2));
+                    console.log(
+                      `[TX] Receipt ${i} FAILED:`,
+                      JSON.stringify(receipt.outcome.status.Failure, null, 2)
+                    );
                   }
                 });
               }
@@ -368,7 +390,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
           }
         }
 
-        console.log(`[RPC Route] Response preview: ${responseBody.substring(0, 500)}`);
+        console.log(
+          `[RPC Route] Response preview: ${responseBody.substring(0, 500)}`
+        );
 
         await route.fulfill({
           status: response.status(),
@@ -388,29 +412,28 @@ test.describe("Asset Exchange Insufficient Balance", () => {
 
     // Step 4: Mock 1Click API responses
     // Mock the 1Click quote endpoint
-    await page.route(
-      "**/1click.chaindefuser.com/v0/quote",
-      async (route) => {
-        console.log("✓ 1Click API quote request intercepted");
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            quote: {
-              amountIn: "6000000000000000000", // 6 ETH (exceeds balance)
-              amountOut: "18000000000", // 18000 USDC (6 ETH * 3000 USDC/ETH)
-              amountInFormatted: "6",
-              amountOutFormatted: "18000.00",
-              depositAddress: testDepositAddress,
-              deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-              timeEstimate: 10,
-              signature: "ed25519:mock-signature-12345",
-            },
+    await page.route("**/1click.chaindefuser.com/v0/quote", async (route) => {
+      console.log("✓ 1Click API quote request intercepted");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          quote: {
+            amountIn: "6000000000000000000", // 6 ETH (exceeds balance)
+            amountOut: "18000000000", // 18000 USDC (6 ETH * 3000 USDC/ETH)
+            amountInFormatted: "6",
+            amountOutFormatted: "18000.00",
+            depositAddress: testDepositAddress,
+            deadline: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            timeEstimate: 10,
             signature: "ed25519:mock-signature-12345",
-          }),
-        });
-      }
-    );
+          },
+          signature: "ed25519:mock-signature-12345",
+        }),
+      });
+    });
 
     // Mock the backend oneclick-quote endpoint
     await page.route("**/api/treasury/oneclick-quote", async (route) => {
@@ -455,7 +478,10 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log(`✓ Navigated to: ${treasuryUrl}`);
 
     // Take screenshot after initial navigation
-    await page.screenshot({ path: 'test-results/01-after-initial-navigation.png', fullPage: true });
+    await page.screenshot({
+      path: "test-results/01-after-initial-navigation.png",
+      fullPage: true,
+    });
 
     // Step 6: Set wallet in localStorage after page loads
     await page.evaluate(() => {
@@ -472,7 +498,10 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Page loaded with authenticated user");
 
     // Take screenshot after reload
-    await page.screenshot({ path: 'test-results/02-after-reload.png', fullPage: true });
+    await page.screenshot({
+      path: "test-results/02-after-reload.png",
+      fullPage: true,
+    });
 
     // Step 8: Navigate to Asset Exchange page via menu (to properly load DAO context)
     await page.getByRole("link", { name: "Asset Exchange" }).click();
@@ -480,7 +509,10 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Navigated to Asset Exchange page via menu");
 
     // Take screenshot after navigation
-    await page.screenshot({ path: 'test-results/03-after-menu-navigation.png', fullPage: true });
+    await page.screenshot({
+      path: "test-results/03-after-menu-navigation.png",
+      fullPage: true,
+    });
 
     // Step 9: Wait for page to load
     await expect(page.getByText("Pending Requests")).toBeVisible({
@@ -489,7 +521,10 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Asset exchange page loaded");
 
     // Take screenshot after page loaded
-    await page.screenshot({ path: 'test-results/04-page-loaded.png', fullPage: true });
+    await page.screenshot({
+      path: "test-results/04-page-loaded.png",
+      fullPage: true,
+    });
 
     // Step 10: Click Create Request button
     const createRequestButton = page.getByRole("button", {
@@ -515,7 +550,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Opened send token dropdown");
 
     // Wait for token selector modal to appear
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10000 });
 
     // Click on ETH in the list - it shows as "ETH" with subtext "ETH • 4 Networks"
     await page.getByText("ETH", { exact: true }).first().click();
@@ -523,7 +560,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Selected ETH token");
 
     // Now select network for ETH - "Select Network for ETH" modal appears
-    await expect(page.getByRole("heading", { name: "Select Network for ETH" })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Network for ETH" })
+    ).toBeVisible({ timeout: 10000 });
     await page.getByText("Ethereum", { exact: true }).click();
     await page.waitForTimeout(1000);
     console.log("✓ Selected Ethereum network for ETH");
@@ -531,7 +570,10 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     // Step 13: Fill in send amount first
     // Fill in 6 ETH - MORE than the 5 ETH available balance
     await page.waitForTimeout(1000);
-    const amountInput = page.locator('input[type="number"]').or(page.locator('input[type="text"]')).first();
+    const amountInput = page
+      .locator('input[type="number"]')
+      .or(page.locator('input[type="text"]'))
+      .first();
     await expect(amountInput).toBeVisible({ timeout: 10000 });
     await amountInput.click();
     await amountInput.fill("6");
@@ -541,20 +583,26 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     // Step 14: Select receive token (USDC)
     // There are 2 buttons: "Select token " (dropdown in Receive section) and "Select Token" (bottom button)
     // First click the dropdown in the Receive section
-    const receiveTokenDropdown = page.getByRole("button", { name: "Select token", exact: false }).first();
+    const receiveTokenDropdown = page
+      .getByRole("button", { name: "Select token", exact: false })
+      .first();
     await expect(receiveTokenDropdown).toBeVisible({ timeout: 10000 });
     await receiveTokenDropdown.click();
     await page.waitForTimeout(1500);
     console.log("✓ Clicked receive token dropdown");
 
     // Wait for token selector modal and select USDC
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10000 });
     await page.getByText("USDC", { exact: true }).first().click();
     await page.waitForTimeout(1000);
     console.log("✓ Selected USDC token");
 
     // Select network for USDC
-    await expect(page.getByRole("heading", { name: /Select Network for USDC/i })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: /Select Network for USDC/i })
+    ).toBeVisible({ timeout: 10000 });
     // There are multiple "Ethereum" texts on page (one in Send section), use .last() to get the one in modal
     await page.getByText("Ethereum", { exact: true }).last().click();
     await page.waitForTimeout(1000);
@@ -575,7 +623,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Clicked Preview button");
 
     // Step 18: Wait for Confirm modal and click Submit
-    await expect(page.getByRole("heading", { name: "Confirm" })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Confirm" })).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ Confirm modal appeared");
 
     const submitButton = page.getByRole("button", { name: "Submit" });
@@ -603,7 +653,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
 
     // Look for ETH and USDC in the table
     await expect(page.getByText("ETH").first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("USDC").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("USDC").first()).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ Proposal appears in Pending Requests table with ETH → USDC");
 
     // Step 21.5: Verify initial balance on Dashboard before swap
@@ -614,7 +666,7 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Navigated to dashboard");
 
     // Scroll down to NEAR Intents section
-    const intentsSection = page.locator('text=/NEAR Intents/i').first();
+    const intentsSection = page.locator("text=/NEAR Intents/i").first();
     await expect(intentsSection).toBeVisible({ timeout: 10000 });
     await intentsSection.scrollIntoViewIfNeeded();
     await page.waitForTimeout(1000);
@@ -622,8 +674,12 @@ test.describe("Asset Exchange Insufficient Balance", () => {
 
     // Verify ETH balance shows 5 ETH
     // The balance and token symbol are in separate elements, so check for both
-    await expect(page.getByText("ETH", { exact: true }).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("5", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("ETH", { exact: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByText("5", { exact: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ Dashboard shows initial ETH balance: 5 ETH");
 
     // Navigate back to asset exchange page
@@ -656,10 +712,14 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     // Treasury has 5 ETH and we're trying to swap 6 ETH, so balance is insufficient
     const insufficientBalanceModal = page.getByText("Insufficient Balance");
     await expect(insufficientBalanceModal).toBeVisible({ timeout: 5000 });
-    console.log("✅ PASS: Insufficient Balance modal appeared as expected (5 ETH available, trying to swap 6 ETH)");
+    console.log(
+      "✅ PASS: Insufficient Balance modal appeared as expected (5 ETH available, trying to swap 6 ETH)"
+    );
 
     // Click "Proceed Anyway" to continue with the test
-    const proceedAnywayButton = page.getByRole("button", { name: "Proceed Anyway" });
+    const proceedAnywayButton = page.getByRole("button", {
+      name: "Proceed Anyway",
+    });
     await expect(proceedAnywayButton).toBeVisible({ timeout: 2000 });
     await proceedAnywayButton.click();
     await page.waitForTimeout(1000);
@@ -674,21 +734,23 @@ test.describe("Asset Exchange Insufficient Balance", () => {
 
     // Wait for execution result - either success or failure notification
     await expect(
-      page.getByText(/request (has been|is) (successfully approved|failed)|vote.*counted/i)
+      page.getByText(
+        /request (has been|is) (successfully approved|failed)|vote.*counted/i
+      )
     ).toBeVisible({ timeout: 30000 });
     console.log("✓ Proposal approval transaction completed");
 
     // Check the proposal status - should be Failed due to insufficient balance
-    const proposal = await sandbox.viewFunction(
-      daoAccountId,
-      "get_proposal",
-      { id: 0 }
-    );
+    const proposal = await sandbox.viewFunction(daoAccountId, "get_proposal", {
+      id: 0,
+    });
     console.log("Proposal status:", proposal.status);
 
     // Verify the proposal execution FAILED (insufficient balance)
     expect(proposal.status).toBe("Failed");
-    console.log("✓ Proposal execution failed as expected (insufficient balance)");
+    console.log(
+      "✓ Proposal execution failed as expected (insufficient balance)"
+    );
 
     // Verify NO tokens were transferred to deposit address
     const depositBalance = await sandbox.viewFunction(
@@ -699,7 +761,9 @@ test.describe("Asset Exchange Insufficient Balance", () => {
         token_id: "nep141:eth.omft.near",
       }
     );
-    console.log(`✓ Deposit address ETH balance: ${depositBalance} (no transfer)`);
+    console.log(
+      `✓ Deposit address ETH balance: ${depositBalance} (no transfer)`
+    );
     expect(depositBalance).toBe("0");
 
     // Verify ETH balance UNCHANGED in DAO account
@@ -725,7 +789,7 @@ test.describe("Asset Exchange Insufficient Balance", () => {
     console.log("✓ Navigated to dashboard");
 
     // Scroll down to NEAR Intents section
-    const intentsSectionAfter = page.locator('text=/NEAR Intents/i').first();
+    const intentsSectionAfter = page.locator("text=/NEAR Intents/i").first();
     await expect(intentsSectionAfter).toBeVisible({ timeout: 10000 });
     await intentsSectionAfter.scrollIntoViewIfNeeded();
     await page.waitForTimeout(1000);
@@ -733,8 +797,12 @@ test.describe("Asset Exchange Insufficient Balance", () => {
 
     // Verify ETH balance still shows 5 ETH (UNCHANGED)
     // The balance and token symbol are in separate elements, so check for both
-    await expect(page.getByText("ETH", { exact: true }).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("5", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("ETH", { exact: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByText("5", { exact: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ Dashboard still shows ETH balance: 5 ETH (unchanged)");
 
     console.log("\n=== Test Complete ===\n");

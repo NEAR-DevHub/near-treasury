@@ -3,7 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import Big from "big.js";
 import { Near } from "@/api/near";
-import { formatTokenAmount, formatUsdValue } from "@/helpers/nearHelpers";
+import {
+  formatTokenAmount,
+  formatTokenBalance,
+  formatUsdValue,
+} from "@/helpers/nearHelpers";
 import { getTokenPrice } from "@/api/backend";
 import NearToken from "@/components/icons/NearToken";
 import Tooltip from "@/components/ui/Tooltip";
@@ -157,9 +161,28 @@ const TokenAmount = ({
       return formatTokenAmount(value, tokenPrice);
     }
 
-    // Fallback for full precision display
-    return Number(value).toLocaleString("en-US", {
-      maximumFractionDigits: 10,
+    // For full precision display, show all significant decimals
+    if (showAllDecimals) {
+      try {
+        const bigValue = Big(value);
+        // Use toFixed without a limit to get full precision
+        // Then remove trailing zeros
+        const fullPrecision = bigValue.toString();
+        const parts = fullPrecision.split(".");
+        if (parts[0]) {
+          parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        return parts.join(".");
+      } catch {
+        return value.toString();
+      }
+    }
+
+    // Default formatting for regular display
+    return formatTokenBalance(value, {
+      minAmount: 0.01,
+      maxDecimals: 8,
+      defaultDecimals: 2,
     });
   }
 

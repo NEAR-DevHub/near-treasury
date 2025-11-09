@@ -18,6 +18,7 @@ import {
 import Skeleton from "@/components/ui/Skeleton";
 import Big from "big.js";
 import Tooltip from "@/components/ui/Tooltip";
+import { formatTokenBalance } from "@/helpers/nearHelpers";
 
 const Dashboard = () => {
   const searchParams = useSearchParams();
@@ -135,9 +136,10 @@ const Dashboard = () => {
 
   // Format currency function
   const formatCurrency = (amount) => {
-    return Number(amount).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    return formatTokenBalance(amount, {
+      minAmount: 0.01,
+      maxDecimals: 2,
+      defaultDecimals: 2,
     });
   };
 

@@ -8,14 +8,14 @@ import { useProposalToastContext } from "@/context/ProposalToastContext";
 // Determine context from URL pathname
 const getContextFromPath = (pathname) => {
   if (!pathname) return null;
-  
+
   // Match specific routes
   if (pathname.includes("/payments")) return "payment";
   if (pathname.includes("/stake-delegation")) return "stake";
   if (pathname.includes("/asset-exchange")) return "exchange";
   if (pathname.includes("/function-call")) return "function";
   if (pathname.includes("/settings")) return "settings";
-  
+
   // Return null for unknown routes (no transaction handling)
   return null;
 };
@@ -43,7 +43,7 @@ export const useTransactionHandler = () => {
   useEffect(() => {
     const transactionHashes = searchParams.get("transactionHashes");
     const context = getContextFromPath(pathname);
-    
+
     // Skip if no transaction, not logged in, not in a DAO, or unknown route
     if (!transactionHashes || !accountId || !treasuryDaoID || !context) return;
 
@@ -70,7 +70,9 @@ export const useTransactionHandler = () => {
             const args =
               transaction?.result?.transaction?.actions[0]?.FunctionCall?.args;
             const decodedArgsStr = decodeBase64(args ?? "");
-            const decodedArgs = decodedArgsStr ? JSON.parse(decodedArgsStr) : {};
+            const decodedArgs = decodedArgsStr
+              ? JSON.parse(decodedArgsStr)
+              : {};
             if (decodedArgs.id !== undefined) {
               const proposalId = decodedArgs.id;
               // Check proposal status
@@ -97,4 +99,3 @@ export const useTransactionHandler = () => {
       });
   }, [searchParams, accountId, treasuryDaoID, showToast, pathname]);
 };
-

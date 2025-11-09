@@ -5,7 +5,11 @@
 import { getUserDaos } from "@/api/backend";
 import { Near } from "@/api/near";
 import { fetchSupportedTokens } from "@/api/chaindefuser";
-import { fetchTokenMetadataByDefuseAssetId, fetchBlockchainByNetwork } from "@/api/backend";
+import {
+  fetchTokenMetadataByDefuseAssetId,
+  fetchBlockchainByNetwork,
+} from "@/api/backend";
+import { convertBalanceToReadableFormat } from "@/helpers/nearHelpers";
 import Big from "big.js";
 
 /**
@@ -21,7 +25,7 @@ export async function getUserTreasuries(accountId) {
     const treasuries = await Promise.all(
       userDaos.map(async (daoId) => {
         try {
-          const config= await  Near.view(daoId, "get_config", {});
+          const config = await Near.view(daoId, "get_config", {});
           const metadata = config.metadata
             ? JSON.parse(atob(config.metadata))
             : null;
@@ -60,11 +64,16 @@ export async function getUserTreasuries(accountId) {
  *   }
  * ]
  */
-export async function getAggregatedIntentsAssets({ intentsBalances = [], theme = "light" } = {}) {
+export async function getAggregatedIntentsAssets({
+  intentsBalances = [],
+  theme = "light",
+} = {}) {
   try {
     const supported = await fetchSupportedTokens();
-    const allTokens = (supported?.tokens || []).filter((t) => t.standard === "nep141");
-    
+    const allTokens = (supported?.tokens || []).filter(
+      (t) => t.standard === "nep141"
+    );
+
     // Deduplicate by intents_token_id to avoid double-counting balances
     // Some tokens (like NEAR/wNEAR) may have duplicate entries with the same intents_token_id
     const tokenMap = {};
@@ -129,13 +138,13 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
     // Group by CANONICAL SYMBOL to avoid duplicates like wNEAR/NEAR entries for the same token
     // Canonical key prefers metadata.symbol (uppercased); falls back to asset_name uppercased
     const assetMap = {};
-    
+
     tokens.forEach((t) => {
       const meta = metadataMap[t.intents_token_id];
       if (!meta) return;
-      
+
       const canonicalSymbol = (meta.symbol || t.asset_name || "").toUpperCase();
-      
+
       if (!assetMap[canonicalSymbol]) {
         assetMap[canonicalSymbol] = {
           asset_name: meta.symbol || t.asset_name || "",
@@ -150,21 +159,29 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
 
       // Derive chain id like "eth:1" from defuse_asset_identifier
       const parts = (t.defuse_asset_identifier || "").split(":");
-      const chainId = parts.length >= 2 ? parts.slice(0, 2).join(":") : parts[0];
+      const chainId =
+        parts.length >= 2 ? parts.slice(0, 2).join(":") : parts[0];
       // Get chainName from enriched token (same as Intents component approach)
-      const enrichedToken = enrichedTokens.find((et) => et.intents_token_id === t.intents_token_id);
+      const enrichedToken = enrichedTokens.find(
+        (et) => et.intents_token_id === t.intents_token_id
+      );
       const chainName = enrichedToken?.chainName;
-      const netInfo = networkIconMap[chainName] || { name: chainName || chainId, icon: null };
+      const netInfo = networkIconMap[chainName] || {
+        name: chainName || chainId,
+        icon: null,
+      };
 
       // Compute readable balance if available
       let amountReadable = undefined;
       const raw = balanceRawById[t.intents_token_id];
       if (raw) {
         const decimals = meta.decimals || 18;
-        amountReadable = Big(raw).div(Big(10).pow(decimals)).toString();
-        
+        amountReadable = convertBalanceToReadableFormat(raw, decimals);
+
         // add to asset total
-        assetMap[canonicalSymbol].totalAmount = Big(assetMap[canonicalSymbol].totalAmount || "0")
+        assetMap[canonicalSymbol].totalAmount = Big(
+          assetMap[canonicalSymbol].totalAmount || "0"
+        )
           .plus(amountReadable)
           .toString();
       }
@@ -177,7 +194,8 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
 
       if (existingNetworkIndex >= 0) {
         // Network already exists - merge amounts if both have balances
-        const existingNetwork = assetMap[canonicalSymbol].networks[existingNetworkIndex];
+        const existingNetwork =
+          assetMap[canonicalSymbol].networks[existingNetworkIndex];
         if (amountReadable && existingNetwork.amount) {
           // Sum the amounts
           existingNetwork.amount = Big(existingNetwork.amount || "0")
@@ -202,7 +220,9 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
 
     const assets = Object.values(assetMap).map((a) => ({
       ...a,
-      totalUsd: Big(a.totalAmount || 0).mul(a.price || 0).toString(),
+      totalUsd: Big(a.totalAmount || 0)
+        .mul(a.price || 0)
+        .toString(),
     }));
 
     return assets;
@@ -211,4 +231,3 @@ export async function getAggregatedIntentsAssets({ intentsBalances = [], theme =
     return [];
   }
 }
-

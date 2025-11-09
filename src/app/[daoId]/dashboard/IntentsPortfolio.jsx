@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import Skeleton from "@/components/ui/Skeleton";
 import NearToken from "@/components/icons/NearToken";
-import { formatTokenAmount, formatUsdValue } from "@/helpers/nearHelpers";
+import {
+  formatTokenAmount,
+  formatUsdValue,
+  convertBalanceToReadableFormat,
+} from "@/helpers/nearHelpers";
 import { formatCurrency } from "@/helpers/formatters";
 import { getIntentsBalances } from "@/api/rpc";
 import Big from "big.js";
@@ -13,12 +17,6 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [expandedTokens, setExpandedTokens] = useState({});
-
-  function convertBalanceToReadableFormat(amount, decimals) {
-    return Big(amount ?? "0")
-      .div(Big(10).pow(decimals ?? "1"))
-      .toString();
-  }
 
   function formatPrice(price) {
     const numAmount = Number(price ?? 0);
@@ -186,20 +184,18 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
                 width: 20,
               }}
             >
-              {individualTokens.length > 1 && (
-                <i
-                  onClick={toggleExpanded}
-                  className={
-                    (isExpanded ? "bi bi-chevron-up" : "bi bi-chevron-down") +
-                    " text-secondary h6 mb-0"
-                  }
-                ></i>
-              )}
+              <i
+                onClick={toggleExpanded}
+                className={
+                  (isExpanded ? "bi bi-chevron-up" : "bi bi-chevron-down") +
+                  " text-secondary h6 mb-0 cursor-pointer"
+                }
+              ></i>
             </div>
           </div>
         </div>
 
-        {isExpanded && individualTokens.length > 1 && (
+        {isExpanded && (
           <div
             className="d-flex flex-column text-color"
             style={{ backgroundColor: "var(--bg-system-color)" }}
@@ -221,7 +217,12 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
                     <div className="d-flex gap-1">
                       <div style={{ marginTop: "-5px" }}>
                         {icon ? (
-                          <img src={icon} height={16} width={16} />
+                          <img
+                            src={icon}
+                            height={16}
+                            width={16}
+                            className="rounded-circle"
+                          />
                         ) : (
                           <NearToken height={16} width={16} />
                         )}

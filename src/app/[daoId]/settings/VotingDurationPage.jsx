@@ -13,6 +13,7 @@ import InsufficientBannerModal from "@/components/proposals/InsufficientBannerMo
 import Skeleton from "@/components/ui/Skeleton";
 import WarningTable from "./WarningTable";
 import { logger } from "@/helpers/logger";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const VotingDurationPage = () => {
   const { daoId: treasuryDaoID, hasPermission, daoPolicy } = useDao();
@@ -237,9 +238,12 @@ const VotingDurationPage = () => {
       });
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        setTxnCreated(false);
         showToast("ProposalAdded", null, "settings");
-        reset({ durationDays: currentDurationDays });
+
+        setTimeout(() => {
+          setTxnCreated(false);
+          reset({ durationDays: currentDurationDays });
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       logger.error("Error submitting proposal:", error);

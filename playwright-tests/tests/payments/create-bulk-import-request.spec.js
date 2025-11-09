@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, injectTestWallet, interceptIndexerAPI, interceptRPC, parseNEAR } from "../../util/sandbox.js";
+import {
+  NearSandbox,
+  injectTestWallet,
+  interceptIndexerAPI,
+  interceptRPC,
+  parseNEAR,
+} from "../../util/sandbox.js";
 
 /**
  * Bulk Import Payment Requests Test
@@ -33,8 +39,14 @@ test.describe("Bulk Import Payment Requests", () => {
 
     // Create test accounts with sufficient NEAR balance (100 NEAR each)
     // Need extra NEAR because creating the DAO costs ~6 NEAR and we need at least 0.20N remaining
-    creatorAccountId = await sandbox.createAccount("testcreator.near", "100000000000000000000000000");
-    voterAccountId = await sandbox.createAccount("testvoter.near", "100000000000000000000000000");
+    creatorAccountId = await sandbox.createAccount(
+      "testcreator.near",
+      "100000000000000000000000000"
+    );
+    voterAccountId = await sandbox.createAccount(
+      "testvoter.near",
+      "100000000000000000000000000"
+    );
     console.log(`Creator account: ${creatorAccountId}`);
     console.log(`Voter account: ${voterAccountId}`);
 
@@ -125,7 +137,9 @@ test.describe("Bulk Import Payment Requests", () => {
     }
   });
 
-  test("should create multiple payment requests via bulk import and verify all are created", async ({ page }) => {
+  test("should create multiple payment requests via bulk import and verify all are created", async ({
+    page,
+  }) => {
     test.setTimeout(180000);
 
     // Inject test wallet and intercept API calls
@@ -135,7 +149,9 @@ test.describe("Bulk Import Payment Requests", () => {
     console.log(`✓ Injected wallet for ${creatorAccountId}`);
 
     // Navigate to payments page
-    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
     await page.waitForTimeout(3000);
 
     // Click Create Request
@@ -148,7 +164,7 @@ test.describe("Bulk Import Payment Requests", () => {
 
     // Select Treasury Wallet (SputnikDAO)
     await expect(offcanvas.getByText("Treasury Wallet")).toBeVisible();
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
     await walletDropdown.click();
     await page.waitForTimeout(500);
     await page.locator('text="SputnikDAO"').last().click();
@@ -200,13 +216,13 @@ Bulk Payment 3\tThird bulk payment\t${creatorAccountId}\tnear\t30\tBulk test 3`;
     console.log("✓ Transaction submission started - awaiting confirmation");
 
     // Wait for success message after transaction confirmation
-    await expect(
-      page.getByText('Successfully imported 3')
-    ).toBeVisible();
+    await expect(page.getByText("Successfully imported 3")).toBeVisible();
     console.log("✓ Successfully imported 3 payment requests");
 
     // Check if modal is still visible or closed
-    const importModal = page.locator(".offcanvas").filter({ hasText: "Import Payment Requests" });
+    const importModal = page
+      .locator(".offcanvas")
+      .filter({ hasText: "Import Payment Requests" });
     const modalVisible = await importModal.isVisible();
     console.log(`Import modal visible: ${modalVisible}`);
 
@@ -221,7 +237,9 @@ Bulk Payment 3\tThird bulk payment\t${creatorAccountId}\tnear\t30\tBulk test 3`;
     // Hard expectation: All 3 proposals must be visible in Pending Requests table
     // Wait for the table to update with new proposals
     await page.waitForTimeout(3000);
-    await expect(page.getByText("Bulk Payment 1")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Bulk Payment 1")).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.getByText("Bulk Payment 2")).toBeVisible();
     await expect(page.getByText("Bulk Payment 3")).toBeVisible();
     console.log("✓ All 3 payment requests appear in Pending Requests table");
@@ -231,6 +249,8 @@ Bulk Payment 3\tThird bulk payment\t${creatorAccountId}\tnear\t30\tBulk test 3`;
     await expect(page.getByText("@testcreator.near").first()).toBeVisible();
     console.log("✓ All recipients verified in table");
 
-    console.log("✓ End-to-end bulk import flow complete - all proposals confirmed in sandbox");
+    console.log(
+      "✓ End-to-end bulk import flow complete - all proposals confirmed in sandbox"
+    );
   });
 });

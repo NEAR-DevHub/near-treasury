@@ -256,16 +256,16 @@ const FiltersDropdown = ({
                     amountValues.value === ">"
                       ? "amount-min"
                       : amountValues.value === "<"
-                      ? "amount-max"
-                      : "amount-equal";
+                        ? "amount-max"
+                        : "amount-equal";
                   amountInputRefs.current[field] = el;
                 }}
                 name={
                   amountValues.value === ">"
                     ? "amount-min"
                     : amountValues.value === "<"
-                    ? "amount-max"
-                    : "amount-equal"
+                      ? "amount-max"
+                      : "amount-equal"
                 }
                 type="number"
                 className="form-control form-control-sm"
@@ -274,16 +274,16 @@ const FiltersDropdown = ({
                   amountValues.value === ">"
                     ? amountValues.min
                     : amountValues.value === "<"
-                    ? amountValues.max
-                    : amountValues.equal
+                      ? amountValues.max
+                      : amountValues.equal
                 }
                 onChange={(e) => {
                   const field =
                     amountValues.value === ">"
                       ? "min"
                       : amountValues.value === "<"
-                      ? "max"
-                      : "equal";
+                        ? "max"
+                        : "equal";
                   handleAmountValueChange(field, e.target.value);
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -309,7 +309,14 @@ const FiltersDropdown = ({
             getOptionKey={(account) => account}
             getOptionLabel={(account) => account}
             renderOption={(account) => (
-              <div className="text-truncate">{account}</div>
+              <Profile
+                accountId={account}
+                showKYC={false}
+                displayImage={true}
+                displayName={true}
+                displayAddress={true}
+                imageSize={{ width: 30, height: 30 }}
+              />
             )}
           />
         );
