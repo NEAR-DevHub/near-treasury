@@ -95,9 +95,10 @@
   --grey-045: #1d1d1d;
   --grey-05: #1b1b18;
 
-  --secondary-foreground-bg-color: rgba(38, 38, 38, 1)
-    --secondary-foreground-color-dark: rgba(245, 245, 245, 1)
-    /* Status Colors (same) */ --other-primary: #2775c9;
+  --secondary-foreground-bg-color: rgba(38, 38, 38, 1);
+  --secondary-foreground-color-dark: rgba(245, 245, 245, 1);
+  /* Status Colors (same) */
+  --other-primary: #2775c9;
   --other-warning: #b17108;
   --other-green: #3cb179;
   --other-green-light: #3cb1791a;

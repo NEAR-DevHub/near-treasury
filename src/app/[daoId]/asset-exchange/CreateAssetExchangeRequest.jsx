@@ -128,13 +128,6 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
   const [receiveDropdownOpen, setReceiveDropdownOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
-  const formatFixed2 = (value) =>
-    Number(value || 0).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      notation: "standard",
-    });
-
   function getTokenNetworkBalance(token, network) {
     if (!token) return null;
     const nets = Array.isArray(token.networks) ? token.networks : [];
@@ -602,7 +595,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                   const bal = getTokenNetworkBalance(sendToken, sendNetwork);
                   return bal !== null ? (
                     <span>
-                      Balance: {formatFixed2(bal)} {sendToken.symbol}
+                      Balance: {formatTokenBalance(bal)} {sendToken.symbol}
                     </span>
                   ) : null;
                 })()}
@@ -768,7 +761,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 );
                 return bal !== null ? (
                   <span>
-                    Balance: {formatFixed2(bal)} {receiveToken.symbol}
+                    Balance: {formatTokenBalance(bal)} {receiveToken.symbol}
                   </span>
                 ) : null;
               })()}
@@ -931,10 +924,12 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 </div>
                 {Number(n.amount || 0) > 0 && (
                   <div className="text-end" style={{ minWidth: 120 }}>
-                    <div className="fw-semibold">{formatFixed2(n.amount)}</div>
+                    <div className="fw-semibold">
+                      {formatTokenBalance(n.amount)}
+                    </div>
                     <div className="text-secondary" style={{ fontSize: 12 }}>
                       ≈$
-                      {formatFixed2(
+                      {formatTokenBalance(
                         (n.amount || 0) *
                           (sendToken?.price || receiveToken?.price || 0)
                       )}

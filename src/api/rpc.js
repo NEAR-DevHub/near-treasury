@@ -2,6 +2,7 @@ import { logger } from "@/helpers/logger";
 import {
   getNearStakedPools,
   fetchTokenMetadataByDefuseAssetId,
+  fetchBlockchainByNetwork,
 } from "@/api/backend";
 import { Near } from "@/api/near";
 import Big from "big.js";
@@ -135,11 +136,37 @@ export const getIntentsBalances = async (accountId) => {
       }
     });
 
-    // Combine token data with metadata
+    // Extract unique blockchain/network names and fetch network metadata
+    const uniqueNetworks = [
+      ...new Set(
+        metadataResults
+          .map((m) => m.blockchain)
+          .filter((blockchain) => blockchain)
+      ),
+    ];
+
+    const networkData =
+      uniqueNetworks.length > 0
+        ? await fetchBlockchainByNetwork(uniqueNetworks)
+        : [];
+
+    // Create a map for blockchain data
+    const blockchainMap = {};
+    networkData.forEach((network) => {
+      if (network.network) {
+        blockchainMap[network.network.toLowerCase()] = network;
+      }
+    });
+
+    // Combine token data with metadata and blockchain info
     const finalTokens = tokensWithBalances
       .map((token) => {
         const metadata = metadataMap[token.token_id];
         if (!metadata) return null;
+
+        const blockchainInfo = metadata.blockchain
+          ? blockchainMap[metadata.blockchain.toLowerCase()]
+          : null;
 
         return {
           // contract_id is needed by TokensDropdown (without prefix for backward compatibility)
@@ -155,7 +182,8 @@ export const getIntentsBalances = async (accountId) => {
             price: metadata.price, // Include price if available
           },
           amount: token.amount,
-          blockchain: metadata.blockchain,
+          blockchain:
+            blockchainInfo?.name || (metadata.blockchain || "").toUpperCase(),
         };
       })
       .filter((token) => token !== null);

@@ -209,8 +209,7 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
                 }
               >
                 <div style={{ paddingLeft: "5px" }}>
-                  {(individualToken.blockchain || "").toUpperCase() ||
-                    "Unknown"}
+                  {individualToken.blockchain || "" || "Unknown"}
                 </div>
                 <div className="d-flex justify-content-end">
                   <div className="d-flex flex-column align-items-end">
