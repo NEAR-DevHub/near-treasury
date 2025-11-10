@@ -145,7 +145,10 @@ export class NearSandbox {
     const actions = [
       transactions.createAccount(),
       transactions.transfer(initialBalance),
-      transactions.addKey(newKeyPair.getPublicKey(), transactions.fullAccessKey()),
+      transactions.addKey(
+        newKeyPair.getPublicKey(),
+        transactions.fullAccessKey()
+      ),
     ];
 
     const blockHash = await this.getLatestBlockHash();
@@ -360,7 +363,10 @@ export class NearSandbox {
       utils.serialize.base_decode(blockHash)
     );
 
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      tx
+    );
     const txHash = crypto.createHash("sha256").update(serializedTx).digest();
     const signature = keyPair.sign(txHash);
 

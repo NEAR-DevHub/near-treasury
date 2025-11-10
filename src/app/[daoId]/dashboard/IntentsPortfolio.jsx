@@ -209,7 +209,7 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
                 }
               >
                 <div style={{ paddingLeft: "5px" }}>
-                  {individualToken.blockchain || "" || "Unknown"}
+                  {individualToken.blockchainName || "" || "Unknown"}
                 </div>
                 <div className="d-flex justify-content-end">
                   <div className="d-flex flex-column align-items-end">

@@ -182,7 +182,8 @@ export const getIntentsBalances = async (accountId) => {
             price: metadata.price, // Include price if available
           },
           amount: token.amount,
-          blockchain:
+          blockchain: metadata.blockchain,
+          blockchainName:
             blockchainInfo?.name || (metadata.blockchain || "").toUpperCase(),
         };
       })
