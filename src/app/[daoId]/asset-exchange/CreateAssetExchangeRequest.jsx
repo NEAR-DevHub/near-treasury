@@ -28,7 +28,6 @@ const formatNumberWithCommas = (value) => {
   return formatTokenBalance(value, {
     minAmount: 0.000001,
     maxDecimals: 8,
-    defaultDecimals: 2,
   });
 };
 

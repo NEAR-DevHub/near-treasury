@@ -72,7 +72,6 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
     return formatTokenBalance(amount, {
       minAmount: 0.01,
       maxDecimals: 2,
-      defaultDecimals: 2,
     });
   }
 

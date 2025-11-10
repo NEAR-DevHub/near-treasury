@@ -342,7 +342,6 @@ const FtLockupPortfolio = ({
                     {
                       minAmount: 0.01,
                       maxDecimals: 4,
-                      defaultDecimals: 2,
                     }
                   )}
                 </div>
@@ -382,7 +381,6 @@ const FtLockupPortfolio = ({
                 {
                   minAmount: 0.01,
                   maxDecimals: 4,
-                  defaultDecimals: 2,
                 }
               )}
               tooltip="Tokens that are still locked and not yet available to claim under your vesting schedule."
@@ -400,7 +398,6 @@ const FtLockupPortfolio = ({
                 {
                   minAmount: 0.01,
                   maxDecimals: 4,
-                  defaultDecimals: 2,
                 }
               )}
               tooltip="Tokens from earlier payout periods (rounds) that you have not claimed yet. These can be claimed together with the next unlock."
@@ -418,7 +415,6 @@ const FtLockupPortfolio = ({
                 {
                   minAmount: 0.01,
                   maxDecimals: 4,
-                  defaultDecimals: 2,
                 }
               )}
               tooltip="Tokens you've already claimed and transferred to your DAO treasury."
@@ -617,7 +613,6 @@ const FtLockupPortfolio = ({
                       {
                         minAmount: 0.01,
                         maxDecimals: 4,
-                        defaultDecimals: 2,
                       }
                     )}
                   </div>

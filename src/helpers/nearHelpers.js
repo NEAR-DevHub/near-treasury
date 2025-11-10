@@ -34,15 +34,15 @@ export function convertBalanceToReadableFormat(amount, decimals = 18) {
 /**
  * Format token balance with appropriate precision
  * Shows more decimals for very small amounts to avoid scientific notation
+ * Automatically trims unnecessary trailing zeros (e.g., "5" instead of "5.00")
  * @param {string|number} amount - The token amount to format
  * @param {Object} options - Formatting options
  * @param {number} options.minAmount - Threshold for using extended decimals (default: 0.01)
- * @param {number} options.maxDecimals - Maximum decimals for small amounts (default: 8)
- * @param {number} options.defaultDecimals - Default decimals for normal amounts (default: 2)
+ * @param {number} options.maxDecimals - Maximum decimals to show (default: 8)
  * @returns {string} Formatted token amount without scientific notation
  */
 export const formatTokenBalance = (amount, options = {}) => {
-  const { minAmount = 0.01, maxDecimals = 8, defaultDecimals = 2 } = options;
+  const { minAmount = 0.01, maxDecimals = 8 } = options;
 
   try {
     const bigAmount = Big(amount || 0);
@@ -51,21 +51,16 @@ export const formatTokenBalance = (amount, options = {}) => {
       return "0";
     }
 
-    // For amounts >= minAmount, use default decimals
-    if (bigAmount.gte(minAmount)) {
-      const formatted = bigAmount.toFixed(defaultDecimals);
-      // Add thousand separators
-      const parts = formatted.split(".");
-      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      return parts.join(".");
-    }
-
+    // For amounts >= minAmount, use fewer decimals (2)
     // For very small amounts, show up to maxDecimals
-    const formatted = bigAmount.toFixed(maxDecimals);
+    const decimals = bigAmount.gte(minAmount) ? 2 : maxDecimals;
+    const formatted = bigAmount.toFixed(decimals);
+
     // Remove trailing zeros
     let trimmed = formatted
       .replace(/(\.\d*[1-9])?0+$/, "$1")
       .replace(/\.$/, "");
+
     // Add thousand separators
     const parts = trimmed.split(".");
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");

@@ -182,7 +182,6 @@ const TokenAmount = ({
     return formatTokenBalance(value, {
       minAmount: 0.01,
       maxDecimals: 8,
-      defaultDecimals: 2,
     });
   }
 

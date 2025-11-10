@@ -99,7 +99,6 @@ const Portfolio = ({
     const formattedAmount = formatTokenBalance(amount, {
       minAmount: 0.01,
       maxDecimals: 2,
-      defaultDecimals: 2,
     });
     return "$" + formattedAmount;
   }
