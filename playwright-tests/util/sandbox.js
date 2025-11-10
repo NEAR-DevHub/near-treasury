@@ -116,7 +116,7 @@ export class NearSandbox {
 
   async waitForBlockchainState(delayMs = 100) {
     // Small delay to ensure blockchain state is consistent
-    await new Promise(resolve => setTimeout(resolve, delayMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   async getLatestBlockHash() {
@@ -135,28 +135,42 @@ export class NearSandbox {
     return result.nonce;
   }
 
-  async createAccount(accountId, initialBalance = "100000000000000000000000000") {
+  async createAccount(
+    accountId,
+    initialBalance = "100000000000000000000000000",
+    parentAccountId = null
+  ) {
     const newKeyPair = KeyPair.fromRandom("ed25519");
     this.accountKeys.set(accountId, newKeyPair);
 
     const actions = [
       transactions.createAccount(),
-      transactions.transfer(
-        utils.format.parseNearAmount(initialBalance.replace(/0{24}$/, ""))
+      transactions.transfer(initialBalance),
+      transactions.addKey(
+        newKeyPair.getPublicKey(),
+        transactions.fullAccessKey()
       ),
-      transactions.addKey(newKeyPair.getPublicKey(), transactions.fullAccessKey()),
     ];
 
     const blockHash = await this.getLatestBlockHash();
-    const parentAccount = accountId.endsWith("test.near") ? "test.near" : "near";
+
+    // Determine parent account: use provided parent, or auto-detect based on suffix
+    const parentAccount =
+      parentAccountId ||
+      (accountId.endsWith("test.near") ? "test.near" : "near");
+
+    // Get the key pair for the parent account (use default key for root accounts)
+    const parentKeyPair =
+      this.accountKeys.get(parentAccount) || this.defaultKeyPair;
+
     const nonce = await this.getAccessKeyNonce(
       parentAccount,
-      this.defaultKeyPair.getPublicKey().toString()
+      parentKeyPair.getPublicKey().toString()
     );
 
     const tx = transactions.createTransaction(
       parentAccount,
-      this.defaultKeyPair.getPublicKey(),
+      parentKeyPair.getPublicKey(),
       accountId,
       nonce + 1,
       actions,
@@ -164,9 +178,12 @@ export class NearSandbox {
     );
 
     // Serialize and sign the transaction
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      tx
+    );
     const txHash = crypto.createHash("sha256").update(serializedTx).digest();
-    const signature = this.defaultKeyPair.sign(txHash);
+    const signature = parentKeyPair.sign(txHash);
 
     const signedTx = new transactions.SignedTransaction({
       transaction: tx,
@@ -186,7 +203,10 @@ export class NearSandbox {
     if (result.status.SuccessValue !== undefined) {
       console.log(`✓ Created account: ${accountId}`);
     } else if (result.status.Failure) {
-      console.error(`✗ Failed to create account ${accountId}:`, result.status.Failure);
+      console.error(
+        `✗ Failed to create account ${accountId}:`,
+        result.status.Failure
+      );
       throw new Error(`Failed to create account ${accountId}`);
     }
 
@@ -218,7 +238,10 @@ export class NearSandbox {
       utils.serialize.base_decode(blockHash)
     );
 
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      tx
+    );
     const txHash = crypto.createHash("sha256").update(serializedTx).digest();
     const signature = keyPair.sign(txHash);
 
@@ -240,7 +263,10 @@ export class NearSandbox {
     if (result.status.SuccessValue !== undefined) {
       console.log(`✓ Deployed contract to: ${accountId}`);
     } else if (result.status.Failure) {
-      console.error(`✗ Failed to deploy contract to ${accountId}:`, result.status.Failure);
+      console.error(
+        `✗ Failed to deploy contract to ${accountId}:`,
+        result.status.Failure
+      );
       throw new Error(`Failed to deploy contract to ${accountId}`);
     }
 
@@ -250,7 +276,14 @@ export class NearSandbox {
     return result;
   }
 
-  async functionCall(signerId, receiverId, methodName, args = {}, gas = "30000000000000", deposit = "0") {
+  async functionCall(
+    signerId,
+    receiverId,
+    methodName,
+    args = {},
+    gas = "30000000000000",
+    deposit = "0"
+  ) {
     const keyPair = this.accountKeys.get(signerId);
     if (!keyPair) {
       throw new Error(`Account ${signerId} not found`);
@@ -280,7 +313,10 @@ export class NearSandbox {
       utils.serialize.base_decode(blockHash)
     );
 
-    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      tx
+    );
     const txHash = crypto.createHash("sha256").update(serializedTx).digest();
     const signature = keyPair.sign(txHash);
 
@@ -300,9 +336,9 @@ export class NearSandbox {
         signedTxBase64: signedTxBase64,
         waitUntil: "FINAL",
       });
-    } catch(e) {
+    } catch (e) {
       console.error(JSON.stringify(e));
-      throw(e);
+      throw e;
     }
 
     // Wait for block finalization before next transaction
@@ -312,8 +348,65 @@ export class NearSandbox {
     return this._enhanceResult(result);
   }
 
+  async transfer(signerId, receiverId, amount) {
+    const keyPair = this.accountKeys.get(signerId);
+    if (!keyPair) {
+      throw new Error(`Account ${signerId} not found`);
+    }
+
+    const actions = [transactions.transfer(BigInt(amount))];
+
+    const blockHash = await this.getLatestBlockHash();
+    const nonce = await this.getAccessKeyNonce(
+      signerId,
+      keyPair.getPublicKey().toString()
+    );
+
+    const tx = transactions.createTransaction(
+      signerId,
+      keyPair.getPublicKey(),
+      receiverId,
+      nonce + 1,
+      actions,
+      utils.serialize.base_decode(blockHash)
+    );
+
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      tx
+    );
+    const txHash = crypto.createHash("sha256").update(serializedTx).digest();
+    const signature = keyPair.sign(txHash);
+
+    const signedTx = new transactions.SignedTransaction({
+      transaction: tx,
+      signature: new transactions.Signature({
+        keyType: tx.publicKey.keyType,
+        data: signature.signature,
+      }),
+    });
+
+    const signedTxBytes = signedTx.encode();
+    const signedTxBase64 = Buffer.from(signedTxBytes).toString("base64");
+    let result;
+    try {
+      result = await broadcastTxCommit(this.rpcClient, {
+        signedTxBase64: signedTxBase64,
+        waitUntil: "FINAL",
+      });
+    } catch (error) {
+      console.error("Transfer failed:", error);
+      throw error;
+    }
+
+    // Wait for block finalization before next transaction
+    await this.waitForBlock();
+
+    return this._enhanceResult(result);
+  }
+
   async waitForBlock(delayMs = 1000) {
-    await new Promise(resolve => setTimeout(resolve, delayMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   _enhanceResult(result) {
@@ -333,7 +426,7 @@ export class NearSandbox {
     // Add helper methods
     result.logs = allLogs;
     result.logsContain = (pattern) => {
-      return allLogs.some(log => log.includes(pattern));
+      return allLogs.some((log) => log.includes(pattern));
     };
     result.failed = result.status?.Failure !== undefined;
 
@@ -350,7 +443,9 @@ export class NearSandbox {
   }
 
   async viewFunctionMainnet(contractId, methodName, args = {}) {
-    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.fastnear.com");
+    const mainnetRpcClient = new NearRpcClient(
+      "https://rpc.mainnet.fastnear.com"
+    );
     return await viewFunctionAsJson(mainnetRpcClient, {
       accountId: contractId,
       methodName: methodName,
@@ -364,7 +459,9 @@ export class NearSandbox {
     await this.createAccount(accountId);
 
     // Fetch contract code from mainnet
-    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.fastnear.com");
+    const mainnetRpcClient = new NearRpcClient(
+      "https://rpc.mainnet.fastnear.com"
+    );
     const contractCode = await query(mainnetRpcClient, {
       requestType: "view_code",
       finality: "final",
@@ -372,7 +469,9 @@ export class NearSandbox {
     });
 
     // Deploy the contract code to sandbox
-    const wasmCode = contractCode.codeBase64 ? Buffer.from(contractCode.codeBase64, "base64") : null;
+    const wasmCode = contractCode.codeBase64
+      ? Buffer.from(contractCode.codeBase64, "base64")
+      : null;
     if (!wasmCode) {
       throw new Error(`No contract code found for ${mainnetContractId}`);
     }
@@ -428,14 +527,8 @@ export async function setPageAuthSettings(page, accountId, keyPair) {
   // Set authentication in localStorage
   await page.evaluate(
     ({ accountId, publicKey, privateKey }) => {
-      localStorage.setItem(
-        "selected-wallet",
-        "mynearwallet"
-      );
-      localStorage.setItem(
-        "mynearwallet:signedAccountId",
-        accountId
-      );
+      localStorage.setItem("selected-wallet", "mynearwallet");
+      localStorage.setItem("mynearwallet:signedAccountId", accountId);
     },
     {
       accountId,
@@ -457,175 +550,196 @@ export async function injectTestWallet(page, sandbox, accountId) {
   const rpcUrl = sandbox.getRpcUrl();
 
   // Verify imports
-  console.log('Injected wallet setup - transactions:', typeof transactions, 'utils:', typeof utils);
+  console.log(
+    "Injected wallet setup - transactions:",
+    typeof transactions,
+    "utils:",
+    typeof utils
+  );
 
   // Expose signing function to the page - this function executes in Node.js context
   // Check if function is already exposed to avoid errors on multiple calls
   try {
-    await page.exposeFunction('__testWalletSign', async (transaction) => {
-    console.log('__testWalletSign called, transactions available:', typeof transactions);
-    const client = new NearRpcClient({ endpoint: rpcUrl });
+    await page.exposeFunction("__testWalletSign", async (transaction) => {
+      console.log(
+        "__testWalletSign called, transactions available:",
+        typeof transactions
+      );
+      const client = new NearRpcClient({ endpoint: rpcUrl });
 
-    // Transform actions from wallet format to near-api-js format
-    const nearActions = transaction.actions.map(action => {
-      if (action.type === 'FunctionCall') {
-        // args is already a Uint8Array or buffer from the wallet
-        const args = action.params.args;
-        return transactions.functionCall(
-          action.params.methodName,
-          args,
-          BigInt(action.params.gas || '30000000000000'),
-          BigInt(action.params.deposit || '0')
-        );
-      }
-      // Add other action types as needed
-      throw new Error(`Unsupported action type: ${action.type}`);
+      // Transform actions from wallet format to near-api-js format
+      const nearActions = transaction.actions.map((action) => {
+        if (action.type === "FunctionCall") {
+          // args is already a Uint8Array or buffer from the wallet
+          const args = action.params.args;
+          return transactions.functionCall(
+            action.params.methodName,
+            args,
+            BigInt(action.params.gas || "30000000000000"),
+            BigInt(action.params.deposit || "0")
+          );
+        }
+        // Add other action types as needed
+        throw new Error(`Unsupported action type: ${action.type}`);
+      });
+
+      // Get access key nonce
+      const accessKeyResult = await viewAccessKey(client, {
+        accountId,
+        publicKey: keyPair.getPublicKey().toString(),
+        finality: "final",
+      });
+
+      const nonce = BigInt(accessKeyResult.nonce) + 1n;
+
+      // Get latest block hash
+      const blockResult = await block(client, { finality: "final" });
+      const blockHash = utils.serialize.base_decode(blockResult.header.hash);
+
+      // Create transaction
+      const tx = transactions.createTransaction(
+        accountId,
+        keyPair.getPublicKey(),
+        transaction.receiverId,
+        nonce,
+        nearActions,
+        blockHash
+      );
+
+      // Sign transaction
+      const serializedTx = utils.serialize.serialize(
+        transactions.SCHEMA.Transaction,
+        tx
+      );
+
+      // Hash the serialized transaction
+      const hashBuffer = await crypto.subtle.digest("SHA-256", serializedTx);
+      const signature = keyPair.sign(new Uint8Array(hashBuffer));
+
+      const signedTx = new transactions.SignedTransaction({
+        transaction: tx,
+        signature: new transactions.Signature({
+          keyType: tx.publicKey.keyType,
+          data: signature.signature,
+        }),
+      });
+
+      // Broadcast transaction
+      const signedTxBase64 = Buffer.from(signedTx.encode()).toString("base64");
+      const result = await broadcastTxCommit(client, {
+        signedTxBase64,
+        waitUntil: "FINAL",
+      });
+
+      return result;
     });
-
-    // Get access key nonce
-    const accessKeyResult = await viewAccessKey(client, {
-      accountId,
-      publicKey: keyPair.getPublicKey().toString(),
-      finality: 'final',
-    });
-
-    const nonce = BigInt(accessKeyResult.nonce) + 1n;
-
-    // Get latest block hash
-    const blockResult = await block(client, { finality: 'final' });
-    const blockHash = utils.serialize.base_decode(blockResult.header.hash);
-
-    // Create transaction
-    const tx = transactions.createTransaction(
-      accountId,
-      keyPair.getPublicKey(),
-      transaction.receiverId,
-      nonce,
-      nearActions,
-      blockHash
-    );
-
-    // Sign transaction
-    const serializedTx = utils.serialize.serialize(
-      transactions.SCHEMA.Transaction,
-      tx
-    );
-
-    // Hash the serialized transaction
-    const hashBuffer = await crypto.subtle.digest('SHA-256', serializedTx);
-    const signature = keyPair.sign(new Uint8Array(hashBuffer));
-
-    const signedTx = new transactions.SignedTransaction({
-      transaction: tx,
-      signature: new transactions.Signature({
-        keyType: tx.publicKey.keyType,
-        data: signature.signature,
-      }),
-    });
-
-    // Broadcast transaction
-    const signedTxBase64 = Buffer.from(signedTx.encode()).toString('base64');
-    const result = await broadcastTxCommit(client, {
-      signedTxBase64,
-      waitUntil: 'FINAL',
-    });
-
-    return result;
-  });
   } catch (error) {
     // Function already exposed, silently ignore - this allows multiple calls to injectTestWallet
-    if (!error.message.includes('has been already registered')) {
+    if (!error.message.includes("has been already registered")) {
       throw error;
     }
   }
 
   // Inject the test wallet immediately before any scripts run
-  await page.addInitScript(({ accountId }) => {
-    // Create test wallet object
-    const testWallet = {
-      manifest: {
-        id: 'test-wallet',
-        name: 'Test Wallet',
-        description: 'Automated test wallet for sandbox',
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
-        type: 'injected',
-        features: {
-          signMessage: true,
-          signTransaction: true,
-          signAndSendTransaction: true,
-          signAndSendTransactions: true,
-        }
-      },
+  await page.addInitScript(
+    ({ accountId }) => {
+      // Create test wallet object
+      const testWallet = {
+        manifest: {
+          id: "test-wallet",
+          name: "Test Wallet",
+          description: "Automated test wallet for sandbox",
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
+          type: "injected",
+          features: {
+            signMessage: true,
+            signTransaction: true,
+            signAndSendTransaction: true,
+            signAndSendTransactions: true,
+          },
+        },
 
-      async isSignedIn() {
-        return true;
-      },
+        async isSignedIn() {
+          return true;
+        },
 
-      async getAddress() {
-        return accountId;
-      },
+        async getAddress() {
+          return accountId;
+        },
 
-      async getAccounts() {
-        return [{ accountId }];
-      },
+        async getAccounts() {
+          return [{ accountId }];
+        },
 
-      async signIn() {
-        return { accounts: [{ accountId }] };
-      },
+        async signIn() {
+          return { accounts: [{ accountId }] };
+        },
 
-      async signOut() {
-        // No-op for tests
-      },
+        async signOut() {
+          // No-op for tests
+        },
 
-      async signAndSendTransaction({ receiverId, actions }) {
-        console.log('signAndSendTransaction called for:', receiverId, 'with', actions.length, 'actions');
-        try {
-          const result = await window.__testWalletSign({
+        async signAndSendTransaction({ receiverId, actions }) {
+          console.log(
+            "signAndSendTransaction called for:",
             receiverId,
-            actions,
-          });
-          console.log('Transaction result:', result?.transaction?.hash);
-          return result;
-        } catch (error) {
-          console.error('Test wallet sign error:', error);
-          throw error;
-        }
-      },
+            "with",
+            actions.length,
+            "actions"
+          );
+          try {
+            const result = await window.__testWalletSign({
+              receiverId,
+              actions,
+            });
+            console.log("Transaction result:", result?.transaction?.hash);
+            return result;
+          } catch (error) {
+            console.error("Test wallet sign error:", error);
+            throw error;
+          }
+        },
 
-      async signAndSendTransactions({ transactions }) {
-        console.log('signAndSendTransactions called with', transactions.length, 'transactions');
-        const results = [];
-        for (const tx of transactions) {
-          const result = await this.signAndSendTransaction(tx);
-          results.push(result);
-        }
-        console.log('All transactions completed:', results.length);
-        return results;
-      },
-    };
+        async signAndSendTransactions({ transactions }) {
+          console.log(
+            "signAndSendTransactions called with",
+            transactions.length,
+            "transactions"
+          );
+          const results = [];
+          for (const tx of transactions) {
+            const result = await this.signAndSendTransaction(tx);
+            results.push(result);
+          }
+          console.log("All transactions completed:", results.length);
+          return results;
+        },
+      };
 
-    // Store in window for access
-    window.__testWallet = testWallet;
+      // Store in window for access
+      window.__testWallet = testWallet;
 
-    // Set localStorage
-    localStorage.setItem('selected-wallet', 'test-wallet');
+      // Set localStorage
+      localStorage.setItem("selected-wallet", "test-wallet");
 
-    // Inject wallet immediately when near-selector-ready fires
-    document.addEventListener('DOMContentLoaded', () => {
-      window.dispatchEvent(
-        new CustomEvent('near-wallet-injected', { detail: testWallet })
-      );
-      console.log('✓ Test wallet injected for:', accountId);
-    });
+      // Inject wallet immediately when near-selector-ready fires
+      document.addEventListener("DOMContentLoaded", () => {
+        window.dispatchEvent(
+          new CustomEvent("near-wallet-injected", { detail: testWallet })
+        );
+        console.log("✓ Test wallet injected for:", accountId);
+      });
 
-    // Also listen for the selector ready event
-    window.addEventListener('near-selector-ready', () => {
-      window.dispatchEvent(
-        new CustomEvent('near-wallet-injected', { detail: testWallet })
-      );
-      console.log('✓ Test wallet injected (selector-ready) for:', accountId);
-    });
-  }, { accountId });
+      // Also listen for the selector ready event
+      window.addEventListener("near-selector-ready", () => {
+        window.dispatchEvent(
+          new CustomEvent("near-wallet-injected", { detail: testWallet })
+        );
+        console.log("✓ Test wallet injected (selector-ready) for:", accountId);
+      });
+    },
+    { accountId }
+  );
 }
 
 /**
@@ -640,25 +754,31 @@ export async function interceptIndexerAPI(page, sandbox) {
     try {
       // Parse URL to determine endpoint
       const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(p => p);
+      const pathParts = urlObj.pathname.split("/").filter((p) => p);
 
       // Extract dao ID from path: /proposals/{daoId}/...
-      if (pathParts[0] === 'proposals' && pathParts[1]) {
+      if (pathParts[0] === "proposals" && pathParts[1]) {
         const requestedDaoId = pathParts[1];
 
         // Handle different endpoints
         if (pathParts.length === 2) {
           // Main proposals endpoint: /proposals/{daoId}
           const searchParams = new URLSearchParams(urlObj.search);
-          const page = parseInt(searchParams.get('page') || '0');
-          const pageSize = parseInt(searchParams.get('page_size') || '10');
-          const statusesParam = searchParams.get('statuses');
-          const requestedStatuses = statusesParam ? statusesParam.split(',') : [];
+          const page = parseInt(searchParams.get("page") || "0");
+          const pageSize = parseInt(searchParams.get("page_size") || "10");
+          const statusesParam = searchParams.get("statuses");
+          const requestedStatuses = statusesParam
+            ? statusesParam.split(",")
+            : [];
 
           // Get the last proposal ID to know how many proposals exist
           let lastProposalId;
           try {
-            lastProposalId = await sandbox.viewFunction(requestedDaoId, 'get_last_proposal_id', {});
+            lastProposalId = await sandbox.viewFunction(
+              requestedDaoId,
+              "get_last_proposal_id",
+              {}
+            );
           } catch (error) {
             lastProposalId = -1;
           }
@@ -668,21 +788,32 @@ export async function interceptIndexerAPI(page, sandbox) {
           const allProposals = [];
           for (let id = 0; id <= lastProposalId; id++) {
             try {
-              const proposal = await sandbox.viewFunction(requestedDaoId, 'get_proposal', { id });
+              const proposal = await sandbox.viewFunction(
+                requestedDaoId,
+                "get_proposal",
+                { id }
+              );
 
               // Check if proposal has any "Remove" votes AND is still InProgress
               // Only filter out InProgress proposals with Remove votes (these are "deleted")
               // Proposals with final status (Rejected, Approved, etc.) should still appear in History
-              const hasRemoveVotes = proposal.votes && Object.values(proposal.votes).some(vote => vote === 'Remove');
+              const hasRemoveVotes =
+                proposal.votes &&
+                Object.values(proposal.votes).some((vote) => vote === "Remove");
 
-              if (hasRemoveVotes && proposal.status === 'InProgress') {
-                console.log(`Proposal ${id} has Remove votes and is InProgress - filtering out from results`);
+              if (hasRemoveVotes && proposal.status === "InProgress") {
+                console.log(
+                  `Proposal ${id} has Remove votes and is InProgress - filtering out from results`
+                );
                 continue; // Skip InProgress proposals with Remove votes (these are "deleted")
               }
 
               // If no status filter specified, include all proposals
               // If status filter specified, only include matching proposals
-              if (requestedStatuses.length === 0 || requestedStatuses.includes(proposal.status)) {
+              if (
+                requestedStatuses.length === 0 ||
+                requestedStatuses.includes(proposal.status)
+              ) {
                 allProposals.push({
                   id: proposal.id ?? id,
                   proposer: proposal.proposer,
@@ -691,7 +822,9 @@ export async function interceptIndexerAPI(page, sandbox) {
                   status: proposal.status,
                   vote_counts: proposal.vote_counts || { Vote: [0, 0, 0] },
                   votes: proposal.votes || {},
-                  submission_time: proposal.submission_time || Date.now().toString() + '000000',
+                  submission_time:
+                    proposal.submission_time ||
+                    Date.now().toString() + "000000",
                   last_actions_log: null,
                 });
               }
@@ -718,17 +851,17 @@ export async function interceptIndexerAPI(page, sandbox) {
 
           await route.fulfill({
             status: 200,
-            contentType: 'application/json',
+            contentType: "application/json",
             body: JSON.stringify(response),
           });
           return;
         }
 
-        if (pathParts[2] === 'approvers') {
+        if (pathParts[2] === "approvers") {
           // Approvers endpoint
           await route.fulfill({
             status: 200,
-            contentType: 'application/json',
+            contentType: "application/json",
             body: JSON.stringify({
               approvers: [],
               total: 0,
@@ -737,11 +870,11 @@ export async function interceptIndexerAPI(page, sandbox) {
           return;
         }
 
-        if (pathParts[2] === 'recipients') {
+        if (pathParts[2] === "recipients") {
           // Recipients endpoint
           await route.fulfill({
             status: 200,
-            contentType: 'application/json',
+            contentType: "application/json",
             body: JSON.stringify({
               recipients: [],
               total: 0,
@@ -750,11 +883,11 @@ export async function interceptIndexerAPI(page, sandbox) {
           return;
         }
 
-        if (pathParts[2] === 'proposers') {
+        if (pathParts[2] === "proposers") {
           // Proposers endpoint
           await route.fulfill({
             status: 200,
-            contentType: 'application/json',
+            contentType: "application/json",
             body: JSON.stringify({
               proposers: [],
               total: 0,
@@ -763,11 +896,11 @@ export async function interceptIndexerAPI(page, sandbox) {
           return;
         }
 
-        if (pathParts[2] === 'requested-tokens') {
+        if (pathParts[2] === "requested-tokens") {
           // Requested tokens endpoint
           await route.fulfill({
             status: 200,
-            contentType: 'application/json',
+            contentType: "application/json",
             body: JSON.stringify({
               requested_tokens: [],
               total: 0,
@@ -776,11 +909,11 @@ export async function interceptIndexerAPI(page, sandbox) {
           return;
         }
 
-        if (pathParts[2] === 'validators') {
+        if (pathParts[2] === "validators") {
           // Validators endpoint
           await route.fulfill({
             status: 200,
-            contentType: 'application/json',
+            contentType: "application/json",
             body: JSON.stringify({
               validators: [],
               total: 0,
@@ -793,15 +926,14 @@ export async function interceptIndexerAPI(page, sandbox) {
       // Default: return empty response
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Not implemented for sandbox' }),
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Not implemented for sandbox" }),
       });
-
     } catch (error) {
-      console.error('Error intercepting indexer API:', error);
+      console.error("Error intercepting indexer API:", error);
       await route.fulfill({
         status: 500,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({ error: error.message }),
       });
     }
@@ -820,17 +952,20 @@ export async function interceptRPC(page, sandbox) {
     const postData = request.postDataJSON();
 
     // Log RPC method calls for debugging
-    const method = postData?.params?.method_name || postData?.method || 'unknown';
-    if (method === 'get_last_proposal_id' || method.includes('proposal')) {
-      console.log(`RPC: ${method} for ${postData?.params?.account_id || 'unknown'}`);
+    const method =
+      postData?.params?.method_name || postData?.method || "unknown";
+    if (method === "get_last_proposal_id" || method.includes("proposal")) {
+      console.log(
+        `RPC: ${method} for ${postData?.params?.account_id || "unknown"}`
+      );
     }
 
     try {
       // Forward the request to sandbox RPC
       const response = await fetch(sandboxRpcUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(postData),
       });
@@ -838,17 +973,17 @@ export async function interceptRPC(page, sandbox) {
       const responseData = await response.json();
 
       // Log response for proposal-related calls
-      if (method === 'get_last_proposal_id') {
+      if (method === "get_last_proposal_id") {
         console.log(`get_last_proposal_id response:`, responseData?.result);
       }
 
       await route.fulfill({
         status: response.status,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify(responseData),
       });
     } catch (error) {
-      console.error('Error intercepting RPC:', error);
+      console.error("Error intercepting RPC:", error);
       await route.abort();
     }
   });

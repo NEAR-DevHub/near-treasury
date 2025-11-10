@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, injectTestWallet, interceptIndexerAPI, parseNEAR } from "../../util/sandbox.js";
+import {
+  NearSandbox,
+  injectTestWallet,
+  interceptIndexerAPI,
+  parseNEAR,
+} from "../../util/sandbox.js";
 
 /**
  * Vote on Payment Request Tests - Table View
@@ -40,15 +45,24 @@ test.describe("Vote on Payment Request - Table View", () => {
     );
 
     // Create creator account with 10000 NEAR
-    creatorAccountId = await sandbox.createAccount("testcreator.near", "10000000000000000000000000000");
+    creatorAccountId = await sandbox.createAccount(
+      "testcreator.near",
+      "10000000000000000000000000000"
+    );
     console.log(`Creator account: ${creatorAccountId}`);
 
     // Create voter account with 10000 NEAR
-    voterAccountId = await sandbox.createAccount("testvoter.near", "10000000000000000000000000000");
+    voterAccountId = await sandbox.createAccount(
+      "testvoter.near",
+      "10000000000000000000000000000"
+    );
     console.log(`Voter account: ${voterAccountId}`);
 
     // Create non-voter account with 10000 NEAR (has no voting permissions)
-    nonVoterAccountId = await sandbox.createAccount("nonvoter.near", "10000000000000000000000000000");
+    nonVoterAccountId = await sandbox.createAccount(
+      "nonvoter.near",
+      "10000000000000000000000000000"
+    );
     console.log(`Non-voter account: ${nonVoterAccountId}`);
 
     // Initialize the factory
@@ -142,25 +156,27 @@ test.describe("Vote on Payment Request - Table View", () => {
 
   test.afterEach(async ({ page }) => {
     // Clean up route handlers before closing page
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.unrouteAll({ behavior: "ignoreErrors" });
 
     if (sandbox) {
       await sandbox.stop();
     }
   });
 
-  test("user without voting permissions should not see vote buttons", async ({ page }) => {
+  test("user without voting permissions should not see vote buttons", async ({
+    page,
+  }) => {
     test.setTimeout(90000); // 90 seconds
 
     console.log("\n=== Test: Role-Based Access Control ===\n");
 
     // Add console logging to debug UI stability issues
-    page.on('console', msg => {
-      if (msg.type() === 'error' || msg.type() === 'warning') {
+    page.on("console", (msg) => {
+      if (msg.type() === "error" || msg.type() === "warning") {
         console.log(`Browser ${msg.type()}: ${msg.text()}`);
       }
     });
-    page.on('pageerror', err => console.log('Page error:', err.message));
+    page.on("pageerror", (err) => console.log("Page error:", err.message));
 
     // Setup interceptors before navigation
     await interceptIndexerAPI(page, sandbox, daoAccountId);
@@ -179,7 +195,9 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // First, create a proposal as creator
     await injectTestWallet(page, sandbox, creatorAccountId);
-    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
 
     // Create a payment request
     await page.getByRole("button", { name: "Create Request" }).click();
@@ -191,13 +209,13 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Select Treasury Wallet (SputnikDAO)
     await expect(offcanvas.getByText("Treasury Wallet")).toBeVisible();
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
-    await walletDropdown.waitFor({ state: 'visible', timeout: 10000 });
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
+    await walletDropdown.waitFor({ state: "visible", timeout: 10000 });
     await walletDropdown.click();
     await page.waitForTimeout(1000);
 
     const sputnikOption = page.locator('text="SputnikDAO"').last();
-    await sputnikOption.waitFor({ state: 'visible', timeout: 10000 });
+    await sputnikOption.waitFor({ state: "visible", timeout: 10000 });
     await sputnikOption.click();
     await page.waitForTimeout(2000);
 
@@ -206,11 +224,11 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Fill Title
     const titleInput = offcanvas.locator('input[type="text"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
+    await titleInput.waitFor({ state: "visible", timeout: 10000 });
     await titleInput.fill("Role-Based Access Test");
 
     // Fill Summary
-    const summaryInput = offcanvas.locator('textarea').first();
+    const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing role-based access control");
 
     // Fill Recipient
@@ -226,7 +244,10 @@ test.describe("Vote on Payment Request - Table View", () => {
     await page.waitForTimeout(1000);
 
     // Fill Amount
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
     await amountInput.click();
     await amountInput.fill("2");
     await page.waitForTimeout(500);
@@ -240,10 +261,12 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Now switch to non-voter account
     await injectTestWallet(page, sandbox, nonVoterAccountId);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: "networkidle" });
 
     // Should see pending requests tab
-    await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Pending Requests")).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ On Pending Requests tab");
 
     // Vote buttons should NOT be visible for non-voter
@@ -252,7 +275,9 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     await expect(approveButton).toBeHidden({ timeout: 5000 });
     await expect(rejectButton).toBeHidden({ timeout: 5000 });
-    console.log("✓ Vote buttons are hidden for user without voting permissions");
+    console.log(
+      "✓ Vote buttons are hidden for user without voting permissions"
+    );
   });
 
   test("reject payment request", async ({ page }) => {
@@ -277,7 +302,9 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Create proposal as creator
     await injectTestWallet(page, sandbox, creatorAccountId);
-    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
 
     await page.getByRole("button", { name: "Create Request" }).click();
     await page.waitForTimeout(1000);
@@ -287,13 +314,13 @@ test.describe("Vote on Payment Request - Table View", () => {
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
     await expect(offcanvas.getByText("Treasury Wallet")).toBeVisible();
 
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
-    await walletDropdown.waitFor({ state: 'visible', timeout: 10000 });
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
+    await walletDropdown.waitFor({ state: "visible", timeout: 10000 });
     await walletDropdown.click();
     await page.waitForTimeout(1000);
 
     const sputnikOption = page.locator('text="SputnikDAO"').last();
-    await sputnikOption.waitFor({ state: 'visible', timeout: 10000 });
+    await sputnikOption.waitFor({ state: "visible", timeout: 10000 });
     await sputnikOption.click();
     await page.waitForTimeout(2000);
 
@@ -301,10 +328,10 @@ test.describe("Vote on Payment Request - Table View", () => {
     await page.waitForTimeout(1000);
 
     const titleInput = offcanvas.locator('input[type="text"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
+    await titleInput.waitFor({ state: "visible", timeout: 10000 });
     await titleInput.fill("Payment for Rejection Test");
 
-    const summaryInput = offcanvas.locator('textarea').first();
+    const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing payment rejection workflow");
 
     const recipientInput = offcanvas.getByPlaceholder("treasury.near");
@@ -317,7 +344,10 @@ test.describe("Vote on Payment Request - Table View", () => {
     await page.getByText("NEAR", { exact: true }).first().click();
     await page.waitForTimeout(1000);
 
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
     await amountInput.click();
     await amountInput.fill("3");
     await page.waitForTimeout(500);
@@ -330,9 +360,11 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Switch to voter account to reject
     await injectTestWallet(page, sandbox, voterAccountId);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: "networkidle" });
 
-    await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Pending Requests")).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ On Pending Requests tab");
 
     // Click reject button
@@ -348,7 +380,9 @@ test.describe("Vote on Payment Request - Table View", () => {
     }
 
     // Verify rejection succeeded - toast shows "Your vote is counted"
-    await expect(page.getByText(/your vote is counted|vote.*counted/i)).toBeVisible({ timeout: 30000 });
+    await expect(
+      page.getByText(/your vote is counted|vote.*counted/i)
+    ).toBeVisible({ timeout: 30000 });
     console.log("✓ Vote counted notification appeared");
 
     // Wait for toast to disappear and reload to see updated status
@@ -357,12 +391,24 @@ test.describe("Vote on Payment Request - Table View", () => {
     // Direct contract verification: query the proposal to check its status and votes
     const proposalId = 0; // First proposal created in this test
     try {
-      const proposal = await sandbox.viewFunction(daoAccountId, 'get_proposal', { id: proposalId });
-      console.log(`✓ Proposal ${proposalId} status in contract:`, proposal.status);
-      console.log(`✓ Proposal ${proposalId} votes:`, JSON.stringify(proposal.votes));
+      const proposal = await sandbox.viewFunction(
+        daoAccountId,
+        "get_proposal",
+        { id: proposalId }
+      );
+      console.log(
+        `✓ Proposal ${proposalId} status in contract:`,
+        proposal.status
+      );
+      console.log(
+        `✓ Proposal ${proposalId} votes:`,
+        JSON.stringify(proposal.votes)
+      );
 
       // Check what votes exist
-      const hasRejectVote = Object.values(proposal.votes || {}).some(vote => vote === 'Reject');
+      const hasRejectVote = Object.values(proposal.votes || {}).some(
+        (vote) => vote === "Reject"
+      );
       if (hasRejectVote) {
         console.log(`✓ Contract verification: Proposal has "Reject" vote(s)`);
       }
@@ -372,14 +418,20 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Switch back to creator account to verify the rejection badge
     await injectTestWallet(page, sandbox, creatorAccountId);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: "networkidle" });
 
     // Verify proposal remains in Pending Requests with "You Rejected" badge
     // Note: Proposals stay "InProgress" until someone calls finalize()
     // They don't automatically move to History just from having reject votes
-    await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/You Rejected/i)).toBeVisible({ timeout: 10000 });
-    console.log("✓ Proposal with reject vote remains in Pending Requests with 'You Rejected' badge");
+    await expect(page.getByText("Pending Requests")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByText(/You Rejected/i)).toBeVisible({
+      timeout: 10000,
+    });
+    console.log(
+      "✓ Proposal with reject vote remains in Pending Requests with 'You Rejected' badge"
+    );
   });
 
   test("approve payment request from table", async ({ page }) => {
@@ -403,7 +455,9 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Create proposal as creator
     await injectTestWallet(page, sandbox, creatorAccountId);
-    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
 
     await page.getByRole("button", { name: "Create Request" }).click();
     await page.waitForTimeout(1000);
@@ -412,22 +466,22 @@ test.describe("Vote on Payment Request - Table View", () => {
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
     await expect(offcanvas.getByText("Treasury Wallet")).toBeVisible();
 
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
-    await walletDropdown.waitFor({ state: 'visible', timeout: 10000 });
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
+    await walletDropdown.waitFor({ state: "visible", timeout: 10000 });
     await walletDropdown.click();
     await page.waitForTimeout(1000);
 
     const sputnikOption = page.locator('text="SputnikDAO"').last();
-    await sputnikOption.waitFor({ state: 'visible', timeout: 10000 });
+    await sputnikOption.waitFor({ state: "visible", timeout: 10000 });
     await sputnikOption.click();
     await page.waitForTimeout(2000);
 
     await page.waitForTimeout(1000);
     const titleInput = offcanvas.locator('input[type="text"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
+    await titleInput.waitFor({ state: "visible", timeout: 10000 });
     await titleInput.fill("Approve from Table Test");
 
-    const summaryInput = offcanvas.locator('textarea').first();
+    const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing approve from table");
 
     const recipientInput = offcanvas.getByPlaceholder("treasury.near");
@@ -440,7 +494,10 @@ test.describe("Vote on Payment Request - Table View", () => {
     await page.getByText("NEAR", { exact: true }).first().click();
     await page.waitForTimeout(1000);
 
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
     await amountInput.click();
     await amountInput.fill("5");
     await page.waitForTimeout(500);
@@ -453,13 +510,17 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Switch to voter account to approve from table
     await injectTestWallet(page, sandbox, voterAccountId);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: "networkidle" });
 
-    await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Pending Requests")).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ On Pending Requests tab");
 
     // Click approve button in the table
-    const approveButton = page.getByRole("button", { name: /^approve$/i }).first();
+    const approveButton = page
+      .getByRole("button", { name: /^approve$/i })
+      .first();
     await expect(approveButton).toBeVisible({ timeout: 10000 });
     await approveButton.click();
     console.log("✓ Clicked approve button in table");
@@ -471,7 +532,9 @@ test.describe("Vote on Payment Request - Table View", () => {
     }
 
     // Verify approval succeeded
-    await expect(page.getByText(/your vote is counted|vote.*counted/i)).toBeVisible({ timeout: 30000 });
+    await expect(
+      page.getByText(/your vote is counted|vote.*counted/i)
+    ).toBeVisible({ timeout: 30000 });
     console.log("✓ Approve vote from table successful");
   });
 
@@ -496,7 +559,9 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Create proposal as creator
     await injectTestWallet(page, sandbox, creatorAccountId);
-    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
+      waitUntil: "networkidle",
+    });
 
     await page.getByRole("button", { name: "Create Request" }).click();
     await page.waitForTimeout(1000);
@@ -505,22 +570,22 @@ test.describe("Vote on Payment Request - Table View", () => {
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
     await expect(offcanvas.getByText("Treasury Wallet")).toBeVisible();
 
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
-    await walletDropdown.waitFor({ state: 'visible', timeout: 10000 });
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
+    await walletDropdown.waitFor({ state: "visible", timeout: 10000 });
     await walletDropdown.click();
     await page.waitForTimeout(1000);
 
     const sputnikOption = page.locator('text="SputnikDAO"').last();
-    await sputnikOption.waitFor({ state: 'visible', timeout: 10000 });
+    await sputnikOption.waitFor({ state: "visible", timeout: 10000 });
     await sputnikOption.click();
     await page.waitForTimeout(2000);
 
     await page.waitForTimeout(1000);
     const titleInput = offcanvas.locator('input[type="text"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
+    await titleInput.waitFor({ state: "visible", timeout: 10000 });
     await titleInput.fill("Delete from Table Test");
 
-    const summaryInput = offcanvas.locator('textarea').first();
+    const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing delete from table");
 
     const recipientInput = offcanvas.getByPlaceholder("treasury.near");
@@ -533,7 +598,10 @@ test.describe("Vote on Payment Request - Table View", () => {
     await page.getByText("NEAR", { exact: true }).first().click();
     await page.waitForTimeout(1000);
 
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
     await amountInput.click();
     await amountInput.fill("1");
     await page.waitForTimeout(500);
@@ -545,11 +613,13 @@ test.describe("Vote on Payment Request - Table View", () => {
     console.log("✓ Payment request created");
 
     // Reload to see the proposal
-    await page.reload({ waitUntil: 'networkidle' });
-    await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByText("Pending Requests")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Click trash icon in table row
-    const trashIconInTable = page.locator('tbody tr .bi-trash').first();
+    const trashIconInTable = page.locator("tbody tr .bi-trash").first();
     await expect(trashIconInTable).toBeVisible({ timeout: 10000 });
     await trashIconInTable.click();
     console.log("✓ Clicked delete button in table");
@@ -562,23 +632,39 @@ test.describe("Vote on Payment Request - Table View", () => {
     console.log("✓ Confirmed deletion");
 
     await page.waitForTimeout(10000);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: "networkidle" });
     await page.waitForTimeout(2000);
 
     // Direct contract verification: query the proposal to check its votes
     // Note: The contract does NOT delete proposals - it keeps them with "Remove" votes
     const proposalId = 0; // First proposal created in this test
     try {
-      const proposal = await sandbox.viewFunction(daoAccountId, 'get_proposal', { id: proposalId });
-      console.log(`✓ Proposal ${proposalId} status in contract:`, proposal.status);
-      console.log(`✓ Proposal ${proposalId} votes:`, JSON.stringify(proposal.votes));
+      const proposal = await sandbox.viewFunction(
+        daoAccountId,
+        "get_proposal",
+        { id: proposalId }
+      );
+      console.log(
+        `✓ Proposal ${proposalId} status in contract:`,
+        proposal.status
+      );
+      console.log(
+        `✓ Proposal ${proposalId} votes:`,
+        JSON.stringify(proposal.votes)
+      );
 
       // Verify the proposal has a "Remove" vote
-      const hasRemoveVote = Object.values(proposal.votes || {}).some(vote => vote === 'Remove');
+      const hasRemoveVote = Object.values(proposal.votes || {}).some(
+        (vote) => vote === "Remove"
+      );
       if (hasRemoveVote) {
-        console.log(`✓ Contract verification: Proposal has "Remove" vote (should be filtered by indexer)`);
+        console.log(
+          `✓ Contract verification: Proposal has "Remove" vote (should be filtered by indexer)`
+        );
       } else {
-        console.warn(`⚠ WARNING: Expected proposal to have "Remove" vote but it doesn't!`);
+        console.warn(
+          `⚠ WARNING: Expected proposal to have "Remove" vote but it doesn't!`
+        );
       }
     } catch (error) {
       console.error(`✗ Error querying proposal from contract:`, error.message);
@@ -586,7 +672,11 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Verify proposal is gone from Pending Requests (filtered by mock indexer)
     await expect(page.getByText("Delete from Table Test")).not.toBeVisible();
-    console.log("✓ Proposal removed from Pending Requests (filtered out by indexer)");
-    console.log("✓ Delete from table successful - indexer correctly filters proposals with Remove votes");
+    console.log(
+      "✓ Proposal removed from Pending Requests (filtered out by indexer)"
+    );
+    console.log(
+      "✓ Delete from table successful - indexer correctly filters proposals with Remove votes"
+    );
   });
 });

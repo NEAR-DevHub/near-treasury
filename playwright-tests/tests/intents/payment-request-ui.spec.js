@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, injectTestWallet, interceptIndexerAPI, parseNEAR } from "../../util/sandbox.js";
+import {
+  NearSandbox,
+  injectTestWallet,
+  interceptIndexerAPI,
+  parseNEAR,
+} from "../../util/sandbox.js";
 
 const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
 const PROPOSAL_BOND = "0";
@@ -57,7 +62,10 @@ test.describe("Payment Request UI Flow", () => {
     expect(nativeToken.near_token_id).toEqual("btc.omft.near");
 
     // Import and setup omft.near contract
-    omftContractId = await sandbox.importMainnetContract("omft.near", "omft.near");
+    omftContractId = await sandbox.importMainnetContract(
+      "omft.near",
+      "omft.near"
+    );
 
     // Fetch BTC token metadata from mainnet
     const btcMetadata = await sandbox.viewFunctionMainnet(
@@ -66,20 +74,15 @@ test.describe("Payment Request UI Flow", () => {
     );
 
     // Initialize omft contract
-    await sandbox.functionCall(
-      omftContractId,
-      omftContractId,
-      "new",
-      {
-        super_admins: ["omft.near"],
-        admins: {},
-        grantees: {
-          DAO: ["omft.near"],
-          TokenDeployer: ["omft.near"],
-          TokenDepositer: ["omft.near"],
-        },
-      }
-    );
+    await sandbox.functionCall(omftContractId, omftContractId, "new", {
+      super_admins: ["omft.near"],
+      admins: {},
+      grantees: {
+        DAO: ["omft.near"],
+        TokenDeployer: ["omft.near"],
+        TokenDepositer: ["omft.near"],
+      },
+    });
 
     // Deploy BTC token
     await sandbox.functionCall(
@@ -95,7 +98,8 @@ test.describe("Payment Request UI Flow", () => {
     );
 
     // Deploy USDC (BASE) token
-    const usdcBaseTokenId = "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near";
+    const usdcBaseTokenId =
+      "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near";
     const usdcBaseMetadata = await sandbox.viewFunctionMainnet(
       usdcBaseTokenId,
       "ft_metadata"
@@ -113,26 +117,24 @@ test.describe("Payment Request UI Flow", () => {
     );
 
     // Import and setup intents.near contract
-    intentsContractId = await sandbox.importMainnetContract("intents.near", "intents.near");
-    await sandbox.functionCall(
-      intentsContractId,
-      intentsContractId,
-      "new",
-      {
-        config: {
-          wnear_id: "wrap.near",
-          fees: {
-            fee: 100,
-            fee_collector: "intents.near",
-          },
-          roles: {
-            super_admins: ["intents.near"],
-            admins: {},
-            grantees: {},
-          },
-        },
-      }
+    intentsContractId = await sandbox.importMainnetContract(
+      "intents.near",
+      "intents.near"
     );
+    await sandbox.functionCall(intentsContractId, intentsContractId, "new", {
+      config: {
+        wnear_id: "wrap.near",
+        fees: {
+          fee: 100,
+          fee_collector: "intents.near",
+        },
+        roles: {
+          super_admins: ["intents.near"],
+          admins: {},
+          grantees: {},
+        },
+      },
+    });
 
     // Register intents contract with BTC token storage
     await sandbox.functionCall(
@@ -175,7 +177,10 @@ test.describe("Payment Request UI Flow", () => {
     );
 
     // Create testcreator account with 3000 NEAR initial balance
-    creatorAccountId = await sandbox.createAccount("testcreator.near", "3000000000000000000000000000");
+    creatorAccountId = await sandbox.createAccount(
+      "testcreator.near",
+      "3000000000000000000000000000"
+    );
 
     // Create testdao using the factory
     const daoName = "testdao";
@@ -263,7 +268,8 @@ test.describe("Payment Request UI Flow", () => {
         memo: `BRIDGED_FROM:${JSON.stringify({
           networkType: "btc",
           chainId: "1",
-          txHash: "0xc6b7ecd5c7517a8f56ac7ec9befed7d26a459fc97c7d5cd7598d4e19b5a806b7",
+          txHash:
+            "0xc6b7ecd5c7517a8f56ac7ec9befed7d26a459fc97c7d5cd7598d4e19b5a806b7",
         })}`,
       },
       "300000000000000",
@@ -295,7 +301,10 @@ test.describe("Payment Request UI Flow", () => {
     console.log("✓ Deposited 100,000 USDC to DAO via intents");
 
     // Import and setup wrap.near contract for wNEAR
-    const wrapNearContractId = await sandbox.importMainnetContract("wrap.near", "wrap.near");
+    const wrapNearContractId = await sandbox.importMainnetContract(
+      "wrap.near",
+      "wrap.near"
+    );
 
     // Initialize wrap.near contract with proper parameters
     await sandbox.functionCall(
@@ -346,7 +355,9 @@ test.describe("Payment Request UI Flow", () => {
         account_id: creatorAccountId,
       }
     );
-    console.log(`✓ testcreator wNEAR balance before transfer: ${creatorBalanceBefore}`);
+    console.log(
+      `✓ testcreator wNEAR balance before transfer: ${creatorBalanceBefore}`
+    );
 
     // Transfer wNEAR to intents contract for the DAO (transfer less than deposited to account for fees)
     await sandbox.functionCall(
@@ -375,7 +386,9 @@ test.describe("Payment Request UI Flow", () => {
         account_id: intentsContractId,
       }
     );
-    console.log(`✓ intents.near wNEAR balance on wrap.near: ${intentsWnearBalance}`);
+    console.log(
+      `✓ intents.near wNEAR balance on wrap.near: ${intentsWnearBalance}`
+    );
 
     // Debug: Check wNEAR balance in intents contract
     const wnearBalance = await sandbox.viewFunction(
@@ -386,14 +399,16 @@ test.describe("Payment Request UI Flow", () => {
         token_id: `nep141:${wrapNearContractId}`,
       }
     );
-    console.log(`✓ wNEAR balance for ${daoAccountId} in intents: ${wnearBalance}`);
+    console.log(
+      `✓ wNEAR balance for ${daoAccountId} in intents: ${wnearBalance}`
+    );
 
     console.log("\n=== Setup Complete ===\n");
   });
 
   test.afterEach(async ({ page }) => {
     // Clean up page routes before closing
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.unrouteAll({ behavior: "ignoreErrors" });
     await page.close();
   });
 
@@ -413,14 +428,14 @@ test.describe("Payment Request UI Flow", () => {
     test.setTimeout(120000); // 2 minutes
 
     // Listen for console errors
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        console.log('Browser console error:', msg.text());
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        console.log("Browser console error:", msg.text());
       }
     });
 
-    page.on('pageerror', error => {
-      console.log('Browser page error:', error.message);
+    page.on("pageerror", (error) => {
+      console.log("Browser page error:", error.message);
     });
 
     // Inject test wallet before navigation
@@ -471,7 +486,7 @@ test.describe("Payment Request UI Flow", () => {
 
     // Set localStorage after page loads
     await page.evaluate(() => {
-      localStorage.setItem('selected-wallet', 'test-wallet');
+      localStorage.setItem("selected-wallet", "test-wallet");
     });
     console.log("✓ Set localStorage selected-wallet");
 
@@ -488,7 +503,11 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Dashboard" }).click();
     await page.waitForTimeout(1000);
 
-    const initialBtcAmountElement = page.getByTestId('intents-portfolio').locator("div.flex-column", {hasText: "BTC"}).locator("div.h6.mb-0").last();
+    const initialBtcAmountElement = page
+      .getByTestId("intents-portfolio")
+      .locator("div.flex-column", { hasText: "BTC" })
+      .locator("div.h6.mb-0")
+      .last();
     await expect(initialBtcAmountElement).toHaveText("320");
 
     await initialBtcAmountElement.scrollIntoViewIfNeeded();
@@ -516,42 +535,57 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByTestId("tokens-dropdown").locator("div").first().click();
 
     // Wait for the token selection modal to appear
-    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10_000 });
 
     // Verify BTC is available with the balance
     await expect(page.getByText("BTC", { exact: true })).toBeVisible();
-    await expect(page.getByText("320.00 through BTC")).toBeVisible();
+    await expect(page.getByText("320 through BTC")).toBeVisible();
     console.log("✓ BTC token is available in dropdown");
 
     // Select BTC token - try clicking on a more specific element
     // Look for a clickable container that has both BTC text and the balance info
-    await page.locator('.modal-body').getByText("BTC", { exact: true }).click({ force: true });
+    await page
+      .locator(".modal-body")
+      .getByText("BTC", { exact: true })
+      .click({ force: true });
 
     // Wait for modal to close
-    await expect(page.getByRole('heading', { name: 'Select Token' })).not.toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).not.toBeVisible({ timeout: 10000 });
     console.log("✓ Selected BTC token");
 
     // Wait for form to update after token selection
     await page.waitForTimeout(1000);
 
     // Fill in Title field
-    await page.getByRole('textbox', { name: 'Title' }).click();
-    await page.getByRole('textbox', { name: 'Title' }).fill("btc proposal title");
+    await page.getByRole("textbox", { name: "Title" }).click();
+    await page
+      .getByRole("textbox", { name: "Title" })
+      .fill("btc proposal title");
     console.log("✓ Filled title");
 
     // Fill in Summary field
-    await page.getByRole('textbox', { name: 'Summary' }).click();
-    await page.getByRole('textbox', { name: 'Summary' }).fill("describing the btc payment request proposal");
+    await page.getByRole("textbox", { name: "Summary" }).click();
+    await page
+      .getByRole("textbox", { name: "Summary" })
+      .fill("describing the btc payment request proposal");
     console.log("✓ Filled summary");
 
     // Fill in BTC recipient address
-    await page.getByRole('textbox', { name: 'Enter BTC Address (e.g., bc1' }).click();
-    await page.getByRole('textbox', { name: 'Enter BTC Address (e.g., bc1' }).fill("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+    await page
+      .getByRole("textbox", { name: "Enter BTC Address (e.g., bc1" })
+      .click();
+    await page
+      .getByRole("textbox", { name: "Enter BTC Address (e.g., bc1" })
+      .fill("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
     console.log("✓ Filled BTC recipient address");
 
     // Fill in amount
-    await page.getByRole('spinbutton', { name: 'Total Amount' }).click();
-    await page.getByRole('spinbutton', { name: 'Total Amount' }).fill("2");
+    await page.getByRole("spinbutton", { name: "Total Amount" }).click();
+    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2");
     console.log("✓ Filled amount: 2 BTC");
 
     // Verify no validation errors and submit button is enabled
@@ -563,7 +597,7 @@ test.describe("Payment Request UI Flow", () => {
     // Take screenshot before submitting
     await page.screenshot({
       path: "playwright-tests/screenshots/payment-request-filled.png",
-      fullPage: true
+      fullPage: true,
     });
 
     // Submit the form
@@ -576,27 +610,34 @@ test.describe("Payment Request UI Flow", () => {
     console.log("✓ Waiting for transaction to complete");
 
     // Check if there's an error message
-    const hasError = await page.getByText("Failed to create payment request").isVisible().catch(() => false);
+    const hasError = await page
+      .getByText("Failed to create payment request")
+      .isVisible()
+      .catch(() => false);
     if (hasError) {
       console.log("ERROR: Transaction failed to create payment request");
       // Take screenshot of error
       await page.screenshot({
         path: "playwright-tests/screenshots/payment-request-error.png",
-        fullPage: true
+        fullPage: true,
       });
       throw new Error("Transaction signing failed - check screenshot");
     }
 
     // The modal should close after successful transaction
-    await expect(page.getByText("Create Payment Request")).not.toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Create Payment Request")).not.toBeVisible({
+      timeout: 15000,
+    });
     console.log("✓ Transaction submitted successfully, modal closed");
 
     // Wait for success toast
-    await expect(page.getByText("Payment request has been successfully created.")).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByText("Payment request has been successfully created.")
+    ).toBeVisible({ timeout: 10000 });
     console.log("✓ Payment request created successfully");
 
     // Verify the "View Request" link is present in the toast
-    const viewRequestLink = page.getByText('View Request');
+    const viewRequestLink = page.getByText("View Request");
     await expect(viewRequestLink).toBeVisible();
     console.log("✓ 'View Request' link is visible in toast");
 
@@ -604,12 +645,18 @@ test.describe("Payment Request UI Flow", () => {
     await page.waitForTimeout(2500); // Wait slightly longer than the 2s cache invalidation delay
 
     // Hard expectation: Proposal MUST be visible in the table
-    const proposalRow = page.locator('tbody tr').filter({ hasText: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh' }).first();
+    const proposalRow = page
+      .locator("tbody tr")
+      .filter({ hasText: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" })
+      .first();
     await expect(proposalRow).toBeVisible({ timeout: 3000 });
     console.log("✓ Proposal is visible in table (fix verified!)");
 
     // Extract the proposal ID from the table row to verify "View Request" link points to it
-    const proposalIdInTable = await proposalRow.locator('td').first().textContent();
+    const proposalIdInTable = await proposalRow
+      .locator("td")
+      .first()
+      .textContent();
     console.log(`✓ Proposal ID in table: ${proposalIdInTable}`);
 
     // Verify the "View Request" link points to the same proposal by clicking it
@@ -620,7 +667,9 @@ test.describe("Payment Request UI Flow", () => {
     // Check that the URL contains the proposal ID (format: ?id=0)
     const currentUrl = page.url();
     expect(currentUrl).toContain(`id=${proposalIdInTable}`);
-    console.log(`✓ 'View Request' link correctly points to proposal ${proposalIdInTable}`);
+    console.log(
+      `✓ 'View Request' link correctly points to proposal ${proposalIdInTable}`
+    );
 
     // Navigate back to the payments page
     await page.goBack();
@@ -636,8 +685,10 @@ test.describe("Payment Request UI Flow", () => {
 
     // If sidebar is open, click the expand button to open full detail page
     // This avoids duplicate elements (sidebar + table)
-    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
-    const isExpandButtonVisible = await expandButton.isVisible().catch(() => false);
+    const expandButton = page.locator(".bi.bi-arrows-angle-expand");
+    const isExpandButtonVisible = await expandButton
+      .isVisible()
+      .catch(() => false);
 
     if (isExpandButtonVisible) {
       await expandButton.click();
@@ -646,9 +697,15 @@ test.describe("Payment Request UI Flow", () => {
     }
 
     // Verify proposal details on detail page
-    await expect(page.getByRole("heading", { name: "btc proposal title" }).first()).toBeVisible();
-    await expect(page.getByText("describing the btc payment request proposal").first()).toBeVisible();
-    await expect(page.getByText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh").first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "btc proposal title" }).first()
+    ).toBeVisible();
+    await expect(
+      page.getByText("describing the btc payment request proposal").first()
+    ).toBeVisible();
+    await expect(
+      page.getByText("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh").first()
+    ).toBeVisible();
     console.log("✓ Proposal details verified on detail page");
 
     // Verify balance before approval
@@ -717,13 +774,15 @@ test.describe("Payment Request UI Flow", () => {
     // Take final screenshot
     await page.screenshot({
       path: "playwright-tests/screenshots/payment-request-completed.png",
-      fullPage: true
+      fullPage: true,
     });
 
     console.log("\n✓✓✓ BTC Payment request flow completed successfully! ✓✓✓\n");
   });
 
-  test("should create USDC payment request to BASE address", async ({ page }) => {
+  test("should create USDC payment request to BASE address", async ({
+    page,
+  }) => {
     test.setTimeout(120000); // 2 minutes
 
     // Inject test wallet before navigation
@@ -769,7 +828,7 @@ test.describe("Payment Request UI Flow", () => {
 
     // Set localStorage
     await page.evaluate(() => {
-      localStorage.setItem('selected-wallet', 'test-wallet');
+      localStorage.setItem("selected-wallet", "test-wallet");
     });
 
     await page.reload();
@@ -804,20 +863,33 @@ test.describe("Payment Request UI Flow", () => {
 
     // Open tokens dropdown
     await page.getByTestId("tokens-dropdown").locator("div").first().click();
-    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10_000 });
 
     // Select USDC token
-    await page.locator('.modal-body').getByText("USDC", { exact: true }).click({ force: true });
-    await expect(page.getByRole('heading', { name: 'Select Token' })).not.toBeVisible({ timeout: 10000 });
+    await page
+      .locator(".modal-body")
+      .getByText("USDC", { exact: true })
+      .click({ force: true });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).not.toBeVisible({ timeout: 10000 });
     console.log("✓ Selected USDC token");
 
     await page.waitForTimeout(1000);
 
     // Fill in form
-    await page.getByRole('textbox', { name: 'Title' }).fill("usdc proposal title");
-    await page.getByRole('textbox', { name: 'Summary' }).fill("describing the usdc payment request proposal");
-    await page.getByPlaceholder(/Enter .* Address \(0x/).fill("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
-    await page.getByRole('spinbutton', { name: 'Total Amount' }).fill("2500");
+    await page
+      .getByRole("textbox", { name: "Title" })
+      .fill("usdc proposal title");
+    await page
+      .getByRole("textbox", { name: "Summary" })
+      .fill("describing the usdc payment request proposal");
+    await page
+      .getByPlaceholder(/Enter .* Address \(0x/)
+      .fill("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2500");
     console.log("✓ Filled form with USDC payment details");
 
     // Submit
@@ -826,29 +898,42 @@ test.describe("Payment Request UI Flow", () => {
     await page.waitForTimeout(3000);
 
     // Verify proposal created
-    await expect(page.getByText("Create Payment Request")).not.toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("Payment request has been successfully created.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Create Payment Request")).not.toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      page.getByText("Payment request has been successfully created.")
+    ).toBeVisible({ timeout: 10000 });
     console.log("✓ USDC payment request created successfully");
 
     await page.waitForTimeout(2500);
 
     // Find and click proposal
-    const proposalRow = page.locator('tbody tr').filter({ hasText: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' }).first();
+    const proposalRow = page
+      .locator("tbody tr")
+      .filter({ hasText: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" })
+      .first();
     await expect(proposalRow).toBeVisible({ timeout: 3000 });
     await proposalRow.click();
     await page.waitForTimeout(2000);
 
     // Expand to full detail page
-    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
-    const isExpandButtonVisible = await expandButton.isVisible().catch(() => false);
+    const expandButton = page.locator(".bi.bi-arrows-angle-expand");
+    const isExpandButtonVisible = await expandButton
+      .isVisible()
+      .catch(() => false);
     if (isExpandButtonVisible) {
       await expandButton.click();
       await page.waitForTimeout(1000);
     }
 
     // Verify proposal details
-    await expect(page.getByRole("heading", { name: "usdc proposal title" }).first()).toBeVisible();
-    await expect(page.getByText("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045").first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "usdc proposal title" }).first()
+    ).toBeVisible();
+    await expect(
+      page.getByText("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045").first()
+    ).toBeVisible();
 
     // Verify balance before approval
     const balanceBefore = await sandbox.viewFunction(
@@ -856,7 +941,9 @@ test.describe("Payment Request UI Flow", () => {
       "mt_batch_balance_of",
       {
         account_id: daoAccountId,
-        token_ids: ["nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near"],
+        token_ids: [
+          "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+        ],
       }
     );
     expect(balanceBefore).toEqual(["100000000000"]); // 100,000 USDC with 6 decimals
@@ -881,7 +968,9 @@ test.describe("Payment Request UI Flow", () => {
       "mt_batch_balance_of",
       {
         account_id: daoAccountId,
-        token_ids: ["nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near"],
+        token_ids: [
+          "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+        ],
       }
     );
     expect(balanceAfter).toEqual(["97500000000"]); // 97,500 USDC with 6 decimals
@@ -894,10 +983,14 @@ test.describe("Payment Request UI Flow", () => {
     await expect(usdcAmountElement).toHaveText("97,500");
     console.log("✓ Dashboard shows updated balance: 97,500 USDC");
 
-    console.log("\n✓✓✓ USDC Payment request flow completed successfully! ✓✓✓\n");
+    console.log(
+      "\n✓✓✓ USDC Payment request flow completed successfully! ✓✓✓\n"
+    );
   });
 
-  test("should create wNEAR payment request to NEAR account", async ({ page }) => {
+  test("should create wNEAR payment request to NEAR account", async ({
+    page,
+  }) => {
     test.setTimeout(120000); // 2 minutes
 
     // Inject test wallet before navigation
@@ -943,7 +1036,7 @@ test.describe("Payment Request UI Flow", () => {
 
     // Set localStorage
     await page.evaluate(() => {
-      localStorage.setItem('selected-wallet', 'test-wallet');
+      localStorage.setItem("selected-wallet", "test-wallet");
     });
 
     await page.reload();
@@ -959,9 +1052,11 @@ test.describe("Payment Request UI Flow", () => {
     await expect(intentsPortfolio).toBeVisible();
 
     // Look for either "wNEAR" or "NEAR" text in the portfolio
-    const wnearRowLocator = intentsPortfolio.locator(
-      'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("NEAR"))'
-    ).first();
+    const wnearRowLocator = intentsPortfolio
+      .locator(
+        'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("NEAR"))'
+      )
+      .first();
 
     const wnearAmountElement = wnearRowLocator.locator(
       "div.d-flex.gap-2.align-items-center.justify-content-end div.d-flex.flex-column.align-items-end div.h6.mb-0"
@@ -987,11 +1082,18 @@ test.describe("Payment Request UI Flow", () => {
 
     // Open tokens dropdown
     await page.getByTestId("tokens-dropdown").locator("div").first().click();
-    await expect(page.getByRole('heading', { name: 'Select Token' })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10_000 });
 
     // Select wNEAR token
-    await page.locator('.modal-body').getByText("wNEAR", { exact: true }).click({ force: true });
-    await expect(page.getByRole('heading', { name: 'Select Token' })).not.toBeVisible({ timeout: 10000 });
+    await page
+      .locator(".modal-body")
+      .getByText("wNEAR", { exact: true })
+      .click({ force: true });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).not.toBeVisible({ timeout: 10000 });
     console.log("✓ Selected wNEAR token");
 
     await page.waitForTimeout(1000);
@@ -1000,17 +1102,23 @@ test.describe("Payment Request UI Flow", () => {
     const recipientAccountId = creatorAccountId;
 
     // Fill in form
-    await page.getByRole('textbox', { name: 'Title' }).fill("wNEAR withdrawal proposal");
-    await page.getByRole('textbox', { name: 'Summary' }).fill("Withdrawal of wNEAR tokens from intents contract");
+    await page
+      .getByRole("textbox", { name: "Title" })
+      .fill("wNEAR withdrawal proposal");
+    await page
+      .getByRole("textbox", { name: "Summary" })
+      .fill("Withdrawal of wNEAR tokens from intents contract");
 
     // Fill recipient with keypress simulation to trigger validation
-    const recipientInput = page.getByPlaceholder(/treasury.near|Enter NEAR Account/);
+    const recipientInput = page.getByPlaceholder(
+      /treasury.near|Enter NEAR Account/
+    );
     await recipientInput.click();
     await recipientInput.clear();
     await recipientInput.pressSequentially(recipientAccountId, { delay: 50 });
     await page.waitForTimeout(500); // Wait for validation to complete
 
-    await page.getByRole('spinbutton', { name: 'Total Amount' }).fill("50");
+    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("50");
     console.log("✓ Filled form with wNEAR payment details");
 
     // Submit
@@ -1019,28 +1127,39 @@ test.describe("Payment Request UI Flow", () => {
     await page.waitForTimeout(3000);
 
     // Verify proposal created
-    await expect(page.getByText("Create Payment Request")).not.toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("Payment request has been successfully created.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Create Payment Request")).not.toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      page.getByText("Payment request has been successfully created.")
+    ).toBeVisible({ timeout: 10000 });
     console.log("✓ wNEAR payment request created successfully");
 
     await page.waitForTimeout(2500);
 
     // Find and click proposal
-    const proposalRow = page.locator('tbody tr').filter({ hasText: recipientAccountId }).first();
+    const proposalRow = page
+      .locator("tbody tr")
+      .filter({ hasText: recipientAccountId })
+      .first();
     await expect(proposalRow).toBeVisible({ timeout: 3000 });
     await proposalRow.click();
     await page.waitForTimeout(2000);
 
     // Expand to full detail page
-    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
-    const isExpandButtonVisible = await expandButton.isVisible().catch(() => false);
+    const expandButton = page.locator(".bi.bi-arrows-angle-expand");
+    const isExpandButtonVisible = await expandButton
+      .isVisible()
+      .catch(() => false);
     if (isExpandButtonVisible) {
       await expandButton.click();
       await page.waitForTimeout(1000);
     }
 
     // Verify proposal details
-    await expect(page.getByRole("heading", { name: "wNEAR withdrawal proposal" }).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "wNEAR withdrawal proposal" }).first()
+    ).toBeVisible();
     await expect(page.getByText(recipientAccountId).first()).toBeVisible();
 
     // Verify balance before approval
@@ -1086,9 +1205,11 @@ test.describe("Payment Request UI Flow", () => {
 
     // Re-locate the wNEAR amount element after navigation
     const finalIntentsPortfolio = page.getByTestId("intents-portfolio");
-    const finalWnearRowLocator = finalIntentsPortfolio.locator(
-      'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("NEAR"))'
-    ).first();
+    const finalWnearRowLocator = finalIntentsPortfolio
+      .locator(
+        'div.d-flex.flex-column:has(div.h6.mb-0.text-truncate:has-text("NEAR"))'
+      )
+      .first();
     const finalWnearAmountElement = finalWnearRowLocator.locator(
       "div.d-flex.gap-2.align-items-center.justify-content-end div.d-flex.flex-column.align-items-end div.h6.mb-0"
     );
@@ -1097,6 +1218,8 @@ test.describe("Payment Request UI Flow", () => {
     await expect(finalWnearAmountElement).toHaveText("41.3");
     console.log("✓ Dashboard shows updated balance: 41.3 wNEAR");
 
-    console.log("\n✓✓✓ wNEAR Payment request flow completed successfully! ✓✓✓\n");
+    console.log(
+      "\n✓✓✓ wNEAR Payment request flow completed successfully! ✓✓✓\n"
+    );
   });
 });

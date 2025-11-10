@@ -70,7 +70,9 @@ test.describe("Homepage - Logged In with Treasuries", () => {
       page.getByRole("button", { name: /Create Treasury/i })
     ).toBeVisible();
 
-    const treasuryCard = page.getByText("Sputnik DAO:testing-astradao.sputnik-dao.near");
+    const treasuryCard = page.getByText(
+      "Sputnik DAO:testing-astradao.sputnik-dao.near"
+    );
     await expect(treasuryCard).toBeVisible();
 
     // Click on the treasury card to navigate to dashboard
@@ -118,7 +120,9 @@ test.describe("Homepage - Invalid DAO ID in URL", () => {
     await page.locator("button.btn-close").first().click();
 
     // Verify toast is hidden after closing
-    await expect(page.getByText("Invalid Link", { exact: true })).not.toBeVisible({
+    await expect(
+      page.getByText("Invalid Link", { exact: true })
+    ).not.toBeVisible({
       timeout: 2000,
     });
   });

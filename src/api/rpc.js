@@ -1,5 +1,9 @@
 import { logger } from "@/helpers/logger";
-import { getNearStakedPools, fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
+import {
+  getNearStakedPools,
+  fetchTokenMetadataByDefuseAssetId,
+  fetchBlockchainByNetwork,
+} from "@/api/backend";
 import { Near } from "@/api/near";
 import Big from "big.js";
 import { formatNearAmount } from "@/helpers/nearHelpers";
@@ -7,25 +11,25 @@ import { formatNearAmount } from "@/helpers/nearHelpers";
 export const getNearBalances = async (accountId) => {
   try {
     const result = await Near.viewAccount(accountId);
-    if(!result){
+    if (!result) {
       return null;
     }
     const storage = Big(result?.storageUsage ?? "0")
-    .mul(Big(10).pow(19))
-    .toFixed();
-  const total = Big(result?.amount ?? "0").toFixed();
-  const available = Big(result?.amount ?? "0")
-    .minus(storage ?? "0")
-    .toFixed();
+      .mul(Big(10).pow(19))
+      .toFixed();
+    const total = Big(result?.amount ?? "0").toFixed();
+    const available = Big(result?.amount ?? "0")
+      .minus(storage ?? "0")
+      .toFixed();
 
-  return {
-    total,
-    available,
-    storage,
-    totalParsed: formatNearAmount(total),
-    availableParsed: formatNearAmount(available),
-    storageParsed: formatNearAmount(storage),
-  };
+    return {
+      total,
+      available,
+      storage,
+      totalParsed: formatNearAmount(total),
+      availableParsed: formatNearAmount(available),
+      storageParsed: formatNearAmount(storage),
+    };
   } catch (error) {
     logger.error("Error getting NEAR Balances:", error);
     return null;
@@ -35,24 +39,44 @@ export const getNearBalances = async (accountId) => {
 export const getNearStakedBalances = async (accountId) => {
   try {
     const stakingPools = await getNearStakedPools(accountId);
-    
-    if(stakingPools.length === 0) {
+
+    if (stakingPools.length === 0) {
       return [];
     }
-    const result = [];  
-    await Promise.all(stakingPools.map(async (pool) => {
-    const stakedBalances = await Near.view(pool, 'get_account_staked_balance', { account_id: accountId });
-    const unstakedBalances = await Near.view(pool, 'get_account_unstaked_balance', { account_id: accountId });
-    const isUnstakedBalanceAvailable = await Near.view(pool, 'is_account_unstaked_balance_available', { account_id: accountId });
-       
-    result.push({
-      poolId: pool,
-      staked: (formatNearAmount(stakedBalances)),
-      unstaked: isUnstakedBalanceAvailable ? 0 :  (formatNearAmount(unstakedBalances)) ,
-      availableToWithdraw:isUnstakedBalanceAvailable ? (formatNearAmount(unstakedBalances)) : 0,
-      total: (formatNearAmount(Big(stakedBalances).plus(Big(unstakedBalances)).toFixed())),
-    });
-  }));
+    const result = [];
+    await Promise.all(
+      stakingPools.map(async (pool) => {
+        const stakedBalances = await Near.view(
+          pool,
+          "get_account_staked_balance",
+          { account_id: accountId }
+        );
+        const unstakedBalances = await Near.view(
+          pool,
+          "get_account_unstaked_balance",
+          { account_id: accountId }
+        );
+        const isUnstakedBalanceAvailable = await Near.view(
+          pool,
+          "is_account_unstaked_balance_available",
+          { account_id: accountId }
+        );
+
+        result.push({
+          poolId: pool,
+          staked: formatNearAmount(stakedBalances),
+          unstaked: isUnstakedBalanceAvailable
+            ? 0
+            : formatNearAmount(unstakedBalances),
+          availableToWithdraw: isUnstakedBalanceAvailable
+            ? formatNearAmount(unstakedBalances)
+            : 0,
+          total: formatNearAmount(
+            Big(stakedBalances).plus(Big(unstakedBalances)).toFixed()
+          ),
+        });
+      })
+    );
     return result;
   } catch (error) {
     logger.error("Error getting NEAR Staked Balances:", error);
@@ -101,7 +125,8 @@ export const getIntentsBalances = async (accountId) => {
 
     // Fetch metadata for all tokens in a single batch request
     const defuseAssetIds = tokensWithBalances.map((t) => t.token_id);
-    const metadataResults = await fetchTokenMetadataByDefuseAssetId(defuseAssetIds);
+    const metadataResults =
+      await fetchTokenMetadataByDefuseAssetId(defuseAssetIds);
 
     // Create a map for quick lookup
     const metadataMap = {};
@@ -111,11 +136,37 @@ export const getIntentsBalances = async (accountId) => {
       }
     });
 
-    // Combine token data with metadata
+    // Extract unique blockchain/network names and fetch network metadata
+    const uniqueNetworks = [
+      ...new Set(
+        metadataResults
+          .map((m) => m.blockchain)
+          .filter((blockchain) => blockchain)
+      ),
+    ];
+
+    const networkData =
+      uniqueNetworks.length > 0
+        ? await fetchBlockchainByNetwork(uniqueNetworks)
+        : [];
+
+    // Create a map for blockchain data
+    const blockchainMap = {};
+    networkData.forEach((network) => {
+      if (network.network) {
+        blockchainMap[network.network.toLowerCase()] = network;
+      }
+    });
+
+    // Combine token data with metadata and blockchain info
     const finalTokens = tokensWithBalances
       .map((token) => {
-        const metadata = metadataMap[token.token_id ];
+        const metadata = metadataMap[token.token_id];
         if (!metadata) return null;
+
+        const blockchainInfo = metadata.blockchain
+          ? blockchainMap[metadata.blockchain.toLowerCase()]
+          : null;
 
         return {
           // contract_id is needed by TokensDropdown (without prefix for backward compatibility)
@@ -132,6 +183,8 @@ export const getIntentsBalances = async (accountId) => {
           },
           amount: token.amount,
           blockchain: metadata.blockchain,
+          blockchainName:
+            blockchainInfo?.name || (metadata.blockchain || "").toUpperCase(),
         };
       })
       .filter((token) => token !== null);

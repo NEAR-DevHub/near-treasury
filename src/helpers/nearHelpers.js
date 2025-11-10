@@ -16,6 +16,70 @@ export function formatNearAmount(amount) {
 }
 
 /**
+ * Convert raw token amount to readable format by dividing by 10^decimals
+ * @param {string|number} amount - Raw token amount
+ * @param {string|number} decimals - Token decimals (default: 18)
+ * @returns {string} Readable amount as string with full precision
+ */
+export function convertBalanceToReadableFormat(amount, decimals = 18) {
+  try {
+    return Big(amount ?? "0")
+      .div(Big(10).pow(Number(decimals) || 18))
+      .toString();
+  } catch {
+    return "0";
+  }
+}
+
+/**
+ * Format token balance with appropriate precision
+ * Shows more decimals for very small amounts to avoid scientific notation
+ * Automatically trims unnecessary trailing zeros (e.g., "5" instead of "5.00")
+ * @param {string|number} amount - The token amount to format
+ * @param {Object} options - Formatting options
+ * @param {number} options.minAmount - Threshold for using extended decimals (default: 0.01)
+ * @param {number} options.maxDecimals - Maximum decimals to show (default: 8)
+ * @returns {string} Formatted token amount without scientific notation
+ */
+export const formatTokenBalance = (amount, options = {}) => {
+  const {
+    minAmount = 0.01,
+    maxDecimals = 8,
+    alwaysMaxDecimals = false,
+  } = options;
+
+  try {
+    const bigAmount = Big(amount || 0);
+
+    if (bigAmount.eq(0)) {
+      return "0";
+    }
+
+    // If alwaysMaxDecimals is true, always use maxDecimals
+    // Otherwise, for amounts >= minAmount, use fewer decimals (2)
+    // For very small amounts, show up to maxDecimals
+    const decimals = alwaysMaxDecimals
+      ? maxDecimals
+      : bigAmount.gte(minAmount)
+        ? 2
+        : maxDecimals;
+    const formatted = bigAmount.toFixed(decimals);
+
+    // Remove trailing zeros
+    let trimmed = formatted
+      .replace(/(\.\d*[1-9])?0+$/, "$1")
+      .replace(/\.$/, "");
+
+    // Add thousand separators
+    const parts = trimmed.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
+  } catch {
+    return "0";
+  }
+};
+
+/**
  * Format token amount with dynamic precision based on USD value
  */
 export const formatTokenAmount = (amount, tokenPrice, minUsdValue = 0.01) => {
@@ -32,10 +96,6 @@ export const formatTokenAmount = (amount, tokenPrice, minUsdValue = 0.01) => {
 
   const usdValue = numAmount.mul(numPrice);
 
-  if (usdValue.lt(minUsdValue)) {
-    return numAmount.toExponential(2);
-  }
-
   // Calculate decimals needed so the smallest unit is worth <= $0.01
   const targetPrecision = Big(0.01);
   const requiredDecimals = Math.max(
@@ -43,7 +103,16 @@ export const formatTokenAmount = (amount, tokenPrice, minUsdValue = 0.01) => {
     Math.ceil(-Math.log10(targetPrecision.div(numPrice).toNumber()))
   );
 
-  const decimals = Math.min(requiredDecimals, 8);
+  // Calculate minimum decimals needed to show the actual amount (not round to 0)
+  const amountString = numAmount.toFixed();
+  const firstNonZeroIndex = amountString.search(/[1-9]/);
+  const minDecimalsForAmount = firstNonZeroIndex > 0 ? firstNonZeroIndex : 0;
+
+  // For very small amounts, use more decimals but cap at 8
+  const decimals = usdValue.lt(minUsdValue)
+    ? Math.min(8, Math.max(requiredDecimals + 2, minDecimalsForAmount))
+    : Math.min(requiredDecimals, 8);
+
   const formatted = numAmount.toFixed(decimals);
 
   // Remove trailing zeros and decimal point if no fractional part remains
@@ -270,4 +339,3 @@ export const deserializeLockupContract = (byteArray) => {
 
   return result;
 };
-

@@ -221,19 +221,19 @@ const Table = ({
                 amount: decodedArgs?.amount,
               }
             : isFunctionType
-            ? {
-                token_id: decodedArgs?.token_id || "",
-                receiver_id: decodedArgs?.receiver_id,
-                amount: decodedArgs?.amount,
-              }
-            : item.kind.Transfer;
+              ? {
+                  token_id: decodedArgs?.token_id || "",
+                  receiver_id: decodedArgs?.receiver_id,
+                  amount: decodedArgs?.amount,
+                }
+              : item.kind.Transfer;
 
           const sourceWallet = isIntentWithdraw
             ? "Intents"
             : isFunctionType &&
-              item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
-            ? "Lockup"
-            : "SputnikDAO";
+                item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
+              ? "Lockup"
+              : "SputnikDAO";
           const intentsToken =
             isIntentWithdraw &&
             (intentsTokensData || []).find(

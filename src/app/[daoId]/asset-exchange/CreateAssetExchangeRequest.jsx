@@ -15,14 +15,20 @@ import Big from "big.js";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { useNearWallet } from "@/context/NearWalletContext";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
-import { Near } from "@/api/near";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { formatDateTimeWithTimezone } from "@/components/ui/DateTimeDisplay";
+import { REFRESH_DELAY } from "@/constants/ui";
+import { formatTokenBalance } from "@/helpers/nearHelpers";
+
+const DRY_QUOTE_REFRESH_INTERVAL = 20000;
+const PROPOSAL_QUOTE_REFRESH_SECONDS = 20;
 
 const formatNumberWithCommas = (value) => {
-  const num = Number(value || 0);
-  if (!Number.isFinite(num)) return "0";
-  return num.toLocaleString("en-US");
+  // Use the centralized formatTokenBalance function
+  return formatTokenBalance(value, {
+    minAmount: 0.000001,
+    maxDecimals: 8,
+  });
 };
 
 const TokenBadge = ({ token, network, hideSymbol = false }) => {
@@ -103,12 +109,15 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
 
   const dryQuoteIntervalRef = useRef(null);
   const dryQuoteDebounceTimeout = useRef(null);
+  const sendAmountInputRef = useRef(null);
 
   const [showPreview, setShowPreview] = useState(false);
 
   const [proposalQuote, setProposalQuote] = useState(null);
   const [isFetchingProposalQuote, setIsFetchingProposalQuote] = useState(false);
-  const [proposalRefreshCountdown, setProposalRefreshCountdown] = useState(10);
+  const [proposalRefreshCountdown, setProposalRefreshCountdown] = useState(
+    PROPOSAL_QUOTE_REFRESH_SECONDS
+  );
   const proposalRefreshIntervalRef = useRef(null);
   const [isTxnCreated, setTxnCreated] = useState(false);
 
@@ -118,12 +127,6 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
   const [sendDropdownOpen, setSendDropdownOpen] = useState(false);
   const [receiveDropdownOpen, setReceiveDropdownOpen] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-
-  const formatFixed2 = (value) =>
-    Number(value || 0).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
 
   function getTokenNetworkBalance(token, network) {
     if (!token) return null;
@@ -232,7 +235,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
 
       setProposalQuote(quoteWithRate);
 
-      setProposalRefreshCountdown(10);
+      setProposalRefreshCountdown(PROPOSAL_QUOTE_REFRESH_SECONDS);
       setShowPreview(true);
     } catch (err) {
       console.error("Failed to get proposal quote:", err);
@@ -254,7 +257,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         if (s <= 1) {
           // Refresh quote when countdown reaches 0
           fetchProposalQuote();
-          return 10;
+          return PROPOSAL_QUOTE_REFRESH_SECONDS;
         }
         return s - 1;
       });
@@ -397,7 +400,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         if (!showPreview) {
           fetchAndUpdateDryQuote();
         }
-      }, 10000); // 10 seconds
+      }, DRY_QUOTE_REFRESH_INTERVAL); // 10 seconds
     }, 1000);
 
     return () => {
@@ -503,9 +506,11 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         // Toast context will automatically fetch proposal ID and invalidate cache
         showToast("ProposalAdded", null, "exchange");
-        setTxnCreated(false);
-        setShowPreview(false);
-        onCloseCanvas();
+        setTimeout(() => {
+          setTxnCreated(false);
+          setShowPreview(false);
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Error submitting proposal:", error);
@@ -562,27 +567,40 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       {/* Combined Send/Receive block matching design */}
       <div className="position-relative">
         {/* Send panel */}
-        <div className="border rounded-3 p-3 mb-2">
+        <div
+          className="border rounded-3 p-3 mb-2 bg-secondary-color cursor-pointer"
+          onClick={(e) => {
+            // Only focus if clicking outside dropdown/button elements
+            const target = e.target;
+            if (
+              !target.closest("button") &&
+              !target.closest('[role="combobox"]') &&
+              !target.closest(".dropdown-menu") &&
+              sendAmountInputRef.current
+            ) {
+              sendAmountInputRef.current.focus();
+            }
+          }}
+        >
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <label className="mb-0" style={{ fontSize: 18 }}>
+            <label className="mb-0" style={{ fontSize: 16 }}>
               Send
             </label>
             {sendToken && sendNetwork && (
               <div
-                className="d-flex align-items-center gap-3 text-secondary"
+                className="d-flex align-items-center gap-3 "
                 style={{ fontSize: 14 }}
               >
                 {(() => {
                   const bal = getTokenNetworkBalance(sendToken, sendNetwork);
                   return bal !== null ? (
                     <span>
-                      Balance: {formatFixed2(bal)} {sendToken.symbol}
+                      Balance: {formatTokenBalance(bal)} {sendToken.symbol}
                     </span>
                   ) : null;
                 })()}
                 <span
-                  className="p-1 rounded-2 border cursor-pointer"
-                  style={{ backgroundColor: "var(--grey-04)" }}
+                  className="p-1 cursor-pointer"
                   onClick={() => {
                     if (!sendToken || !sendNetwork) return;
                     const bal = getTokenNetworkBalance(sendToken, sendNetwork);
@@ -602,7 +620,6 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
             <div className="flex-1" style={{ minWidth: "150px" }}>
               <input type="hidden" {...register("sendToken")} />
               <DropdownWithModal
-                hideBorder={true}
                 modalTitle="Select Token"
                 options={tokenOptions}
                 open={sendDropdownOpen}
@@ -673,23 +690,33 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
               )}
             </div>
             <div className="text-end flex-2">
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={`no-focus form-control text-end border-0 p-0  ${
-                  errors.sendAmount ? "is-invalid" : ""
-                }`}
-                placeholder="00.00"
-                {...register("sendAmount")}
-              />
+              {(() => {
+                const { ref, ...rest } = register("sendAmount");
+                return (
+                  <input
+                    style={{ fontSize: 24 }}
+                    type="number"
+                    min="0"
+                    step="any"
+                    className={`no-focus hide-bg form-control text-end border-0 p-0 fw-semibold  ${
+                      errors.sendAmount ? "is-invalid" : ""
+                    }`}
+                    placeholder="00.00"
+                    {...rest}
+                    ref={(e) => {
+                      ref(e);
+                      sendAmountInputRef.current = e;
+                    }}
+                  />
+                );
+              })()}
               {errors.sendAmount && (
                 <div className="invalid-feedback d-block">
                   {errors.sendAmount.message}
                 </div>
               )}
 
-              <div className="text-secondary" style={{ fontSize: 12 }}>
+              <div className="text-secondary" style={{ fontSize: 16 }}>
                 ≈
                 {formatUsdValue(Number(sendAmount || 0), sendToken?.price || 0)}
               </div>
@@ -720,12 +747,12 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         </div>
 
         {/* Receive panel */}
-        <div className="border rounded-3 p-3">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <label className="mb-0" style={{ fontSize: 18 }}>
+        <div className="border rounded-3 p-3 bg-secondary-color">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <label className="mb-0" style={{ fontSize: 16 }}>
               Receive
             </label>
-            <div className="text-secondary" style={{ fontSize: 14 }}>
+            <div style={{ fontSize: 14 }}>
               {(() => {
                 if (!receiveToken || !receiveNetwork) return null;
                 const bal = getTokenNetworkBalance(
@@ -734,7 +761,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 );
                 return bal !== null ? (
                   <span>
-                    Balance: {formatFixed2(bal)} {receiveToken.symbol}
+                    Balance: {formatTokenBalance(bal)} {receiveToken.symbol}
                   </span>
                 ) : null;
               })()}
@@ -744,7 +771,6 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
             <div className="flex-1" style={{ minWidth: "150px" }}>
               <input type="hidden" {...register("receiveToken")} />
               <DropdownWithModal
-                hideBorder={true}
                 modalTitle="Select Token"
                 options={tokenOptions}
                 open={receiveDropdownOpen}
@@ -810,13 +836,13 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
               <div className="text-danger flex-2 text-end">{dryQuoteError}</div>
             ) : (
               <div className="text-end flex-2">
-                <div className="fw-bold border-0">
+                <div className="fw-semibold border-0" style={{ fontSize: 24 }}>
                   {dryQuote
                     ? formatNumberWithCommas(dryQuote.receiveAmount)
                     : "00.00"}
                 </div>
                 {dryQuote && (
-                  <div className="text-secondary" style={{ fontSize: 12 }}>
+                  <div className="text-secondary" style={{ fontSize: 16 }}>
                     ≈$
                     {dryQuote
                       ? formatNumberWithCommas(
@@ -898,10 +924,12 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 </div>
                 {Number(n.amount || 0) > 0 && (
                   <div className="text-end" style={{ minWidth: 120 }}>
-                    <div className="fw-semibold">{formatFixed2(n.amount)}</div>
+                    <div className="fw-semibold">
+                      {formatTokenBalance(n.amount)}
+                    </div>
                     <div className="text-secondary" style={{ fontSize: 12 }}>
                       ≈$
-                      {formatFixed2(
+                      {formatTokenBalance(
                         (n.amount || 0) *
                           (sendToken?.price || receiveToken?.price || 0)
                       )}
@@ -969,8 +997,8 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
           {isFetchingProposalQuote
             ? "Fetching Deposit Address..."
             : !sendNetwork || !receiveNetwork
-            ? "Select Token"
-            : "Preview"}
+              ? "Select Token"
+              : "Preview"}
         </button>
       </div>
 

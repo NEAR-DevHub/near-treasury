@@ -4,10 +4,11 @@ import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { getProposalsFromIndexer } from "@/api/indexer";
 import { useDebounce } from "./useDebounce";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 /**
  * Custom hook to fetch and manage proposals with React Query
- * 
+ *
  * @param {Object} options - Query options
  * @param {string} options.category - Proposal category (e.g., "payments", "stake-delegation")
  * @param {Array<string>} options.statuses - Proposal statuses to filter
@@ -19,7 +20,7 @@ import { useDebounce } from "./useDebounce";
  * @param {Object} options.amountValues - Amount filter values
  * @param {Array<string>} options.proposalType - Proposal types to filter
  * @param {boolean} options.enabled - Whether the query should run
- * 
+ *
  * @returns {Object} Query result with proposals, loading state, error, and refetch function
  */
 export function useProposals({
@@ -46,7 +47,7 @@ export function useProposals({
   const normalizedFilters = Object.keys(filters).reduce((acc, key) => {
     const filter = filters[key];
     if (filter && filter.values && filter.values.length > 0) {
-      const nonEmptyValues = filter.values.filter(v => v && v !== "");
+      const nonEmptyValues = filter.values.filter((v) => v && v !== "");
       if (nonEmptyValues.length > 0) {
         acc[key] = { ...filter, values: nonEmptyValues };
       }
@@ -55,14 +56,21 @@ export function useProposals({
   }, {});
 
   // Normalize amount values to only include non-empty values
-  const normalizedAmountValues = Object.keys(debouncedAmountValues).reduce((acc, key) => {
-    if (key !== 'value' && debouncedAmountValues[key] && debouncedAmountValues[key] !== "") {
-      acc[key] = debouncedAmountValues[key];
-    } else if (key === 'value') {
-      acc[key] = debouncedAmountValues[key];
-    }
-    return acc;
-  }, {});
+  const normalizedAmountValues = Object.keys(debouncedAmountValues).reduce(
+    (acc, key) => {
+      if (
+        key !== "value" &&
+        debouncedAmountValues[key] &&
+        debouncedAmountValues[key] !== ""
+      ) {
+        acc[key] = debouncedAmountValues[key];
+      } else if (key === "value") {
+        acc[key] = debouncedAmountValues[key];
+      }
+      return acc;
+    },
+    {}
+  );
 
   const queryKey = [
     "proposals",
@@ -120,7 +128,7 @@ export function useProposals({
       setTimeout(() => {
         invalidateCategory();
         resolve();
-      }, 2000); // 2 second delay to allow indexer to process
+      }, REFRESH_DELAY);
     });
   };
 
@@ -146,4 +154,3 @@ export function useProposals({
     invalidateAll,
   };
 }
-

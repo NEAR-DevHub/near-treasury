@@ -11,6 +11,7 @@ import { getValidatorDetails } from "@/api/backend";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import Big from "big.js";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const CreateWithdrawRequest = ({ onCloseCanvas = () => {} }) => {
   const {
@@ -164,8 +165,10 @@ const CreateWithdrawRequest = ({ onCloseCanvas = () => {} }) => {
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         // Toast context will automatically fetch proposal ID and invalidate cache
         showToast("WithdrawProposalAdded", null, "stake");
-        setTxnCreated(false);
-        onCloseCanvas();
+        setTimeout(() => {
+          setTxnCreated(false);
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Withdraw request error:", error);

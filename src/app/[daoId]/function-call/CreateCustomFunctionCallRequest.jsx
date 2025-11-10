@@ -11,6 +11,7 @@ import { Near } from "@/api/near";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { isValidNearAccount } from "@/helpers/nearHelpers";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
   const { daoId: treasuryDaoID, daoPolicy } = useDao();
@@ -42,6 +43,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
           argumentsJson: "",
           gas: "",
           deposit: "",
+          depositUnit: "NEAR", // Default to NEAR
         },
       ],
     },
@@ -60,6 +62,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
         argumentsJson: "",
         gas: "",
         deposit: "",
+        depositUnit: "NEAR", // Default to NEAR
       },
     ]);
   };
@@ -124,10 +127,17 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
         // Convert gas from Tgas to gas units (1 Tgas = 10^12 gas)
         const gasInUnits = Big(action.gas).mul(Big(10).pow(12)).toFixed();
 
-        // Convert deposit from NEAR to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
-        const depositInYoctoNEAR = Big(action.deposit)
-          .mul(Big(10).pow(24))
-          .toFixed();
+        // Convert deposit to yoctoNEAR based on selected unit
+        let depositInYoctoNEAR;
+        if (action.depositUnit === "yoctoNEAR") {
+          // Already in yoctoNEAR, use as is
+          depositInYoctoNEAR = Big(action.deposit).toFixed();
+        } else {
+          // Convert from NEAR to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+          depositInYoctoNEAR = Big(action.deposit)
+            .mul(Big(10).pow(24))
+            .toFixed();
+        }
 
         return {
           method_name: action.methodName,
@@ -184,9 +194,11 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
         showToast("ProposalAdded", null, "function");
-        setTxnCreated(false);
-        reset();
-        onCloseCanvas();
+        setTimeout(() => {
+          setTxnCreated(false);
+          reset();
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       showToast("ErrorAddingProposal", null, "function");
@@ -436,86 +448,97 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
               </div>
 
               {/* Gas and Deposit */}
-              <div>
-                <div className="row">
-                  <div className="col-md-6">
-                    <label className="form-label">
-                      Gas (Tgas) <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      className={`form-control ${
-                        errors.actions?.[index]?.gas ||
-                        errors[`actions.${index}.gas`]
-                          ? "is-invalid"
-                          : ""
-                      }`}
-                      placeholder="30"
-                      {...register(`actions.${index}.gas`, {
-                        required: "Gas (Tgas) is required",
-                        validate: (value) => {
-                          if (!value || value.trim() === "")
-                            return "Gas (Tgas) is required";
-                          const gasNumber = parseFloat(value);
-                          if (isNaN(gasNumber) || gasNumber <= 0)
-                            return "Gas must be a positive number";
-                          if (gasNumber > 300)
-                            return "Gas must be between 0 and 300 Tgas";
-                          return true;
-                        },
-                      })}
-                    />
-                    {(errors.actions?.[index]?.gas ||
-                      errors[`actions.${index}.gas`]) && (
-                      <div className="invalid-feedback d-block">
-                        {
-                          (
-                            errors.actions?.[index]?.gas ||
-                            errors[`actions.${index}.gas`]
-                          ).message
-                        }
-                      </div>
-                    )}
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">
-                      Deposit (NEAR) <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      className={`form-control ${
+              <div className="mb-3">
+                <label className="form-label">
+                  Deposit <span className="text-danger">*</span>
+                </label>
+                <div className="d-flex gap-2">
+                  <input
+                    type="number"
+                    step="any"
+                    className={`form-control ${
+                      errors.actions?.[index]?.deposit ||
+                      errors[`actions.${index}.deposit`]
+                        ? "is-invalid"
+                        : ""
+                    }`}
+                    placeholder={
+                      watchedActions?.[index]?.depositUnit === "yoctoNEAR"
+                        ? "0"
+                        : "0"
+                    }
+                    {...register(`actions.${index}.deposit`, {
+                      required: "Deposit is required",
+                      validate: (value) => {
+                        if (!value || value.trim() === "")
+                          return "Deposit is required";
+                        const depositNumber = parseFloat(value);
+                        if (isNaN(depositNumber) || depositNumber < 0)
+                          return "Deposit must be a non-negative number";
+                        return true;
+                      },
+                    })}
+                  />
+                  <select
+                    className="form-select"
+                    style={{ width: "140px", flexShrink: 0 }}
+                    {...register(`actions.${index}.depositUnit`)}
+                  >
+                    <option value="NEAR">NEAR</option>
+                    <option value="yoctoNEAR">yoctoNEAR</option>
+                  </select>
+                </div>
+                {(errors.actions?.[index]?.deposit ||
+                  errors[`actions.${index}.deposit`]) && (
+                  <div className="invalid-feedback d-block">
+                    {
+                      (
                         errors.actions?.[index]?.deposit ||
                         errors[`actions.${index}.deposit`]
-                          ? "is-invalid"
-                          : ""
-                      }`}
-                      placeholder="0"
-                      {...register(`actions.${index}.deposit`, {
-                        required: "Deposit (NEAR) is required",
-                        validate: (value) => {
-                          if (!value || value.trim() === "")
-                            return "Deposit (NEAR) is required";
-                          const depositNumber = parseFloat(value);
-                          if (isNaN(depositNumber) || depositNumber < 0)
-                            return "Deposit must be a non-negative number";
-                          return true;
-                        },
-                      })}
-                    />
-                    {(errors.actions?.[index]?.deposit ||
-                      errors[`actions.${index}.deposit`]) && (
-                      <div className="invalid-feedback d-block">
-                        {
-                          (
-                            errors.actions?.[index]?.deposit ||
-                            errors[`actions.${index}.deposit`]
-                          ).message
-                        }
-                      </div>
-                    )}
+                      ).message
+                    }
                   </div>
-                </div>
+                )}
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">
+                  Gas (Tgas) <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  className={`form-control ${
+                    errors.actions?.[index]?.gas ||
+                    errors[`actions.${index}.gas`]
+                      ? "is-invalid"
+                      : ""
+                  }`}
+                  placeholder="30"
+                  {...register(`actions.${index}.gas`, {
+                    required: "Gas (Tgas) is required",
+                    validate: (value) => {
+                      if (!value || value.trim() === "")
+                        return "Gas (Tgas) is required";
+                      const gasNumber = parseFloat(value);
+                      if (isNaN(gasNumber) || gasNumber <= 0)
+                        return "Gas must be a positive number";
+                      if (gasNumber > 270)
+                        return "Gas must be between 0 and 270 Tgas";
+                      return true;
+                    },
+                  })}
+                />
+                {(errors.actions?.[index]?.gas ||
+                  errors[`actions.${index}.gas`]) && (
+                  <div className="invalid-feedback d-block">
+                    {
+                      (
+                        errors.actions?.[index]?.gas ||
+                        errors[`actions.${index}.gas`]
+                      ).message
+                    }
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -538,7 +561,6 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
             id="notes"
             rows="3"
             {...register("notes")}
-            placeholder="Describe what this function call will do..."
           />
           {errors.notes && (
             <div className="invalid-feedback d-block">

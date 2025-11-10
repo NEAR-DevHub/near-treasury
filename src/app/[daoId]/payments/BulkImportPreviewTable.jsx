@@ -12,6 +12,7 @@ import Profile from "@/components/ui/Profile";
 import TokenIcon from "@/components/proposals/TokenIcon";
 import TokenAmount from "@/components/proposals/TokenAmount";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 /**
  * BulkImportPreviewTable Component
@@ -189,8 +190,10 @@ const BulkImportPreviewTable = ({ proposals = [], closePreviewTable }) => {
       ) {
         console.log("Transactions completed successfully:", result.length);
         showToast(`BulkProposalAdded: ${selectedCount}`, null, "payment");
-        setTxnCreated(false);
-        closePreviewTable();
+        setTimeout(() => {
+          setTxnCreated(false);
+          closePreviewTable();
+        }, REFRESH_DELAY);
       }
     } catch (err) {
       console.error("Failed to process proposals:", err);

@@ -10,6 +10,7 @@ import TransactionLoader from "@/components/proposals/TransactionLoader";
 import InsufficientBannerModal from "@/components/proposals/InsufficientBannerModal";
 import Skeleton from "@/components/ui/Skeleton";
 import { logger } from "@/helpers/logger";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const Theme = () => {
   const {
@@ -177,8 +178,10 @@ const Theme = () => {
       });
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        setTxnCreated(false);
         showToast("ProposalAdded", null, "settings");
+        setTimeout(() => {
+          setTxnCreated(false);
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       logger.error("Error submitting proposal:", error);

@@ -13,6 +13,7 @@ import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { Near } from "@/api/near";
 import Big from "big.js";
 import { formatDateTimeWithTimezone } from "@/components/ui/DateTimeDisplay";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const VoteActions = ({
   votes = {},
@@ -83,7 +84,8 @@ const VoteActions = ({
       const contractBalance = intentsBalances.find(
         (balance) =>
           balance.contract_id === currentContract ||
-          balance.ft_meta?.symbol?.toLowerCase() === currentContract?.toLowerCase()
+          balance.ft_meta?.symbol?.toLowerCase() ===
+            currentContract?.toLowerCase()
       );
       setUserBalance(
         isHumanReadableCurrentAmount
@@ -207,7 +209,7 @@ const VoteActions = ({
           refetchDaoPolicy();
           refetchIntentsBalances();
           refetchDaoConfig();
-        }, 2000); // 2 second delay to allow indexer to process
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Error acting on proposal:", error);

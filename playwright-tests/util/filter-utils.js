@@ -224,7 +224,9 @@ export async function addFilter(page, options) {
   // Now the filter appears in the active filters bar as a button
   // We need to find and click that button to expand its options
   // The button text will match the filterName (e.g., "Created by", "Recipient", etc.)
-  const activeFilterButton = page.locator(`button:has-text("${filterName}")`).first();
+  const activeFilterButton = page
+    .locator(`button:has-text("${filterName}")`)
+    .first();
   await expect(activeFilterButton).toBeVisible({ timeout: 5000 });
 
   // Click the active filter button to expand its dropdown
@@ -273,7 +275,11 @@ export async function checkColumnDateRange(
     let parsedDate;
 
     // Check if format is like "18 Jul 2024" or ":17 18 Jul 2024"
-    const datePart = raw.split(" ").filter(part => part && part !== ":").slice(-3).join(" ");
+    const datePart = raw
+      .split(" ")
+      .filter((part) => part && part !== ":")
+      .slice(-3)
+      .join(" ");
     parsedDate = new Date(datePart);
 
     // If that didn't work, try parsing the whole string

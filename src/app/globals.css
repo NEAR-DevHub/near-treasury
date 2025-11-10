@@ -1,38 +1,39 @@
 /* Light Theme (Default) */
 :root {
   /* Theme Colors */
-  --theme-color: #01BF7A;
-  
+  --theme-color: #01bf7a;
+
   /* Background Colors */
-  --bg-header-color: #2C3E50;
-  --bg-page-color: #FFFFFF;
+  --bg-header-color: #2c3e50;
+  --bg-page-color: #ffffff;
   --bg-system-color: #f4f4f4;
-  
+
   /* Text Colors */
-  --text-color: #1B1B18;
+  --text-color: #1b1b18;
   --text-secondary-color: #999999;
-  --text-alt-color: #FFFFFF;
-  
+  --text-alt-color: #ffffff;
+
   /* Border & UI Colors */
   --border-color: rgba(226, 230, 236, 1);
   --icon-color: #060606;
-  
+
   /* Grey Scale */
-  --grey-01: #1B1B18;
+  --grey-01: #1b1b18;
   --grey-02: #555555;
-  --grey-03: #B3B3B3;
-  --grey-035: #E6E6E6;
-  --grey-04: #F4F4F4;
-  --grey-045: #F4F4F4;
-  --grey-05: #F7F7F7;
-  
-  /* Status Colors */
-  --other-primary: #2775C9;
-  --other-warning: #B17108;
-  --other-green: #3CB179;
-  --other-green-light: #3CB1791A;
-  --other-red: #D95C4A;
-  
+  --grey-03: #b3b3b3;
+  --grey-035: #e6e6e6;
+  --grey-04: #f4f4f4;
+  --grey-045: #f4f4f4;
+  --grey-05: #f7f7f7;
+
+  --secondary-foreground-bg-color: rgba(245, 245, 245, 1);
+  --secondary-foreground-color: rgba(23, 23, 23, 1) /* Status Colors */
+    --other-primary: #2775c9;
+  --other-warning: #b17108;
+  --other-green: #3cb179;
+  --other-green-light: #3cb1791a;
+  --other-red: #d95c4a;
+
   /* Bootstrap Integration */
   --bs-body-bg: var(--bg-page-color);
   --bs-border-color: var(--border-color);
@@ -69,38 +70,40 @@
 /* Dark Theme */
 [data-theme="dark"] {
   /* Theme Colors (same primary) */
-  --theme-color: #01BF7A;
-  
+  --theme-color: #01bf7a;
+
   /* Background Colors */
   --bg-header-color: #222222;
   --bg-page-color: #222222;
   --bg-system-color: #131313;
-  
+
   /* Text Colors */
-  --text-color: #CACACA;
+  --text-color: #cacaca;
   --text-secondary-color: #878787;
-  --text-alt-color: #FFFFFF;
-  
+  --text-alt-color: #ffffff;
+
   /* Border & UI Colors */
-  --border-color: #3B3B3B;
-  --icon-color: #CACACA;
-  
+  --border-color: #3b3b3b;
+  --icon-color: #cacaca;
+
   /* Grey Scale */
-  --grey-01: #F4F4F4;
-  --grey-02: #B3B3B3;
+  --grey-01: #f4f4f4;
+  --grey-02: #b3b3b3;
   --grey-03: #555555;
-  --grey-035: #3E3E3E;
+  --grey-035: #3e3e3e;
   --grey-04: #323232;
   --grey-045: #1d1d1d;
-  --grey-05: #1B1B18;
-  
+  --grey-05: #1b1b18;
+
+  --secondary-foreground-bg-color: rgba(38, 38, 38, 1);
+  --secondary-foreground-color-dark: rgba(245, 245, 245, 1);
   /* Status Colors (same) */
-  --other-primary: #2775C9;
-  --other-warning: #B17108;
-  --other-green: #3CB179;
-  --other-green-light: #3CB1791A;
-  --other-red: #D95C4A;
-  
+  --other-primary: #2775c9;
+  --other-warning: #b17108;
+  --other-green: #3cb179;
+  --other-green-light: #3cb1791a;
+  --other-red: #d95c4a;
+
   /* Bootstrap Integration */
   --bs-body-bg: var(--bg-page-color);
   --bs-border-color: var(--border-color);
@@ -118,7 +121,9 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 * {
@@ -324,7 +329,7 @@ input[type="number"] {
 }
 
 .form-check-input:checked {
-  background-color: var(--text-secondary-color  ) !important;
+  background-color: var(--text-secondary-color) !important;
   border-color: var(--text-secondary-color) !important;
 }
 
@@ -481,12 +486,15 @@ a.primary-text-color:hover {
 }
 
 /* Markdown content styles */
-.markdown-content  {
-  p, ul, ol, li {
-  margin-bottom: 0 !important;
-  
+.markdown-content {
+  p,
+  ul,
+  ol,
+  li {
+    margin-bottom: 0 !important;
   }
-  ul, ol {
+  ul,
+  ol {
     padding-left: 1rem !important;
   }
 }
@@ -569,7 +577,6 @@ a.primary-text-color:hover {
   }
 }
 
-
 .btn-outline-plain {
   height: 40px;
   padding-block: 7px !important;
@@ -586,7 +593,12 @@ a.primary-text-color:hover {
 }
 
 /* Heading styles */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--text-color) !important;
 }
 
@@ -787,14 +799,14 @@ fieldset:disabled:not(.no-transparent) {
 }
 
 .error-box {
-  background:rgba(217, 92, 74, 0.1);
-  color: var(--other-red) ;
+  background: rgba(217, 92, 74, 0.1);
+  color: var(--other-red);
   font-weight: 500;
   font-size: 13px;
   i {
-  color: var(--other-red) !important;
+    color: var(--other-red) !important;
   }
-  }
+}
 
 /* Toggle Switch Styles */
 .form-switch {
@@ -975,7 +987,9 @@ fieldset:disabled:not(.no-transparent) {
   width: 40%;
   transform: translateX(100%);
   opacity: 0;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.2s ease-out;
   min-width: 300px;
 }
 
@@ -1083,20 +1097,20 @@ fieldset:disabled:not(.no-transparent) {
   }
 }
 
-  @media (max-width: 576px) {
-    .input-responsive {
-      width: 150px;
-      min-width: 120px;
-      max-width: 180px;
-    }
-
-    .layout-secondary.show ~ .layout-main .input-responsive,
-    .layout-main:has(~ .layout-secondary.show) .input-responsive {
-      width: 100px;
-      min-width: 50px;
-      max-width: 120px;
-    }
+@media (max-width: 576px) {
+  .input-responsive {
+    width: 150px;
+    min-width: 120px;
+    max-width: 180px;
   }
+
+  .layout-secondary.show ~ .layout-main .input-responsive,
+  .layout-main:has(~ .layout-secondary.show) .input-responsive {
+    width: 100px;
+    min-width: 50px;
+    max-width: 120px;
+  }
+}
 
 .nav-link {
   font-weight: 500 !important;
@@ -1135,10 +1149,20 @@ fieldset:disabled:not(.no-transparent) {
   border-color: var(--border-color) !important;
 }
 
-.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6{
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--text-color);
 }
-
 
 .HoverCardContent {
   background-color: var(--bg-system-color);
@@ -1198,7 +1222,6 @@ fieldset:disabled:not(.no-transparent) {
   right: -5px;
 }
 
-
 .custom-tabs {
   min-width: 300px;
   cursor: pointer;
@@ -1245,7 +1268,7 @@ fieldset:disabled:not(.no-transparent) {
   text-align: center;
 }
 
-.text-warning i.h5  {
+.text-warning i.h5 {
   color: var(--other-warning) !important;
 }
 
@@ -1383,4 +1406,29 @@ input[type="checkbox"].indeterminate::after {
   color: var(--grey-02);
   padding: 12px;
   border-radius: 12px;
+}
+
+.bg-secondary-color {
+  background-color: var(--secondary-foreground-bg-color) !important;
+  color: var(--secondary-foreground-color) !important;
+}
+
+input.hide-bg {
+  background-color: transparent !important;
+}
+
+input.hide-bg:focus {
+  background-color: transparent !important;
+}
+
+input.hide-bg:hover {
+  background-color: transparent !important;
+}
+
+input.hide-bg:active {
+  background-color: transparent !important;
+}
+
+input.hide-bg:focus-visible {
+  background-color: transparent !important;
 }

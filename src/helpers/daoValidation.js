@@ -3,7 +3,7 @@ import { Near } from "@/api/near";
 /**
  * Validates a DAO ID for Sputnik DAO treasury access
  * First checks the format, then makes an API call to verify existence
- * 
+ *
  * @param {string} daoId - The DAO ID to validate
  * @returns {Promise<{isValid: boolean, error?: string, daoId?: string}>} - Validation result
  */

@@ -6,24 +6,23 @@
     "showFunctionCall": false
   },
   "daos": {
-    "mgoel.sputnik-dao.near": {
-      "showKYC": false,
-      "showReferenceProposal": true,
-      "showProposalSelection": true,
-      "showFunctionCall": true,
-      "proposalAPIEndpoint": "http://0.0.0.0:3001/api/devhub-submissions"
-    },
     "treasury-devdao.sputnik-dao.near": {
       "showKYC": true,
       "showReferenceProposal": true,
-      "showProposalSelection": true,
-      "showFunctionCall": true
+      "showProposalSelection": true
     },
     "testing-astradao.sputnik-dao.near": {
       "showKYC": true,
       "showReferenceProposal": true,
       "showProposalSelection": true,
       "showFunctionCall": true
-    }
+    },
+    "build.sputnik-dao.near": {
+      "showFunctionCall": true
+    },
+    "root-treasury.sputnik-dao.near": {
+      "showFunctionCall": true
+    },
+    "shitzu.sputnik-dao.near": { "showFunctionCall": true }
   }
 }

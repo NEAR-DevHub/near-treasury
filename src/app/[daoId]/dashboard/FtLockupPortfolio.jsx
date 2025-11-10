@@ -8,6 +8,10 @@ import { useNearWallet } from "@/context/NearWalletContext";
 import { Near } from "@/api/near";
 import { formatCurrency } from "@/helpers/formatters";
 import { getFTTokenMetadata } from "@/api/backend";
+import {
+  convertBalanceToReadableFormat,
+  formatTokenBalance,
+} from "@/helpers/nearHelpers";
 import Big from "big.js";
 
 const FtLockupPortfolio = ({
@@ -309,17 +313,6 @@ const FtLockupPortfolio = ({
     );
   };
 
-  function convertBalanceToReadableFormat(amount, decimals) {
-    return Number(
-      Big(amount ?? "0")
-        .div(Big(10).pow(Number(decimals) || 1))
-        .toFixed()
-    ).toLocaleString("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 4,
-    });
-  }
-
   const FtAmountDetails = () => {
     return (
       <div
@@ -341,9 +334,15 @@ const FtLockupPortfolio = ({
                     width={15}
                     className="rounded-circle"
                   />
-                  {convertBalanceToReadableFormat(
-                    Big(accountMetadata?.deposited_amount ?? 0),
-                    ftMetadata?.decimals
+                  {formatTokenBalance(
+                    convertBalanceToReadableFormat(
+                      Big(accountMetadata?.deposited_amount ?? 0),
+                      ftMetadata?.decimals
+                    ),
+                    {
+                      minAmount: 0.01,
+                      maxDecimals: 4,
+                    }
                   )}
                 </div>
                 <div className="text-sm text-secondary">
@@ -372,11 +371,17 @@ const FtLockupPortfolio = ({
           >
             <Row
               label="Unreleased"
-              value={convertBalanceToReadableFormat(
-                Big(accountMetadata?.deposited_amount ?? 0)
-                  .minus(accountMetadata?.unclaimed_amount ?? 0)
-                  .minus(accountMetadata?.claimed_amount ?? 0),
-                ftMetadata?.decimals
+              value={formatTokenBalance(
+                convertBalanceToReadableFormat(
+                  Big(accountMetadata?.deposited_amount ?? 0)
+                    .minus(accountMetadata?.unclaimed_amount ?? 0)
+                    .minus(accountMetadata?.claimed_amount ?? 0),
+                  ftMetadata?.decimals
+                ),
+                {
+                  minAmount: 0.01,
+                  maxDecimals: 4,
+                }
               )}
               tooltip="Tokens that are still locked and not yet available to claim under your vesting schedule."
               showBorder={true}
@@ -385,9 +390,15 @@ const FtLockupPortfolio = ({
             />
             <Row
               label="Unclaimed"
-              value={convertBalanceToReadableFormat(
-                accountMetadata?.unclaimed_amount,
-                ftMetadata?.decimals
+              value={formatTokenBalance(
+                convertBalanceToReadableFormat(
+                  accountMetadata?.unclaimed_amount,
+                  ftMetadata?.decimals
+                ),
+                {
+                  minAmount: 0.01,
+                  maxDecimals: 4,
+                }
               )}
               tooltip="Tokens from earlier payout periods (rounds) that you have not claimed yet. These can be claimed together with the next unlock."
               showBorder={true}
@@ -396,9 +407,15 @@ const FtLockupPortfolio = ({
             />
             <Row
               label="Claimed"
-              value={convertBalanceToReadableFormat(
-                accountMetadata?.claimed_amount,
-                ftMetadata?.decimals
+              value={formatTokenBalance(
+                convertBalanceToReadableFormat(
+                  accountMetadata?.claimed_amount,
+                  ftMetadata?.decimals
+                ),
+                {
+                  minAmount: 0.01,
+                  maxDecimals: 4,
+                }
               )}
               tooltip="Tokens you've already claimed and transferred to your DAO treasury."
               showBorder={false}
@@ -588,9 +605,15 @@ const FtLockupPortfolio = ({
               value={
                 <div className="d-flex flex-column align-items-end">
                   <div>
-                    {convertBalanceToReadableFormat(
-                      accountMetadata.unclaimed_amount,
-                      ftMetadata?.decimals
+                    {formatTokenBalance(
+                      convertBalanceToReadableFormat(
+                        accountMetadata.unclaimed_amount,
+                        ftMetadata?.decimals
+                      ),
+                      {
+                        minAmount: 0.01,
+                        maxDecimals: 4,
+                      }
                     )}
                   </div>
                   <div className="text-sm text-secondary">

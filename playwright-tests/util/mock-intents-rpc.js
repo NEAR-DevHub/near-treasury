@@ -253,7 +253,8 @@ export const MOCK_TOKENS = {
   },
   USDC_ARB: {
     symbol: "USDC (ARB)",
-    tokenId: "nep141:arbitrum-0xaf88d065e77c8cC2239327C5EDb3A432268e5831.omft.near",
+    tokenId:
+      "nep141:arbitrum-0xaf88d065e77c8cC2239327C5EDb3A432268e5831.omft.near",
     balance: "1000000", // 1 USDC (6 decimals)
   },
 };

@@ -22,39 +22,61 @@ import {
 const DAO_ID = "webassemblymusic-treasury.sputnik-dao.near";
 
 test.describe("Payments Filters", () => {
-  test("should open filters panel when filter button is clicked", async ({ page }) => {
-    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, { waitUntil: 'networkidle' });
+  test("should open filters panel when filter button is clicked", async ({
+    page,
+  }) => {
+    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, {
+      waitUntil: "networkidle",
+    });
 
     // Hard expectation: Filter panel must open
     await openFiltersPanel(page);
     console.log("✓ Filter panel opened successfully");
   });
 
-  test("should show correct available filters for Pending Requests tab", async ({ page }) => {
-    await page.goto(`http://localhost:3000/${DAO_ID}/payments`, { waitUntil: 'networkidle' });
+  test("should show correct available filters for Pending Requests tab", async ({
+    page,
+  }) => {
+    await page.goto(`http://localhost:3000/${DAO_ID}/payments`, {
+      waitUntil: "networkidle",
+    });
 
     // Hard expectation: Should be on Pending Requests tab
-    await expect(page.getByText("Pending Requests")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Pending Requests")).toBeVisible({
+      timeout: 10000,
+    });
 
     await openFiltersPanel(page);
     await page.locator("text=Add Filter").click();
     await page.waitForTimeout(500);
 
     // Hard expectation: Verify only Pending Requests filters are available
-    await expect(page.getByRole("button", { name: "Recipient" })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: "Recipient" })).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.getByRole("button", { name: "Token" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Created by" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Created by" })
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Approver" })).toBeVisible();
     console.log("✓ Pending Requests tab filters are correct");
 
     // Hard expectation: History-specific filters must NOT be available
-    await expect(page.getByRole("button", { name: "Created Date" })).not.toBeVisible();
-    await expect(page.getByRole("button", { name: "Status" })).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Created Date" })
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Status" })
+    ).not.toBeVisible();
     console.log("✓ History-only filters correctly hidden in Pending tab");
   });
 
-  test("should show correct available filters for History tab", async ({ page }) => {
-    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, { waitUntil: 'networkidle' });
+  test("should show correct available filters for History tab", async ({
+    page,
+  }) => {
+    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, {
+      waitUntil: "networkidle",
+    });
 
     // Hard expectation: Should be on History tab
     await expect(page.getByText("History")).toBeVisible({ timeout: 10000 });
@@ -69,17 +91,23 @@ test.describe("Payments Filters", () => {
     await page.waitForTimeout(500);
 
     // Hard expectation: Verify all filters are available for History
-    await expect(page.getByRole("button", { name: "Created Date" })).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.getByRole("button", { name: "Created Date" })
+    ).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole("button", { name: "Status" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Recipient" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Token" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Created by" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Created by" })
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Approver" })).toBeVisible();
     console.log("✓ All History tab filters are available");
   });
 
   test("should add and display Created by filter", async ({ page }) => {
-    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, {
+      waitUntil: "networkidle",
+    });
 
     await addFilter(page, {
       filterName: "Created by",
@@ -87,7 +115,9 @@ test.describe("Payments Filters", () => {
     });
 
     // Search for and select a creator
-    await page.getByRole("textbox", { name: "Search by account address" }).fill("peter");
+    await page
+      .getByRole("textbox", { name: "Search by account address" })
+      .fill("peter");
     await page.waitForTimeout(1000);
 
     // Hard expectation: Creator search result must appear
@@ -100,12 +130,19 @@ test.describe("Payments Filters", () => {
     // Hard expectation: All table rows must show the selected creator
     const creatorColumnIndex = await getColumnIndex(page, "Created by");
     expect(creatorColumnIndex).toBeGreaterThan(-1);
-    await checkColumnValues(page, creatorColumnIndex, "petersalomonsen.near", true);
+    await checkColumnValues(
+      page,
+      creatorColumnIndex,
+      "petersalomonsen.near",
+      true
+    );
     console.log("✓ All rows show selected creator");
   });
 
   test("should remove filter when trash icon is clicked", async ({ page }) => {
-    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, {
+      waitUntil: "networkidle",
+    });
 
     await addFilter(page, {
       filterName: "Recipient",
@@ -129,7 +166,9 @@ test.describe("Payments Filters", () => {
   });
 
   test("should search by search input", async ({ page }) => {
-    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, { waitUntil: 'networkidle' });
+    await page.goto(`http://localhost:3000/${DAO_ID}/payments?tab=history`, {
+      waitUntil: "networkidle",
+    });
 
     // Hard expectation: Search input must be visible
     const searchInput = page.getByPlaceholder("Search");

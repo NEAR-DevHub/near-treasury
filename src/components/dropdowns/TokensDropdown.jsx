@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import Big from "big.js";
 import { useDao } from "@/context/DaoContext";
 import DropdownWithModal from "@/components/dropdowns/DropdownWithModal";
 import NearToken from "@/components/icons/NearToken";
+import {
+  formatTokenBalance,
+  convertBalanceToReadableFormat,
+  formatTokenAmount,
+} from "@/helpers/nearHelpers";
 
 /**
  * Optimized TokensDropdown Component
@@ -96,9 +100,10 @@ const TokensDropdown = ({
       title: token.ft_meta.symbol,
       tokenId: token.contract_id,
       value: `intents_${token.contract_id}`,
-      tokenBalance: Big(token.amount ?? "0")
-        .div(Big(10).pow(token.ft_meta.decimals))
-        .toFixed(2),
+      tokenBalance: formatTokenAmount(
+        convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals),
+        token.ft_meta.price
+      ),
       blockchain: token.blockchain,
       isIntent: true,
     }));
@@ -127,9 +132,13 @@ const TokensDropdown = ({
           title: token.ft_meta.symbol,
           value: token.contract,
           blockchain: null,
-          tokenBalance: Big(token.amount ?? "0")
-            .div(Big(10).pow(token.ft_meta.decimals))
-            .toFixed(2),
+          tokenBalance: formatTokenAmount(
+            convertBalanceToReadableFormat(
+              token.amount,
+              token.ft_meta.decimals
+            ),
+            token.ft_meta.price
+          ),
         }))
       );
     }
@@ -204,7 +213,7 @@ const TokensDropdown = ({
                 {walletConfig.nearBalances?.storageParsed || "0"}
               </div>
               {stakedTokens && (
-                <div>Tokens staked: {Big(stakedTokens).toFixed(2)}</div>
+                <div>Tokens staked: {formatTokenBalance(stakedTokens)}</div>
               )}
             </div>
           )}
