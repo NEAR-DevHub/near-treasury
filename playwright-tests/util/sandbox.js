@@ -141,9 +141,7 @@ export class NearSandbox {
 
     const actions = [
       transactions.createAccount(),
-      transactions.transfer(
-        utils.format.parseNearAmount(initialBalance.replace(/0{24}$/, ""))
-      ),
+      transactions.transfer(initialBalance),
       transactions.addKey(newKeyPair.getPublicKey(), transactions.fullAccessKey()),
     ];
 
@@ -309,6 +307,60 @@ export class NearSandbox {
     await this.waitForBlock();
 
     // Enhance result with helper methods and properties
+    return this._enhanceResult(result);
+  }
+
+  async transfer(signerId, receiverId, amount) {
+    const keyPair = this.accountKeys.get(signerId);
+    if (!keyPair) {
+      throw new Error(`Account ${signerId} not found`);
+    }
+
+    const actions = [transactions.transfer(BigInt(amount))];
+
+    const blockHash = await this.getLatestBlockHash();
+    const nonce = await this.getAccessKeyNonce(
+      signerId,
+      keyPair.getPublicKey().toString()
+    );
+
+    const tx = transactions.createTransaction(
+      signerId,
+      keyPair.getPublicKey(),
+      receiverId,
+      nonce + 1,
+      actions,
+      utils.serialize.base_decode(blockHash)
+    );
+
+    const serializedTx = utils.serialize.serialize(transactions.SCHEMA.Transaction, tx);
+    const txHash = crypto.createHash("sha256").update(serializedTx).digest();
+    const signature = keyPair.sign(txHash);
+
+    const signedTx = new transactions.SignedTransaction({
+      transaction: tx,
+      signature: new transactions.Signature({
+        keyType: tx.publicKey.keyType,
+        data: signature.signature,
+      }),
+    });
+
+    const signedTxBytes = signedTx.encode();
+    const signedTxBase64 = Buffer.from(signedTxBytes).toString("base64");
+    let result;
+    try {
+      result = await broadcastTxCommit(this.rpcClient, {
+        signedTxBase64: signedTxBase64,
+        waitUntil: "FINAL",
+      });
+    } catch (error) {
+      console.error("Transfer failed:", error);
+      throw error;
+    }
+
+    // Wait for block finalization before next transaction
+    await this.waitForBlock();
+
     return this._enhanceResult(result);
   }
 
