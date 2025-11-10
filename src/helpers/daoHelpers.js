@@ -96,7 +96,7 @@ export const formatBase64ArgsPretty = (encodedArgs) => {
   }
 };
 
-  export const formatSubmissionTimeStamp = (
+export const formatSubmissionTimeStamp = (
   submissionTime,
   proposalPeriod,
   isProposalDetailsPage
@@ -125,7 +125,6 @@ export const formatBase64ArgsPretty = (encodedArgs) => {
   return isProposalDetailsPage ? (
     <div className={isNegative && "text-secondary"}>
       <DateTimeDisplay timestamp={milliseconds} />
-     
     </div>
   ) : (
     <div className="d-flex flex-wrap">
@@ -135,10 +134,9 @@ export const formatBase64ArgsPretty = (encodedArgs) => {
           : `${totalDays}d ${remainingHours}h ${remainingMinutes}m`}
 
         <div className="text-secondary text-sm">
-        <DateTimeDisplay timestamp={milliseconds} format="date-only"/>
-         
+          <DateTimeDisplay timestamp={milliseconds} format="date-only" />
         </div>
       </div>
     </div>
   );
-}
+};

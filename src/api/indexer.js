@@ -7,7 +7,9 @@ const SPUTNIK_INDEXER_BASE = process.env.NEXT_PUBLIC_SPUTNIK_INDEXER;
 export const getProposalApprovers = async (daoId) => {
   try {
     logger.info("Indexer call: getProposalApprovers", { daoId });
-    const response = await fetch(`${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/approvers`);
+    const response = await fetch(
+      `${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/approvers`
+    );
     const data = await response.json();
     return data?.approvers || [];
   } catch (error) {
@@ -22,7 +24,9 @@ export const getProposalApprovers = async (daoId) => {
 export const getProposalRecipients = async (daoId) => {
   try {
     logger.info("Indexer call: getProposalRecipients", { daoId });
-    const response = await fetch(`${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/recipients`);
+    const response = await fetch(
+      `${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/recipients`
+    );
     const data = await response.json();
     return data?.recipients || [];
   } catch (error) {
@@ -37,7 +41,9 @@ export const getProposalRecipients = async (daoId) => {
 export const getProposalRequestedTokens = async (daoId) => {
   try {
     logger.info("Indexer call: getProposalRequestedTokens", { daoId });
-    const response = await fetch(`${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/requested-tokens`);
+    const response = await fetch(
+      `${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/requested-tokens`
+    );
     const data = await response.json();
     return data?.requested_tokens || [];
   } catch (error) {
@@ -52,7 +58,9 @@ export const getProposalRequestedTokens = async (daoId) => {
 export const getProposalProposers = async (daoId) => {
   try {
     logger.info("Indexer call: getProposalProposers", { daoId });
-    const response = await fetch(`${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/proposers`);
+    const response = await fetch(
+      `${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/proposers`
+    );
     const data = await response.json();
     return data?.proposers || [];
   } catch (error) {
@@ -67,7 +75,9 @@ export const getProposalProposers = async (daoId) => {
 export const getProposalValidators = async (daoId) => {
   try {
     logger.info("Indexer call: getProposalValidators", { daoId });
-    const response = await fetch(`${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/validators`);
+    const response = await fetch(
+      `${SPUTNIK_INDEXER_BASE}/proposals/${daoId}/validators`
+    );
     const data = await response.json();
     return data?.validators || [];
   } catch (error) {
@@ -110,7 +120,12 @@ export function generateFilteredProposalsQuery(
               if (include) {
                 queryParams.push(`statuses=${values.join(",")}`);
               } else {
-                const allStatuses = ["Approved", "Rejected", "Failed", "Expired"];
+                const allStatuses = [
+                  "Approved",
+                  "Rejected",
+                  "Failed",
+                  "Expired",
+                ];
                 const excludedStatuses = values;
                 const includedStatuses = allStatuses.filter(
                   (status) => !excludedStatuses.includes(status)
@@ -185,9 +200,8 @@ export function generateFilteredProposalsQuery(
                   const allValues = [
                     ...new Set([...existingValues, accountId]),
                   ];
-                  queryParams[
-                    existingApproversNotIndex
-                  ] = `approvers_not=${allValues.join(",")}`;
+                  queryParams[existingApproversNotIndex] =
+                    `approvers_not=${allValues.join(",")}`;
                 } else {
                   queryParams.push(`approvers_not=${accountId}`);
                 }
@@ -294,11 +308,15 @@ export const getProposalsFromIndexer = async ({
       query += `&${filterQueryParams}`;
     }
 
-    logger.info("Indexer call: getProposalsFromIndexer", { daoId, category, page });
+    logger.info("Indexer call: getProposalsFromIndexer", {
+      daoId,
+      category,
+      page,
+    });
 
     const response = await fetch(query);
     const data = await response.json();
-    
+
     return {
       proposals: data?.proposals || [],
       total: data?.total || 0,

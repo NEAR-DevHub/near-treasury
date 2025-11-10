@@ -48,9 +48,7 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
         method: "supported_tokens",
         params: [
           {
-            chains: [
-              "btc:mainnet",
-            ],
+            chains: ["btc:mainnet"],
           },
         ],
       }),
@@ -61,7 +59,10 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     expect(tokenId).toEqual("nep141:btc.omft.near");
 
     // Import and setup omft.near contract
-    const omftContractId = await sandbox.importMainnetContract("omft.near", "omft.near");
+    const omftContractId = await sandbox.importMainnetContract(
+      "omft.near",
+      "omft.near"
+    );
 
     // Fetch BTC token metadata from mainnet
     const btcMetadata = await sandbox.viewFunctionMainnet(
@@ -70,20 +71,15 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     );
 
     // Initialize omft contract
-    await sandbox.functionCall(
-      omftContractId,
-      omftContractId,
-      "new",
-      {
-        super_admins: ["omft.near"],
-        admins: {},
-        grantees: {
-          DAO: ["omft.near"],
-          TokenDeployer: ["omft.near"],
-          TokenDepositer: ["omft.near"],
-        },
-      }
-    );
+    await sandbox.functionCall(omftContractId, omftContractId, "new", {
+      super_admins: ["omft.near"],
+      admins: {},
+      grantees: {
+        DAO: ["omft.near"],
+        TokenDeployer: ["omft.near"],
+        TokenDepositer: ["omft.near"],
+      },
+    });
 
     // Deploy BTC token
     await sandbox.functionCall(
@@ -99,26 +95,24 @@ test.describe("BTC Payment Request Flow (Sandbox Only)", () => {
     );
 
     // Import and setup intents.near contract
-    const intentsContractId = await sandbox.importMainnetContract("intents.near", "intents.near");
-    await sandbox.functionCall(
-      intentsContractId,
-      intentsContractId,
-      "new",
-      {
-        config: {
-          wnear_id: "wrap.near",
-          fees: {
-            fee: 100,
-            fee_collector: "intents.near",
-          },
-          roles: {
-            super_admins: ["intents.near"],
-            admins: {},
-            grantees: {},
-          },
-        },
-      }
+    const intentsContractId = await sandbox.importMainnetContract(
+      "intents.near",
+      "intents.near"
     );
+    await sandbox.functionCall(intentsContractId, intentsContractId, "new", {
+      config: {
+        wnear_id: "wrap.near",
+        fees: {
+          fee: 100,
+          fee_collector: "intents.near",
+        },
+        roles: {
+          super_admins: ["intents.near"],
+          admins: {},
+          grantees: {},
+        },
+      },
+    });
 
     // Register intents contract with BTC token storage
     await sandbox.functionCall(

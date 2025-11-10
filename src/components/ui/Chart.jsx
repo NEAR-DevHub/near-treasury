@@ -21,6 +21,7 @@ import {
   formatChartDate,
   formatDateTimeWithTimezone,
 } from "@/components/ui/DateTimeDisplay";
+import { formatTokenBalance } from "@/helpers/nearHelpers";
 
 ChartJS.register(
   CategoryScale,
@@ -221,9 +222,7 @@ const Chart = ({
                 : "";
             },
             label: (context) => {
-              return `Token Balance: ${formatAmountToReadableFormat(
-                context.parsed.y
-              )}`;
+              return `Token Balance: ${formatTokenBalance(context.parsed.y)}`;
             },
           },
         },
@@ -275,7 +274,7 @@ const Chart = ({
             <div className="d-flex align-items-center gap-2">
               <div className="d-flex flex-column">
                 <div className="h4 mb-0 fw-bold">
-                  {formatAmountToReadableFormat(displayBalance.balance)}
+                  {formatTokenBalance(displayBalance.balance)}
                   <span className="ms-2">
                     {selectedTokenInfo?.ft_meta?.symbol}
                   </span>

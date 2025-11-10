@@ -171,9 +171,9 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
         const sourceWallet = isIntentsPayment
           ? "Intents"
           : isFunctionType &&
-            item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
-          ? "Lockup"
-          : "SputnikDAO";
+              item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
+            ? "Lockup"
+            : "SputnikDAO";
 
         setProposalData({
           id: item.id,

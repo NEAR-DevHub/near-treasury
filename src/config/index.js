@@ -3,7 +3,7 @@ import daoConfigData from "@/config/daoConfig.json";
 /**
  * Get configuration for a specific DAO
  * Falls back to default config if DAO-specific config not found
- * 
+ *
  * @param {string} daoId - The DAO account ID
  * @returns {Object} DAO configuration
  */

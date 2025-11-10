@@ -14,7 +14,9 @@ import { test } from "@playwright/test";
 const DAO_ID = "webassemblymusic-treasury.sputnik-dao.near";
 
 test.describe("Asset Exchange Proposal Details", () => {
-  test("displays NEAR Intents asset exchange proposal #30 with correct values", async ({ page }) => {
+  test("displays NEAR Intents asset exchange proposal #30 with correct values", async ({
+    page,
+  }) => {
     test.setTimeout(60_000);
 
     // Navigate to the proposal details page for proposal #30
@@ -22,7 +24,7 @@ test.describe("Asset Exchange Proposal Details", () => {
     // Note: USD prices will vary based on real-time market data
     await page.goto(
       `http://localhost:3000/${DAO_ID}/asset-exchange?tab=history&id=30`,
-      { waitUntil: 'networkidle' }
+      { waitUntil: "networkidle" }
     );
 
     console.log("Testing asset exchange proposal #30 details");
@@ -41,7 +43,9 @@ test.describe("Asset Exchange Proposal Details", () => {
     await expect(page.getByText("Send", { exact: true })).toBeVisible();
     // Check for amount "20" and symbol "USDC" (they may be in separate elements)
     await expect(page.getByText("20", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("USDC", { exact: false }).first()).toBeVisible();
+    await expect(
+      page.getByText("USDC", { exact: false }).first()
+    ).toBeVisible();
     console.log("✓ Send amount (20 USDC) is visible");
 
     // Hard expectation: Send network should be Ethereum
@@ -124,14 +128,18 @@ test.describe("Asset Exchange Proposal Details", () => {
     // Hard expectation: Note about execution deadline should be visible
     // The markdown ** is rendered as bold, so just check for the key content
     await expect(
-      page.getByText("Must be executed before 2025-09-22T08:02:41.846Z", { exact: false })
+      page.getByText("Must be executed before 2025-09-22T08:02:41.846Z", {
+        exact: false,
+      })
     ).toBeVisible();
     console.log("✓ Execution deadline note is visible");
 
     console.log("✓ Asset exchange proposal #30 displays all details correctly");
   });
 
-  test("displays NEAR Intents asset exchange proposal #43 with correct destination network", async ({ page }) => {
+  test("displays NEAR Intents asset exchange proposal #43 with correct destination network", async ({
+    page,
+  }) => {
     test.setTimeout(60_000);
 
     // Navigate to proposal #43: 10 USDC (Near) → 10 USDC (Base)
@@ -140,10 +148,12 @@ test.describe("Asset Exchange Proposal Details", () => {
     // Actual bug: Shows "Near" instead
     await page.goto(
       `http://localhost:3000/${DAO_ID}/asset-exchange?tab=history&id=43`,
-      { waitUntil: 'networkidle' }
+      { waitUntil: "networkidle" }
     );
 
-    console.log("Testing asset exchange proposal #43 - destination network display");
+    console.log(
+      "Testing asset exchange proposal #43 - destination network display"
+    );
 
     // Wait for the page to load
     await page.waitForLoadState("networkidle");
@@ -158,12 +168,16 @@ test.describe("Asset Exchange Proposal Details", () => {
     // Hard expectation: Send section should display USDC on Near
     await expect(page.getByText("Send", { exact: true })).toBeVisible();
     await expect(page.getByText("10", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("USDC", { exact: false }).first()).toBeVisible();
+    await expect(
+      page.getByText("USDC", { exact: false }).first()
+    ).toBeVisible();
     console.log("✓ Send amount (10 USDC) is visible");
 
     // Hard expectation: Send network should be Near
     // The send token is on Near (source)
-    await expect(page.getByText("Near", { exact: false }).first()).toBeVisible();
+    await expect(
+      page.getByText("Near", { exact: false }).first()
+    ).toBeVisible();
     console.log("✓ Send network is visible");
 
     // Hard expectation: Receive section should display USDC
@@ -176,7 +190,11 @@ test.describe("Asset Exchange Proposal Details", () => {
     // But the UI incorrectly displays "Near"
 
     // First, let's verify the bug exists by checking what's currently displayed
-    const receiveNetworkText = await page.locator('text=/Receive/').locator('..').locator('..').textContent();
+    const receiveNetworkText = await page
+      .locator("text=/Receive/")
+      .locator("..")
+      .locator("..")
+      .textContent();
     console.log("Receive section content:", receiveNetworkText);
 
     // Verify that "Base" is displayed as the destination network (issue #39 fix)

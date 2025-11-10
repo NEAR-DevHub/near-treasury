@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { createMockIntentsTokens, mockIntentsRpc, MOCK_TOKENS } from "../../util/mock-intents-rpc.js";
+import {
+  createMockIntentsTokens,
+  mockIntentsRpc,
+  MOCK_TOKENS,
+} from "../../util/mock-intents-rpc.js";
 
 /**
  * Intents Dashboard Tests
@@ -12,7 +16,9 @@ import { createMockIntentsTokens, mockIntentsRpc, MOCK_TOKENS } from "../../util
 const TEST_DAO_ID = "testing-astradao.sputnik-dao.near";
 
 test.describe("Intents Dashboard Display", () => {
-  test("should not display NEAR Intents card when there are no assets", async ({ page }) => {
+  test("should not display NEAR Intents card when there are no assets", async ({
+    page,
+  }) => {
     const daoId = TEST_DAO_ID;
 
     // Mock RPC to return empty balances (all zeros)
@@ -29,7 +35,9 @@ test.describe("Intents Dashboard Display", () => {
     console.log("Testing dashboard with no intents balances");
 
     // Hard expectation: Total Balance should be visible (main dashboard loaded)
-    await expect(page.getByText("Total Balance")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Total Balance")).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ Dashboard loaded");
 
     // Hard expectation: NEAR Intents card should NOT be visible when there are no tokens
@@ -37,7 +45,9 @@ test.describe("Intents Dashboard Display", () => {
     console.log("✓ NEAR Intents card correctly hidden when no balances");
   });
 
-  test("should display NEAR Intents card with token balances", async ({ page }) => {
+  test("should display NEAR Intents card with token balances", async ({
+    page,
+  }) => {
     const daoId = TEST_DAO_ID;
 
     // Mock RPC to return multiple token balances
@@ -55,11 +65,15 @@ test.describe("Intents Dashboard Display", () => {
     console.log("Testing dashboard with intents balances");
 
     // Hard expectation: Dashboard should load
-    await expect(page.getByText("Total Balance")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Total Balance")).toBeVisible({
+      timeout: 10000,
+    });
     console.log("✓ Dashboard loaded");
 
     // Hard expectation: NEAR Intents card should be visible
-    const intentsCard = page.locator('[data-testid="intents-portfolio"], .card:has-text("NEAR Intents")');
+    const intentsCard = page.locator(
+      '[data-testid="intents-portfolio"], .card:has-text("NEAR Intents")'
+    );
     await expect(intentsCard).toBeVisible({ timeout: 10000 });
     console.log("✓ NEAR Intents card is visible");
 
@@ -78,7 +92,9 @@ test.describe("Intents Dashboard Display", () => {
     console.log("✓ NEAR Intents card displays all mocked tokens correctly");
   });
 
-  test("should display aggregated USDC balance across multiple chains", async ({ page }) => {
+  test("should display aggregated USDC balance across multiple chains", async ({
+    page,
+  }) => {
     const daoId = TEST_DAO_ID;
 
     // Mock RPC with USDC on multiple chains (NEAR, Base, Ethereum)
@@ -86,10 +102,11 @@ test.describe("Intents Dashboard Display", () => {
     const mockData = createMockIntentsTokens([
       {
         symbol: "USDC",
-        tokenId: "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", // USDC on NEAR
+        tokenId:
+          "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", // USDC on NEAR
         balance: "1000000", // 1 USDC (6 decimals)
       },
-      MOCK_TOKENS.USDC_BASE,    // 1 USDC on Base
+      MOCK_TOKENS.USDC_BASE, // 1 USDC on Base
       {
         symbol: "USDC",
         tokenId: "eth-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near", // USDC on Ethereum
@@ -104,7 +121,9 @@ test.describe("Intents Dashboard Display", () => {
     console.log("Testing aggregated USDC balance across chains");
 
     // Hard expectation: NEAR Intents card should be visible
-    const intentsCard = page.locator('[data-testid="intents-portfolio"], .card:has-text("NEAR Intents")');
+    const intentsCard = page.locator(
+      '[data-testid="intents-portfolio"], .card:has-text("NEAR Intents")'
+    );
     await expect(intentsCard).toBeVisible({ timeout: 10000 });
 
     // Hard expectation: USDC should be displayed in NEAR Intents section
@@ -134,10 +153,12 @@ test.describe("Intents Dashboard Display", () => {
     // Hard expectation: Check that USD values are displayed
     // The UI shows both individual token price and total value
     const usdMatches = intentsText?.matchAll(/\$(\d+\.?\d{0,2})/g);
-    const usdValues = Array.from(usdMatches || []).map(m => parseFloat(m[1]));
+    const usdValues = Array.from(usdMatches || []).map((m) => parseFloat(m[1]));
 
     expect(usdValues.length).toBeGreaterThan(0);
-    console.log(`✓ USD values found: ${usdValues.map(v => '$' + v).join(', ')}`);
+    console.log(
+      `✓ USD values found: ${usdValues.map((v) => "$" + v).join(", ")}`
+    );
 
     // Hard expectation: The total should reflect multiple USDC tokens
     // With 3 tokens of 1 USDC each @ $1, the total should be around $2-$3
@@ -145,6 +166,8 @@ test.describe("Intents Dashboard Display", () => {
     expect(maxValue).toBeGreaterThanOrEqual(1); // At least $1 total
     expect(maxValue).toBeLessThanOrEqual(4); // Not more than $4
 
-    console.log(`✓ Multi-chain USDC aggregation working (max value: $${maxValue})`);
+    console.log(
+      `✓ Multi-chain USDC aggregation working (max value: $${maxValue})`
+    );
   });
 });

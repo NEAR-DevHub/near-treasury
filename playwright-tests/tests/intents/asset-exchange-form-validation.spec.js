@@ -109,7 +109,9 @@ test.describe("Asset Exchange Form Validation", () => {
     console.log("✓ Slippage accepts 5%");
   });
 
-  test("decimal input field accepts decimal numbers correctly", async ({ page }) => {
+  test("decimal input field accepts decimal numbers correctly", async ({
+    page,
+  }) => {
     // Amount input MUST be visible
     const amountInput = page.locator('input[type="number"]').first();
     await expect(amountInput).toBeVisible({ timeout: 5000 });
@@ -144,12 +146,15 @@ test.describe("Asset Exchange Form Validation", () => {
 
   test("displays form sections and controls", async ({ page }) => {
     // Send section MUST be visible (use label selector to avoid strict mode)
-    const sendLabel = page.locator('label').filter({ hasText: 'Send' }).first();
+    const sendLabel = page.locator("label").filter({ hasText: "Send" }).first();
     await expect(sendLabel).toBeVisible({ timeout: 5000 });
     console.log("✓ Send section is visible");
 
     // Receive section MUST be visible
-    const receiveLabel = page.locator('label').filter({ hasText: 'Receive' }).first();
+    const receiveLabel = page
+      .locator("label")
+      .filter({ hasText: "Receive" })
+      .first();
     await expect(receiveLabel).toBeVisible({ timeout: 5000 });
     console.log("✓ Receive section is visible");
 
@@ -175,7 +180,7 @@ test.describe("Asset Exchange Form Validation", () => {
     await page.waitForTimeout(500);
 
     // Notes textarea MUST be visible
-    const notesTextarea = page.locator('textarea');
+    const notesTextarea = page.locator("textarea");
     await expect(notesTextarea).toBeVisible({ timeout: 5000 });
 
     // Test that notes can be entered
@@ -188,7 +193,9 @@ test.describe("Asset Exchange Form Validation", () => {
 
   test("token selection dropdown can be clicked", async ({ page }) => {
     // Token dropdown MUST be visible
-    const tokenDropdown = page.getByRole("button", { name: /Select token/i }).first();
+    const tokenDropdown = page
+      .getByRole("button", { name: /Select token/i })
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 5000 });
 
     // Click dropdown
@@ -201,18 +208,23 @@ test.describe("Asset Exchange Form Validation", () => {
     console.log("✓ Token selection modal opens");
 
     // Close modal
-    const closeButton = page.getByRole("button", { name: /Close/i }).or(
-      page.locator('[aria-label="Close"]')
-    ).first();
+    const closeButton = page
+      .getByRole("button", { name: /Close/i })
+      .or(page.locator('[aria-label="Close"]'))
+      .first();
     await expect(closeButton).toBeVisible({ timeout: 3000 });
     await closeButton.click();
     await page.waitForTimeout(500);
     console.log("✓ Modal can be closed");
   });
 
-  test("shows insufficient balance warning and preview button with excessive amount", async ({ page }) => {
+  test("shows insufficient balance warning and preview button with excessive amount", async ({
+    page,
+  }) => {
     // Select send token (BTC)
-    const sendTokenDropdown = page.getByRole("button", { name: /Select token/i }).first();
+    const sendTokenDropdown = page
+      .getByRole("button", { name: /Select token/i })
+      .first();
     await expect(sendTokenDropdown).toBeVisible({ timeout: 5000 });
     await sendTokenDropdown.click();
     await page.waitForTimeout(1000);
@@ -243,27 +255,37 @@ test.describe("Asset Exchange Form Validation", () => {
     await page.waitForTimeout(500);
 
     // Button should still say "Select Token" since receive token not selected yet
-    const selectTokenButton = page.getByRole("button", { name: /Select Token/i }).last();
+    const selectTokenButton = page
+      .getByRole("button", { name: /Select Token/i })
+      .last();
     await expect(selectTokenButton).toBeVisible({ timeout: 5000 });
-    console.log("✓ Button shows 'Select Token' (not 'Preview') before receive token selected");
+    console.log(
+      "✓ Button shows 'Select Token' (not 'Preview') before receive token selected"
+    );
 
     // Select receive token (ETH)
     // There are 2 buttons: "Select token " (dropdown in Receive section) and "Select Token" (bottom button)
     // First click the dropdown in the Receive section
-    const receiveTokenDropdown = page.getByRole("button", { name: "Select token", exact: false }).first();
+    const receiveTokenDropdown = page
+      .getByRole("button", { name: "Select token", exact: false })
+      .first();
     await expect(receiveTokenDropdown).toBeVisible({ timeout: 10000 });
     await receiveTokenDropdown.click();
     await page.waitForTimeout(1500);
     console.log("✓ Clicked receive token dropdown");
 
     // Wait for token selector modal and select ETH
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10000 });
     await page.getByText("ETH", { exact: true }).first().click();
     await page.waitForTimeout(1000);
     console.log("✓ Selected ETH token");
 
     // Select network for ETH
-    await expect(page.getByRole("heading", { name: /Select Network for ETH/i })).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: /Select Network for ETH/i })
+    ).toBeVisible({ timeout: 10000 });
     await page.getByText("Arbitrum", { exact: true }).first().click();
     await page.waitForTimeout(2000);
     console.log("✓ Selected Arbitrum network for ETH");
@@ -278,16 +300,22 @@ test.describe("Asset Exchange Form Validation", () => {
     console.log("✓ Button changed to 'Preview' after both tokens selected");
 
     // Insufficient balance warning MUST appear
-    const insufficientBalanceWarning = page.getByText(/treasury balance is insufficient/i);
+    const insufficientBalanceWarning = page.getByText(
+      /treasury balance is insufficient/i
+    );
     await expect(insufficientBalanceWarning).toBeVisible({ timeout: 10000 });
     console.log("✓ Insufficient balance warning is displayed");
 
     // Warning should mention "won't be approved until the balance is topped up"
-    await expect(page.getByText(/won't be approved until the balance is topped up/i)).toBeVisible();
+    await expect(
+      page.getByText(/won't be approved until the balance is topped up/i)
+    ).toBeVisible();
     console.log("✓ Warning message explains approval restriction");
 
     // Preview button MUST still be visible (allows creating request even with insufficient balance)
     await expect(previewButton).toBeVisible({ timeout: 5000 });
-    console.log("✓ Preview button remains visible despite insufficient balance");
+    console.log(
+      "✓ Preview button remains visible despite insufficient balance"
+    );
   });
 });

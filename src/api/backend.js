@@ -23,7 +23,9 @@ export const getValidatorDetails = async (accountId) => {
     if (!accountId) {
       return null;
     }
-    const response = await fetch(`${BACKEND_API_BASE}/validator-details?account_id=${accountId}`);
+    const response = await fetch(
+      `${BACKEND_API_BASE}/validator-details?account_id=${accountId}`
+    );
     return response.json();
   } catch (error) {
     logger.error("Error getting validator details:", error);
@@ -31,16 +33,17 @@ export const getValidatorDetails = async (accountId) => {
   }
 };
 
-
 export const getFtTokens = async (accountId) => {
   try {
     if (!accountId) {
       logger.warn("getFtTokens called without accountId");
       return [];
     }
-    
+
     logger.info("API call: getFtTokens", { accountId });
-    const response = await fetch(`${BACKEND_API_BASE}/ft-tokens?account_id=${accountId}`);
+    const response = await fetch(
+      `${BACKEND_API_BASE}/ft-tokens?account_id=${accountId}`
+    );
     return response.json();
   } catch (error) {
     logger.error("Error getting FT tokens:", error);
@@ -55,15 +58,16 @@ export const getFtTokens = async (accountId) => {
  */
 export const getTokenPrice = async (contractId) => {
   try {
-    
     // Don't make API call if no token address
     if (!contractId) {
       logger.warn("getTokenPrice called without valid contractId");
       return null;
     }
-    
+
     logger.info("API call: getTokenPrice", { contractId });
-    const response = await fetch(`${BACKEND_API_BASE}/ft-token-price?account_id=${contractId}`);
+    const response = await fetch(
+      `${BACKEND_API_BASE}/ft-token-price?account_id=${contractId}`
+    );
     const data = await response.json();
     return data?.price || null;
   } catch (error) {
@@ -88,9 +92,11 @@ export const getHistoricalData = async (accountId, token) => {
       logger.warn("getHistoricalData called without accountId or token");
       return [];
     }
-    
+
     logger.info("API call: getHistoricalData", { token, accountId });
-    const response = await fetch(`${BACKEND_API_BASE}/all-token-balance-history?token_id=${token}&account_id=${accountId}`);
+    const response = await fetch(
+      `${BACKEND_API_BASE}/all-token-balance-history?token_id=${token}&account_id=${accountId}`
+    );
     return response.json();
   } catch (error) {
     logger.error("Error getting historical data:", error);
@@ -104,9 +110,11 @@ export const getIntentsHistoricalData = async (accountId) => {
       logger.warn("getIntentsHistoricalData called without accountId");
       return [];
     }
-    
+
     logger.info("API call: getIntentsHistoricalData", { accountId });
-    const response = await fetch(`${BACKEND_API_BASE}/intents-balance-history?account_id=${accountId}`);
+    const response = await fetch(
+      `${BACKEND_API_BASE}/intents-balance-history?account_id=${accountId}`
+    );
     return response.json();
   } catch (error) {
     logger.error("Error getting intents data:", error);
@@ -114,17 +122,25 @@ export const getIntentsHistoricalData = async (accountId) => {
   }
 };
 
-export const getTransactionTransferHistory = async (accountId,lockupContract, page) => {
+export const getTransactionTransferHistory = async (
+  accountId,
+  lockupContract,
+  page
+) => {
   try {
     if (!accountId) {
       logger.warn("getTransactionTransferHistory called without accountId");
       return [];
     }
-    
-    logger.info("API call: getTransactionHistory", { accountId, lockupContract, page });
-    let query = `transactions-transfer-history?treasuryDaoID=${accountId}&page=${page}`
-    if(lockupContract){
-      query += `&lockupContract=${lockupContract}`
+
+    logger.info("API call: getTransactionHistory", {
+      accountId,
+      lockupContract,
+      page,
+    });
+    let query = `transactions-transfer-history?treasuryDaoID=${accountId}&page=${page}`;
+    if (lockupContract) {
+      query += `&lockupContract=${lockupContract}`;
     }
     const response = await fetch(`${BACKEND_API_BASE}/${query}`);
     return response.json();
@@ -140,30 +156,35 @@ export const getNearStakedPools = async (accountId) => {
       logger.warn("getNearStakedPools called without accountId");
       return [];
     }
-    
+
     logger.info("API call: getNearStakedPool", { accountId });
-    
+
     const [fastnearResponse, stakingApiResponse] = await Promise.allSettled([
       fetch(`https://api.fastnear.com/v1/account/${accountId}/staking`),
-      fetch(`https://staking-pools-api.neartreasury.com/v1/account/${accountId}/staking`)
+      fetch(
+        `https://staking-pools-api.neartreasury.com/v1/account/${accountId}/staking`
+      ),
     ]);
-    
+
     const allPools = [];
-    
+
     // Process fastnear data
-    if (fastnearResponse.status === 'fulfilled' && fastnearResponse.value.ok) {
+    if (fastnearResponse.status === "fulfilled" && fastnearResponse.value.ok) {
       const fastnearData = await fastnearResponse.value.json();
       const fastnearPools = (fastnearData?.pools ?? []).map((i) => i.pool_id);
       allPools.push(...fastnearPools);
     }
-    
+
     // Process staking-pools-api data
-    if (stakingApiResponse.status === 'fulfilled' && stakingApiResponse.value.ok) {
+    if (
+      stakingApiResponse.status === "fulfilled" &&
+      stakingApiResponse.value.ok
+    ) {
       const stakingData = await stakingApiResponse.value.json();
       const stakingPools = (stakingData?.pools ?? []).map((i) => i.pool_id);
       allPools.push(...stakingPools);
     }
-    
+
     // Return unique pool IDs
     return [...new Set(allPools)];
   } catch (error) {
@@ -177,14 +198,16 @@ export const getNearStakedPools = async (accountId) => {
 export const fetchTokenMetadataByDefuseAssetId = async (defuseAssetIds) => {
   try {
     if (!defuseAssetIds) {
-      logger.warn("fetchTokenMetadataByDefuseAssetId called without defuseAssetIds");
+      logger.warn(
+        "fetchTokenMetadataByDefuseAssetId called without defuseAssetIds"
+      );
       return [];
     }
-    
-    const tokenIdsString = Array.isArray(defuseAssetIds) 
-      ? defuseAssetIds.join(",") 
+
+    const tokenIdsString = Array.isArray(defuseAssetIds)
+      ? defuseAssetIds.join(",")
       : defuseAssetIds;
-    
+
     const response = await fetch(
       `${BACKEND_API_BASE}/token-by-defuse-asset-id?defuseAssetId=${tokenIdsString}`
     );
@@ -202,9 +225,11 @@ export const getFTTokenMetadata = async (tokenId) => {
       logger.warn("getFTTokenMetadata called without tokenId");
       return [];
     }
-    
+
     logger.info("API call: getFTTokenMetadata", { tokenId });
-    const response = await fetch(`${BACKEND_API_BASE}/ft-token-metadata?account_id=${tokenId}`);
+    const response = await fetch(
+      `${BACKEND_API_BASE}/ft-token-metadata?account_id=${tokenId}`
+    );
     return response.json();
   } catch (error) {
     logger.error("Error getting FT metadata:", error);
@@ -220,11 +245,11 @@ export const fetchBlockchainByNetwork = async (networks, theme = "light") => {
       logger.warn("fetchBlockchainByNetwork called without networks");
       return [];
     }
-    
-    const networkString = Array.isArray(networks) 
-      ? networks.join(",") 
+
+    const networkString = Array.isArray(networks)
+      ? networks.join(",")
       : networks;
-    
+
     const response = await fetch(
       `${BACKEND_API_BASE}/blockchain-by-network?network=${networkString}&theme=${theme}`
     );
@@ -248,12 +273,17 @@ export const fetchBlockchainByNetwork = async (networks, theme = "light") => {
 export const searchProposals = async (proposalAPIEndpoint, searchTerm) => {
   try {
     if (!proposalAPIEndpoint || !searchTerm) {
-      logger.warn("searchProposals called without proposalAPIEndpoint or searchTerm");
+      logger.warn(
+        "searchProposals called without proposalAPIEndpoint or searchTerm"
+      );
       return [];
     }
 
-    logger.info("API call: searchProposals", { proposalAPIEndpoint, searchTerm });
-    
+    logger.info("API call: searchProposals", {
+      proposalAPIEndpoint,
+      searchTerm,
+    });
+
     let searchUrl;
     // If search term is a number, search by sequential ID
     if (!isNaN(parseFloat(searchTerm)) && isFinite(searchTerm)) {
@@ -297,7 +327,7 @@ export const fetchApprovedProposals = async (proposalAPIEndpoint) => {
     }
 
     logger.info("API call: fetchApprovedProposals", { proposalAPIEndpoint });
-    
+
     const fetchUrl = `${proposalAPIEndpoint}?status=approved`;
 
     const response = await fetch(fetchUrl, {
@@ -322,7 +352,7 @@ export const fetchApprovedProposals = async (proposalAPIEndpoint) => {
 /**
  * Search for FT token by query (symbol or contract address)
  * Returns token metadata if found
- * 
+ *
  * @param {string} query - Token symbol or contract address
  * @returns {Promise<Object|null>} Token metadata or null
  */
@@ -346,13 +376,16 @@ export const searchFTToken = async (query) => {
     }
 
     logger.info("API call: searchFTToken", { query });
-    
-    const response = await fetch(`${BACKEND_API_BASE}/search-ft?query=${query}`, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-      },
-    });
+
+    const response = await fetch(
+      `${BACKEND_API_BASE}/search-ft?query=${query}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       return null;
@@ -379,13 +412,16 @@ export const getUserDaos = async (accountId) => {
     }
 
     logger.info("API call: getUserDaos", { accountId });
-    
-    const response = await fetch(`${BACKEND_API_BASE}/user-daos?account_id=${accountId}`, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-      },
-    });
+
+    const response = await fetch(
+      `${BACKEND_API_BASE}/user-daos?account_id=${accountId}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       return [];
@@ -406,7 +442,7 @@ export const getUserDaos = async (accountId) => {
 export const getTimezones = async () => {
   try {
     logger.info("API call: getTimezones");
-    
+
     const response = await fetch(`${BACKEND_API_BASE}/timezones`, {
       method: "GET",
       headers: {
@@ -463,14 +499,17 @@ export const fetchTreasuryOneClickQuote = async ({
       tokenOutSymbol,
     };
 
-    const response = await fetch(`${BACKEND_API_BASE}/treasury/oneclick-quote`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await fetch(
+      `${BACKEND_API_BASE}/treasury/oneclick-quote`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
 
     if (!response.ok) {
       const text = await response.text();

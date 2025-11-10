@@ -225,7 +225,8 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
           JSON.stringify({
             config: {
               name: daoName,
-              purpose: "Test DAO for asset exchange voting with insufficient balance",
+              purpose:
+                "Test DAO for asset exchange voting with insufficient balance",
               metadata: "",
             },
             policy: {
@@ -240,7 +241,11 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
                 },
                 {
                   kind: {
-                    Group: [voterAccountId, lowBalanceVoterAccountId, lowBalanceCreatorAccountId],
+                    Group: [
+                      voterAccountId,
+                      lowBalanceVoterAccountId,
+                      lowBalanceCreatorAccountId,
+                    ],
                   },
                   name: "Approver",
                   permissions: [
@@ -272,7 +277,11 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     console.log(`✓ DAO created: ${daoAccountId}`);
 
     // Verify DAO was created by checking its policy
-    const daoPolicy = await sandbox.viewFunction(daoAccountId, "get_policy", {});
+    const daoPolicy = await sandbox.viewFunction(
+      daoAccountId,
+      "get_policy",
+      {}
+    );
     console.log(
       `✓ DAO policy verified - Approver group has ${daoPolicy.roles[1].kind.Group.length} members:`,
       daoPolicy.roles[1].kind.Group
@@ -350,18 +359,21 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
-                    amount: "500000000000000000",
-                    token_id: "nep141:eth.omft.near"
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                      amount: "500000000000000000",
+                      token_id: "nep141:eth.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
-                  gas: "100000000000000"
-                }
-              ]
-            }
-          }
-        }
+                  gas: "100000000000000",
+                },
+              ],
+            },
+          },
+        },
       },
       "300000000000000",
       await parseNEAR("0.1")
@@ -394,7 +406,9 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     console.log("\n=== Testing Table View ===");
 
     // Find and click Approve button in table
-    const approveButtonTable = page.getByRole("button", { name: "Approve" }).first();
+    const approveButtonTable = page
+      .getByRole("button", { name: "Approve" })
+      .first();
     await expect(approveButtonTable).toBeVisible({ timeout: 10000 });
     await approveButtonTable.click();
 
@@ -424,13 +438,15 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).not.toBeVisible();
 
-    console.log("✓ Type 1 warning displayed and dismissed correctly in table view");
+    console.log(
+      "✓ Type 1 warning displayed and dismissed correctly in table view"
+    );
 
     // === TEST 2: OVERLAY VIEW ===
     console.log("\n=== Testing Overlay View ===");
 
     // Click on the first row to open overlay modal
-    const firstRow = page.locator('tbody tr').first();
+    const firstRow = page.locator("tbody tr").first();
     await expect(firstRow).toBeVisible({ timeout: 10000 });
     await firstRow.click();
 
@@ -438,7 +454,9 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await page.waitForTimeout(1000);
 
     // Find and click Approve button in overlay (use .last() since overlay is rendered after table)
-    const approveButtonOverlay = page.getByRole("button", { name: "Approve" }).last();
+    const approveButtonOverlay = page
+      .getByRole("button", { name: "Approve" })
+      .last();
     await expect(approveButtonOverlay).toBeVisible({ timeout: 10000 });
     await approveButtonOverlay.click();
 
@@ -465,10 +483,12 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).not.toBeVisible();
 
-    console.log("✓ Type 1 warning displayed and dismissed correctly in overlay view");
+    console.log(
+      "✓ Type 1 warning displayed and dismissed correctly in overlay view"
+    );
 
     // Close the overlay by clicking outside or pressing ESC
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await page.waitForTimeout(500);
 
     // === TEST 3: FULLPAGE VIEW ===
@@ -479,13 +499,13 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await page.waitForTimeout(2000);
 
     // Click on the first row to open overlay
-    const firstRowForExpand = page.locator('tbody tr').first();
+    const firstRowForExpand = page.locator("tbody tr").first();
     await expect(firstRowForExpand).toBeVisible({ timeout: 10000 });
     await firstRowForExpand.click();
     await page.waitForTimeout(1000);
 
     // Click the expand button to go to full page view
-    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
+    const expandButton = page.locator(".bi.bi-arrows-angle-expand");
     await expect(expandButton).toBeVisible({ timeout: 5000 });
     await expandButton.click();
     await page.waitForTimeout(2000);
@@ -518,7 +538,9 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
       page.getByRole("heading", { name: /Insufficient Funds/i })
     ).not.toBeVisible();
 
-    console.log("✓ Type 1 warning displayed and dismissed correctly in fullpage view");
+    console.log(
+      "✓ Type 1 warning displayed and dismissed correctly in fullpage view"
+    );
     console.log("\n✓ All three views tested successfully!");
   });
 
@@ -541,18 +563,21 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
-                    amount: "1000000000000000000",
-                    token_id: "nep141:eth.omft.near"
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                      amount: "1000000000000000000",
+                      token_id: "nep141:eth.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
-                  gas: "100000000000000"
-                }
-              ]
-            }
-          }
-        }
+                  gas: "100000000000000",
+                },
+              ],
+            },
+          },
+        },
       },
       "300000000000000",
       await parseNEAR("0.1")
@@ -564,16 +589,16 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await interceptRPC(page, sandbox);
     await injectTestWallet(page, sandbox, lowBalanceVoterAccountId);
 
-    await page.goto(
-      `http://localhost:3000/${daoAccountId}/asset-exchange`
-    );
+    await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
     await page.waitForTimeout(3000);
 
     // === TEST 1: TABLE VIEW ===
     console.log("\n=== Testing Reject in Table View ===");
 
     // Click Reject button in table
-    const rejectButtonTable = page.getByRole("button", { name: "Reject" }).first();
+    const rejectButtonTable = page
+      .getByRole("button", { name: "Reject" })
+      .first();
     await expect(rejectButtonTable).toBeVisible({ timeout: 10000 });
     await rejectButtonTable.click();
 
@@ -600,7 +625,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     console.log("\n=== Testing Reject in Overlay View ===");
 
     // Click on the first row to open overlay modal
-    const firstRow = page.locator('tbody tr').first();
+    const firstRow = page.locator("tbody tr").first();
     await expect(firstRow).toBeVisible({ timeout: 10000 });
     await firstRow.click();
 
@@ -608,7 +633,9 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await page.waitForTimeout(1000);
 
     // Find and click Reject button in overlay (use .last() since overlay is rendered after table)
-    const rejectButtonOverlay = page.getByRole("button", { name: "Reject" }).last();
+    const rejectButtonOverlay = page
+      .getByRole("button", { name: "Reject" })
+      .last();
     await expect(rejectButtonOverlay).toBeVisible({ timeout: 10000 });
     await rejectButtonOverlay.click();
 
@@ -632,7 +659,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     console.log("✓ Type 1 warning shown for Reject in overlay view");
 
     // Close the overlay
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await page.waitForTimeout(500);
 
     // === TEST 3: FULLPAGE VIEW ===
@@ -643,13 +670,13 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await page.waitForTimeout(2000);
 
     // Click on the first row (reject test proposal - we're still viewing this one) to open overlay
-    const rowForExpandReject = page.locator('tbody tr').first();
+    const rowForExpandReject = page.locator("tbody tr").first();
     await expect(rowForExpandReject).toBeVisible({ timeout: 10000 });
     await rowForExpandReject.click();
     await page.waitForTimeout(1000);
 
     // Click the expand button to go to full page view
-    const expandButton = page.locator('.bi.bi-arrows-angle-expand');
+    const expandButton = page.locator(".bi.bi-arrows-angle-expand");
     await expect(expandButton).toBeVisible({ timeout: 5000 });
     await expandButton.click();
     await page.waitForTimeout(2000);
@@ -699,18 +726,21 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
-                    amount: "300000000000000000",
-                    token_id: "nep141:eth.omft.near"
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                      amount: "300000000000000000",
+                      token_id: "nep141:eth.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
-                  gas: "100000000000000"
-                }
-              ]
-            }
-          }
-        }
+                  gas: "100000000000000",
+                },
+              ],
+            },
+          },
+        },
       },
       "300000000000000",
       await parseNEAR("0.1")
@@ -731,9 +761,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await interceptRPC(page, sandbox);
     await injectTestWallet(page, sandbox, lowBalanceCreatorAccountId);
 
-    await page.goto(
-      `http://localhost:3000/${daoAccountId}/asset-exchange`
-    );
+    await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
     await page.waitForTimeout(3000);
 
     // === TEST 1: TABLE VIEW ===
@@ -767,7 +795,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     console.log("\n=== Testing Delete in Overlay View ===");
 
     // Click on the first row to open overlay modal
-    const firstRow = page.locator('tbody tr').first();
+    const firstRow = page.locator("tbody tr").first();
     await expect(firstRow).toBeVisible({ timeout: 10000 });
     await firstRow.click();
 
@@ -799,7 +827,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     console.log("✓ Type 1 warning shown for Delete in overlay view");
 
     // Close the overlay
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await page.waitForTimeout(500);
 
     // === TEST 3: FULLPAGE VIEW ===
@@ -810,13 +838,13 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await page.waitForTimeout(2000);
 
     // Click on the first row (delete test proposal - we're still viewing this one) to open overlay
-    const rowForExpand = page.locator('tbody tr').first();
+    const rowForExpand = page.locator("tbody tr").first();
     await expect(rowForExpand).toBeVisible({ timeout: 10000 });
     await rowForExpand.click();
     await page.waitForTimeout(1000);
 
     // Click the expand button to go to full page view
-    const expandButtonDelete = page.locator('.bi.bi-arrows-angle-expand');
+    const expandButtonDelete = page.locator(".bi.bi-arrows-angle-expand");
     await expect(expandButtonDelete).toBeVisible({ timeout: 5000 });
     await expandButtonDelete.click();
     await page.waitForTimeout(2000);
@@ -868,18 +896,21 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
-                    amount: "10000000000000000000",
-                    token_id: "nep141:eth.omft.near"
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                      amount: "10000000000000000000",
+                      token_id: "nep141:eth.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
-                  gas: "100000000000000"
-                }
-              ]
-            }
-          }
-        }
+                  gas: "100000000000000",
+                },
+              ],
+            },
+          },
+        },
       },
       "300000000000000",
       await parseNEAR("0.1")
@@ -891,9 +922,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await interceptRPC(page, sandbox);
     await injectTestWallet(page, sandbox, voterAccountId);
 
-    await page.goto(
-      `http://localhost:3000/${daoAccountId}/asset-exchange`
-    );
+    await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
     await page.waitForTimeout(3000);
 
     // Click Approve button
@@ -954,18 +983,21 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
-                    amount: "8000000000000000000",
-                    token_id: "nep141:eth.omft.near"
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                      amount: "8000000000000000000",
+                      token_id: "nep141:eth.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
-                  gas: "100000000000000"
-                }
-              ]
-            }
-          }
-        }
+                  gas: "100000000000000",
+                },
+              ],
+            },
+          },
+        },
       },
       "300000000000000",
       await parseNEAR("0.1")
@@ -977,9 +1009,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await interceptRPC(page, sandbox);
     await injectTestWallet(page, sandbox, voterAccountId);
 
-    await page.goto(
-      `http://localhost:3000/${daoAccountId}/asset-exchange`
-    );
+    await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
     await page.waitForTimeout(3000);
 
     // Click Approve
@@ -1027,18 +1057,21 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
-                    amount: "2000000000000000000",
-                    token_id: "nep141:eth.omft.near"
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "19b04b5b8e1b5480c29a0ce7ec1ca84067fb8d7485165b176274a271e824f177",
+                      amount: "2000000000000000000",
+                      token_id: "nep141:eth.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
-                  gas: "100000000000000"
-                }
-              ]
-            }
-          }
-        }
+                  gas: "100000000000000",
+                },
+              ],
+            },
+          },
+        },
       },
       "300000000000000",
       await parseNEAR("0.1")
@@ -1050,9 +1083,7 @@ test.describe("Vote on Asset Exchange Request with Insufficient Balance - Table 
     await interceptRPC(page, sandbox);
     await injectTestWallet(page, sandbox, voterAccountId);
 
-    await page.goto(
-      `http://localhost:3000/${daoAccountId}/asset-exchange`
-    );
+    await page.goto(`http://localhost:3000/${daoAccountId}/asset-exchange`);
     await page.waitForTimeout(3000);
 
     // Click Approve

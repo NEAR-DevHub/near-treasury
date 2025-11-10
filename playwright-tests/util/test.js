@@ -8,12 +8,12 @@ export const test = base.extend({
   factoryAccount: ["treasury-factory.near", { option: true }],
 });
 
-test.beforeEach(async ({ page }) => {
-
-});
+test.beforeEach(async ({ page }) => {});
 test.afterEach(async ({ page }, testInfo) => {
   const video = await page.video();
-  console.log(`afterEach for "${testInfo.title}": video = ${video ? 'EXISTS' : 'NULL'}`);
+  console.log(
+    `afterEach for "${testInfo.title}": video = ${video ? "EXISTS" : "NULL"}`
+  );
   if (video) {
     const titleFile = testInfo.outputPath("test-title.txt");
     await fs.promises.writeFile(titleFile, testInfo.title);
@@ -63,4 +63,3 @@ export async function overlayMessage(page, message) {
 export async function removeOverlayMessage(page) {
   await page.evaluate(() => window.removeOverlay());
 }
-

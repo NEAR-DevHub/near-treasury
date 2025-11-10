@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Test outputs
+playwright-report
+test-results
+freeze_frames
+processed_videos
+
+# Config files
+*.config.js
+*.config.mjs
+
+# Misc
+.git
+.env*
+*.log
+coverage
+.DS_Store
+

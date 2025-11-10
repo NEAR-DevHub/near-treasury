@@ -6,7 +6,10 @@ import { getWeb3IconMaps } from "../../util/web3icon.js";
 
 test.describe("Intents Deposit UI", () => {
   // Only run on Chromium - clipboard permissions not supported in WebKit/Firefox
-  test.skip(({ browserName }) => browserName !== 'chromium', 'Clipboard API only supported in Chromium');
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "Clipboard API only supported in Chromium"
+  );
 
   test.use({
     contextOptions: {
@@ -55,7 +58,9 @@ test.describe("Intents Deposit UI", () => {
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
     // Click on Sputnik DAO option
-    const sputnikOption = dropdownMenu.locator(".dropdown-item", {hasText: "Sputnik DAO"});
+    const sputnikOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Sputnik DAO",
+    });
     await expect(sputnikOption).toBeVisible();
     await sputnikOption.click();
 
@@ -97,7 +102,9 @@ test.describe("Intents Deposit UI", () => {
     const dropdownMenu = page.locator(".dropdown-menu");
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
-    const sputnikOption = dropdownMenu.locator(".dropdown-item", {hasText: "Sputnik DAO"});
+    const sputnikOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Sputnik DAO",
+    });
     await sputnikOption.click();
 
     await page.waitForURL(/deposit=sputnik-dao/);
@@ -118,7 +125,7 @@ test.describe("Intents Deposit UI", () => {
     let clipboardText = await page.evaluate("navigator.clipboard.readText()");
     expect(clipboardText).toEqual(daoAccount);
 
-    // Navigate back to dashboard    
+    // Navigate back to dashboard
     await page.getByRole("button", { name: "Back" }).click();
     await page.waitForURL(/dashboard/);
 
@@ -126,7 +133,9 @@ test.describe("Intents Deposit UI", () => {
     await depositButton.click();
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
-    const intentsOption = dropdownMenu.locator('.dropdown-item', { hasText: "Intents" });
+    const intentsOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Intents",
+    });
     await intentsOption.click();
 
     await page.waitForURL(/deposit=intents/);
@@ -165,7 +174,9 @@ test.describe("Intents Deposit UI", () => {
     const dropdownMenu = page.locator(".dropdown-menu");
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
-    const sputnikOption = dropdownMenu.locator(".dropdown-item", {hasText: "Sputnik DAO"});
+    const sputnikOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Sputnik DAO",
+    });
     await sputnikOption.click();
 
     await page.waitForURL(/deposit=sputnik-dao/);
@@ -231,7 +242,9 @@ test.describe("Intents Deposit UI", () => {
     const dropdownMenu = page.locator(".dropdown-menu");
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
-    const intentsOption = dropdownMenu.locator('.dropdown-item', { hasText: "Intents" });
+    const intentsOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Intents",
+    });
     await intentsOption.click();
 
     await page.waitForURL(/deposit=intents/);
@@ -349,9 +362,14 @@ INFO: Verifying asset: ${assetName}`);
 
         // Try to find the network by human readable name
         const humanReadableName = networkNames[network.id];
-        expect(humanReadableName, `Network ${network.id} should have a mapping in networkNames`).toBeTruthy();
+        expect(
+          humanReadableName,
+          `Network ${network.id} should have a mapping in networkNames`
+        ).toBeTruthy();
 
-        console.log(`    - Looking for network: ${humanReadableName} (${network.id})`);
+        console.log(
+          `    - Looking for network: ${humanReadableName} (${network.id})`
+        );
 
         // Find the network option in the modal
         const networkOptionElement = modal
@@ -389,11 +407,15 @@ INFO: Verifying asset: ${assetName}`);
         // The UI hides the address card while loading, so wait for the card to appear/stabilize
         // The DepositAddress component is uniquely identified by having a copy-button
         // Use .first() because there might be multiple cards during transitions
-        const depositAddressCard = page.locator(".card.card-body").filter({
-          has: page.locator('[data-testid="copy-button"]')
-        }).filter({
-          hasText: apiDepositAddress
-        }).first();
+        const depositAddressCard = page
+          .locator(".card.card-body")
+          .filter({
+            has: page.locator('[data-testid="copy-button"]'),
+          })
+          .filter({
+            hasText: apiDepositAddress,
+          })
+          .first();
 
         // Wait for the card to be visible with the correct address
         await expect(depositAddressCard).toBeVisible({ timeout: 15000 });
@@ -485,7 +507,9 @@ INFO: Verifying asset: ${assetName}`);
     const dropdownMenu = page.locator(".dropdown-menu");
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
-    const intentsOption = dropdownMenu.locator('.dropdown-item', { hasText: "Intents" });
+    const intentsOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Intents",
+    });
     await intentsOption.click();
 
     await page.waitForURL(/deposit=intents/);
@@ -548,7 +572,9 @@ INFO: Verifying asset: ${assetName}`);
     const dropdownMenu = page.locator(".dropdown-menu");
     await expect(dropdownMenu).toBeVisible({ timeout: 5000 });
 
-    const intentsOption = dropdownMenu.locator('.dropdown-item', { hasText: "Intents" });
+    const intentsOption = dropdownMenu.locator(".dropdown-item", {
+      hasText: "Intents",
+    });
     await intentsOption.click();
 
     await page.waitForURL(/deposit=intents/);

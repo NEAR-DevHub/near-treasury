@@ -17,6 +17,7 @@ import { getProposalsFromIndexer } from "@/api/indexer";
 import WarningTable from "./WarningTable";
 import isEqual from "lodash/isEqual";
 import cloneDeep from "lodash/cloneDeep";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const MembersEditor = ({
   isEdit,
@@ -786,11 +787,14 @@ const Members = () => {
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         checkProposals();
-        setShowEditor(false);
-        setTxnCreated(false);
         showToast("ProposalAdded", null, "settings");
-        setSelectedRows([]);
-        setSelectedMembers([]);
+
+        setTimeout(() => {
+          setShowEditor(false);
+          setTxnCreated(false);
+          setSelectedRows([]);
+          setSelectedMembers([]);
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Error creating proposal:", error);
@@ -842,11 +846,14 @@ const Members = () => {
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         checkProposals();
-        setShowDeleteModal(false);
-        setTxnCreated(false);
         showToast("ProposalAdded", null, "settings");
-        setSelectedRows([]);
-        setSelectedMembers([]);
+
+        setTimeout(() => {
+          setShowDeleteModal(false);
+          setTxnCreated(false);
+          setSelectedRows([]);
+          setSelectedMembers([]);
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Error creating proposal:", error);
