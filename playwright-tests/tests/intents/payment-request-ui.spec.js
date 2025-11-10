@@ -541,7 +541,7 @@ test.describe("Payment Request UI Flow", () => {
 
     // Verify BTC is available with the balance
     await expect(page.getByText("BTC", { exact: true })).toBeVisible();
-    await expect(page.getByText("320.00 through BTC")).toBeVisible();
+    await expect(page.getByText("320 through BTC")).toBeVisible();
     console.log("✓ BTC token is available in dropdown");
 
     // Select BTC token - try clicking on a more specific element
