@@ -100,7 +100,8 @@ const TokensDropdown = ({
       tokenId: token.contract_id,
       value: `intents_${token.contract_id}`,
       tokenBalance: formatTokenBalance(
-        convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals)
+        convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals),
+        { alwaysMaxDecimals: true, maxDecimals: 8 }
       ),
       blockchain: token.blockchain,
       isIntent: true,
@@ -131,7 +132,11 @@ const TokensDropdown = ({
           value: token.contract,
           blockchain: null,
           tokenBalance: formatTokenBalance(
-            convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals)
+            convertBalanceToReadableFormat(
+              token.amount,
+              token.ft_meta.decimals
+            ),
+            { alwaysMaxDecimals: true, maxDecimals: 8 }
           ),
         }))
       );

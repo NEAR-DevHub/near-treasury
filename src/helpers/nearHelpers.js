@@ -42,7 +42,11 @@ export function convertBalanceToReadableFormat(amount, decimals = 18) {
  * @returns {string} Formatted token amount without scientific notation
  */
 export const formatTokenBalance = (amount, options = {}) => {
-  const { minAmount = 0.01, maxDecimals = 8 } = options;
+  const {
+    minAmount = 0.01,
+    maxDecimals = 8,
+    alwaysMaxDecimals = false,
+  } = options;
 
   try {
     const bigAmount = Big(amount || 0);
@@ -51,9 +55,14 @@ export const formatTokenBalance = (amount, options = {}) => {
       return "0";
     }
 
-    // For amounts >= minAmount, use fewer decimals (2)
+    // If alwaysMaxDecimals is true, always use maxDecimals
+    // Otherwise, for amounts >= minAmount, use fewer decimals (2)
     // For very small amounts, show up to maxDecimals
-    const decimals = bigAmount.gte(minAmount) ? 2 : maxDecimals;
+    const decimals = alwaysMaxDecimals
+      ? maxDecimals
+      : bigAmount.gte(minAmount)
+        ? 2
+        : maxDecimals;
     const formatted = bigAmount.toFixed(decimals);
 
     // Remove trailing zeros
