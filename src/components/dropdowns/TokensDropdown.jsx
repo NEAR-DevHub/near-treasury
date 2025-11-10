@@ -7,6 +7,7 @@ import NearToken from "@/components/icons/NearToken";
 import {
   formatTokenBalance,
   convertBalanceToReadableFormat,
+  formatTokenAmount,
 } from "@/helpers/nearHelpers";
 
 /**
@@ -99,9 +100,9 @@ const TokensDropdown = ({
       title: token.ft_meta.symbol,
       tokenId: token.contract_id,
       value: `intents_${token.contract_id}`,
-      tokenBalance: formatTokenBalance(
+      tokenBalance: formatTokenAmount(
         convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals),
-        { alwaysMaxDecimals: true, maxDecimals: 8 }
+        token.ft_meta.price
       ),
       blockchain: token.blockchain,
       isIntent: true,
@@ -131,12 +132,12 @@ const TokensDropdown = ({
           title: token.ft_meta.symbol,
           value: token.contract,
           blockchain: null,
-          tokenBalance: formatTokenBalance(
+          tokenBalance: formatTokenAmount(
             convertBalanceToReadableFormat(
               token.amount,
               token.ft_meta.decimals
             ),
-            { alwaysMaxDecimals: true, maxDecimals: 8 }
+            token.ft_meta.price
           ),
         }))
       );

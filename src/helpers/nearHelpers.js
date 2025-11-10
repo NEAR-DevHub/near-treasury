@@ -103,9 +103,14 @@ export const formatTokenAmount = (amount, tokenPrice, minUsdValue = 0.01) => {
     Math.ceil(-Math.log10(targetPrecision.div(numPrice).toNumber()))
   );
 
+  // Calculate minimum decimals needed to show the actual amount (not round to 0)
+  const amountString = numAmount.toFixed();
+  const firstNonZeroIndex = amountString.search(/[1-9]/);
+  const minDecimalsForAmount = firstNonZeroIndex > 0 ? firstNonZeroIndex : 0;
+
   // For very small amounts, use more decimals but cap at 8
   const decimals = usdValue.lt(minUsdValue)
-    ? Math.min(8, requiredDecimals + 2)
+    ? Math.min(8, Math.max(requiredDecimals + 2, minDecimalsForAmount))
     : Math.min(requiredDecimals, 8);
 
   const formatted = numAmount.toFixed(decimals);

@@ -5,6 +5,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import NearToken from "@/components/icons/NearToken";
 import {
   formatTokenAmount,
+  formatTokenBalance,
   formatUsdValue,
   convertBalanceToReadableFormat,
 } from "@/helpers/nearHelpers";
@@ -46,12 +47,15 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
       }
 
       const readableAmount = convertBalanceToReadableFormat(amount, decimals);
+      // Convert to fixed decimal format to avoid scientific notation
+      const fixedReadableAmount = Big(readableAmount).toFixed();
+
       aggregated[symbol].totalAmount = Big(aggregated[symbol].totalAmount)
         .plus(Big(readableAmount))
-        .toString();
+        .toFixed();
       aggregated[symbol].tokens.push({
         ...token,
-        readableAmount,
+        readableAmount: fixedReadableAmount,
       });
     });
 
@@ -173,7 +177,12 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
           <div className="d-flex gap-2 align-items-center justify-content-end">
             <div className="d-flex flex-column align-items-end">
               <div className="h6 mb-0">
-                {formatTokenAmount(totalAmount, price)}
+                {price && price > 0
+                  ? formatTokenAmount(totalAmount, price)
+                  : formatTokenBalance(totalAmount, {
+                      alwaysMaxDecimals: true,
+                      maxDecimals: 8,
+                    })}
               </div>
               <div className="text-sm text-secondary">
                 {formatUsdValue(totalAmount, price)}
@@ -227,10 +236,15 @@ const IntentsPortfolio = ({ treasuryDaoID, heading, onTotalBalanceChange }) => {
                         )}
                       </div>
                       <div className="h6 mb-0">
-                        {formatTokenAmount(
-                          individualToken.readableAmount,
-                          price
-                        )}
+                        {price && price > 0
+                          ? formatTokenAmount(
+                              individualToken.readableAmount,
+                              price
+                            )
+                          : formatTokenBalance(individualToken.readableAmount, {
+                              alwaysMaxDecimals: true,
+                              maxDecimals: 8,
+                            })}
                       </div>
                     </div>
 
