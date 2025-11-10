@@ -61,8 +61,8 @@ const StepIndicator = ({ step, isActive, isCompleted }) => (
       isCompleted
         ? "bg-theme-color"
         : isActive
-        ? "bg-theme-color"
-        : "bg-grey-04"
+          ? "bg-theme-color"
+          : "bg-grey-04"
     }`}
     style={{
       width: "25px",

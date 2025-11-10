@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { createMockIntentsTokens, mockIntentsRpc, MOCK_TOKENS } from "../../util/mock-intents-rpc.js";
+import {
+  createMockIntentsTokens,
+  mockIntentsRpc,
+  MOCK_TOKENS,
+} from "../../util/mock-intents-rpc.js";
 import { mockIndexerFtTokens } from "../../util/mock-indexer-api.js";
 
 /**
@@ -71,7 +75,7 @@ const testCases = {
 test.describe("OtherChainAccountInput validation", () => {
   test.afterEach(async ({ page }) => {
     // Clean up route handlers to avoid interference between tests
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
   test("validates BTC addresses correctly", async ({ page }) => {
@@ -96,7 +100,9 @@ test.describe("OtherChainAccountInput validation", () => {
     await createButton.click();
 
     // Wait for the form to load
-    await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Create Payment Request")).toBeVisible({
+      timeout: 10000,
+    });
 
     console.log("Testing Bitcoin (BTC) address validation");
 
@@ -112,13 +118,17 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.waitForTimeout(1000);
 
     // Select a cross-chain token (BTC) to trigger address input
-    const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
+    const tokenDropdown = page
+      .locator(
+        'button:has-text("Select Token"), [data-testid="token-dropdown"]'
+      )
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
     // Look for BTC or any cross-chain token option
-    const btcOption = page.locator('text=/BTC/i').first();
+    const btcOption = page.locator("text=/BTC/i").first();
     await expect(btcOption).toBeVisible({ timeout: 10_000 });
     await btcOption.click();
     await page.waitForTimeout(500);
@@ -161,7 +171,10 @@ test.describe("OtherChainAccountInput validation", () => {
     await mockIndexerFtTokens(page);
 
     // Mock RPC to ensure ETH/USDC tokens are available
-    const mockData = createMockIntentsTokens([MOCK_TOKENS.ETH, MOCK_TOKENS.USDC_BASE]);
+    const mockData = createMockIntentsTokens([
+      MOCK_TOKENS.ETH,
+      MOCK_TOKENS.USDC_BASE,
+    ]);
     await mockIntentsRpc(page, mockData, daoId);
 
     await page.goto(`http://localhost:3000/${daoId}/payments`);
@@ -171,7 +184,9 @@ test.describe("OtherChainAccountInput validation", () => {
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
-    await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Create Payment Request")).toBeVisible({
+      timeout: 10000,
+    });
 
     console.log("Testing Ethereum (ETH) address validation");
 
@@ -184,13 +199,17 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.getByText("NEAR Intents").click();
     await page.waitForTimeout(1000);
 
-    const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
+    const tokenDropdown = page
+      .locator(
+        'button:has-text("Select Token"), [data-testid="token-dropdown"]'
+      )
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
     // Look for ETH or USDC (which uses ETH-like addresses)
-    const ethOption = page.locator('text=/ETH|USDC.*BASE|USDC.*ARB/i').first();
+    const ethOption = page.locator("text=/ETH|USDC.*BASE|USDC.*ARB/i").first();
     await expect(ethOption).toBeVisible({ timeout: 10_000 });
     await ethOption.click();
     await page.waitForTimeout(500);
@@ -242,7 +261,9 @@ test.describe("OtherChainAccountInput validation", () => {
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
-    await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Create Payment Request")).toBeVisible({
+      timeout: 10000,
+    });
 
     console.log("Testing Solana (SOL) address validation");
 
@@ -255,12 +276,16 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.getByText("NEAR Intents").click();
     await page.waitForTimeout(1000);
 
-    const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
+    const tokenDropdown = page
+      .locator(
+        'button:has-text("Select Token"), [data-testid="token-dropdown"]'
+      )
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
-    const solOption = page.locator('text=/SOL|USDC.*SOL/i').first();
+    const solOption = page.locator("text=/SOL|USDC.*SOL/i").first();
     await expect(solOption).toBeVisible({ timeout: 10_000 });
     await solOption.click();
     await page.waitForTimeout(500);
@@ -302,7 +327,11 @@ test.describe("OtherChainAccountInput validation", () => {
     await mockIndexerFtTokens(page);
 
     // Mock RPC to ensure ETH-like tokens are available
-    const mockData = createMockIntentsTokens([MOCK_TOKENS.ETH, MOCK_TOKENS.USDC_BASE, MOCK_TOKENS.USDC_ARB]);
+    const mockData = createMockIntentsTokens([
+      MOCK_TOKENS.ETH,
+      MOCK_TOKENS.USDC_BASE,
+      MOCK_TOKENS.USDC_ARB,
+    ]);
     await mockIntentsRpc(page, mockData, daoId);
 
     await page.goto(`http://localhost:3000/${daoId}/payments`);
@@ -312,7 +341,9 @@ test.describe("OtherChainAccountInput validation", () => {
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
 
-    await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Create Payment Request")).toBeVisible({
+      timeout: 10000,
+    });
 
     console.log("Testing cross-chain address mismatch detection");
 
@@ -325,13 +356,19 @@ test.describe("OtherChainAccountInput validation", () => {
     await page.getByText("NEAR Intents").click();
     await page.waitForTimeout(1000);
 
-    const tokenDropdown = page.locator('button:has-text("Select Token"), [data-testid="token-dropdown"]').first();
+    const tokenDropdown = page
+      .locator(
+        'button:has-text("Select Token"), [data-testid="token-dropdown"]'
+      )
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
     // Select an ETH-like token (BASE, ARB, etc.)
-    const ethLikeOption = page.locator('text=/USDC.*BASE|USDC.*ARB|ETH/i').first();
+    const ethLikeOption = page
+      .locator("text=/USDC.*BASE|USDC.*ARB|ETH/i")
+      .first();
     await expect(ethLikeOption).toBeVisible({ timeout: 10_000 });
     await ethLikeOption.click();
     await page.waitForTimeout(500);

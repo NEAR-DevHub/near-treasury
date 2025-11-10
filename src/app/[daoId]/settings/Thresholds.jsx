@@ -16,6 +16,7 @@ import DropDown from "@/components/dropdowns/DropDown";
 import { logger } from "@/helpers/logger";
 import Tooltip from "@/components/ui/Tooltip";
 import WarningTable from "./WarningTable";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const options = [
   {
@@ -74,7 +75,7 @@ function getRoleWiseData(daoPolicy) {
       requiredVotes: isRatio
         ? Math.floor((threshold[0] / threshold[1]) * role.kind?.Group?.length) +
           1
-        : threshold ?? 1,
+        : (threshold ?? 1),
       option: isRatio ? "percentage" : "number",
     });
   });
@@ -300,9 +301,12 @@ const Thresholds = () => {
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         checkProposals();
-        setTxnCreated(false);
         showToast("ProposalAdded", null, "settings");
-        resetForm();
+
+        setTimeout(() => {
+          setTxnCreated(false);
+          resetForm();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       logger.error("Error submitting proposal:", error);

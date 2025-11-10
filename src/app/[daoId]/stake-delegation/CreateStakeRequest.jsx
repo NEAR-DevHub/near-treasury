@@ -17,6 +17,7 @@ import {
   formatNearAmount,
   LOCKUP_MIN_BALANCE_FOR_STORAGE,
 } from "@/helpers/nearHelpers";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
   const {
@@ -96,7 +97,7 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
   const getAvailableBalance = () => {
     if (selectedWallet?.value === lockupContract) {
       const total = lockupNearBalances?.totalParsed || 0;
-      const staked = lockupStakedBalances?.totalParsed || 0;
+      const staked = lockupStakedBalances?.total || 0;
       return Math.max(
         0,
         parseFloat(total) -
@@ -251,9 +252,11 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         // Toast context will automatically fetch proposal ID and invalidate cache
         showToast("StakeProposalAdded", null, "stake");
-        setTxnCreated(false);
-        reset();
-        onCloseCanvas();
+        setTimeout(() => {
+          setTxnCreated(false);
+          reset();
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Stake request error:", error);

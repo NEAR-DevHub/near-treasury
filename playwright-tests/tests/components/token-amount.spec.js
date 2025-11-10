@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { createMockIntentsTokens, mockIntentsRpc, MOCK_TOKENS } from "../../util/mock-intents-rpc.js";
+import {
+  createMockIntentsTokens,
+  mockIntentsRpc,
+  MOCK_TOKENS,
+} from "../../util/mock-intents-rpc.js";
 
 /**
  * TokenAmount Component Tests
@@ -24,10 +28,12 @@ test.describe("TokenAmount component in payment requests", () => {
 
   test.afterEach(async ({ page }) => {
     // Clean up route handlers to avoid interference between tests
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 
-  test("displays token amounts with proper formatting in create request form", async ({ page }) => {
+  test("displays token amounts with proper formatting in create request form", async ({
+    page,
+  }) => {
     const daoId = TEST_DAO_ID;
 
     // Mock RPC to ensure multiple Intents tokens are available
@@ -55,7 +61,9 @@ test.describe("TokenAmount component in payment requests", () => {
     await page.waitForTimeout(1000);
 
     // Hard expectation: Modal/form should open
-    await expect(page.getByText("Create Payment Request")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Create Payment Request")).toBeVisible({
+      timeout: 5000,
+    });
     console.log("✓ Payment request form opened");
 
     // Select NEAR Intents wallet
@@ -69,7 +77,9 @@ test.describe("TokenAmount component in payment requests", () => {
     console.log("✓ Selected NEAR Intents wallet");
 
     // Hard expectation: Token dropdown should be visible
-    const tokenDropdown = page.locator('select[name="token"], button:has-text("Select Token")').first();
+    const tokenDropdown = page
+      .locator('select[name="token"], button:has-text("Select Token")')
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     console.log("✓ Token dropdown is visible");
 
@@ -78,7 +88,9 @@ test.describe("TokenAmount component in payment requests", () => {
     await page.waitForTimeout(500);
 
     // Hard expectation: Token selection modal should be visible
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10_000 });
     console.log("✓ Token selection modal opened");
 
     // Hard expectation: BTC token should be visible in dropdown (use first match)
@@ -110,17 +122,26 @@ test.describe("TokenAmount component in payment requests", () => {
       });
       console.log("✓ All token amounts are properly formatted");
     } else {
-      console.log("  Token amounts may be displayed without explicit balance text");
+      console.log(
+        "  Token amounts may be displayed without explicit balance text"
+      );
     }
 
-    console.log("✓ TokenAmount component renders correctly with mocked intents tokens");
+    console.log(
+      "✓ TokenAmount component renders correctly with mocked intents tokens"
+    );
   });
 
-  test("displays token amounts in existing payment requests table", async ({ page }) => {
+  test("displays token amounts in existing payment requests table", async ({
+    page,
+  }) => {
     const daoId = TEST_DAO_ID;
 
     // Mock RPC to ensure BTC token is available
-    const mockData = createMockIntentsTokens([MOCK_TOKENS.BTC, MOCK_TOKENS.ETH]);
+    const mockData = createMockIntentsTokens([
+      MOCK_TOKENS.BTC,
+      MOCK_TOKENS.ETH,
+    ]);
     await mockIntentsRpc(page, mockData, daoId);
 
     // Navigate to payments page
@@ -149,7 +170,9 @@ test.describe("TokenAmount component in payment requests", () => {
         const rowText = await row.textContent();
 
         // Look for any token amount in the row
-        const amountMatch = rowText?.match(/~?[\d,]+\.?\d*\s*(NEAR|wNEAR|USDC|BTC|ETH|SOL)/);
+        const amountMatch = rowText?.match(
+          /~?[\d,]+\.?\d*\s*(NEAR|wNEAR|USDC|BTC|ETH|SOL)/
+        );
 
         if (amountMatch) {
           console.log(`✓ Row ${i + 1} contains amount: ${amountMatch[0]}`);
@@ -159,7 +182,9 @@ test.describe("TokenAmount component in payment requests", () => {
       }
       console.log("✓ All amounts in table are properly formatted");
     } else {
-      console.log("  No payment rows found (DAO may have no payment requests yet)");
+      console.log(
+        "  No payment rows found (DAO may have no payment requests yet)"
+      );
     }
 
     console.log("✓ TokenAmount component test completed");
@@ -202,13 +227,17 @@ test.describe("TokenAmount component in payment requests", () => {
     await page.waitForTimeout(1000);
 
     // Open token dropdown
-    const tokenDropdown = page.locator('select[name="token"], button:has-text("Select Token")').first();
+    const tokenDropdown = page
+      .locator('select[name="token"], button:has-text("Select Token")')
+      .first();
     await expect(tokenDropdown).toBeVisible({ timeout: 10_000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
 
     // Hard expectation: Token dropdown opened successfully
-    await expect(page.getByRole("heading", { name: "Select Token" })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: "Select Token" })
+    ).toBeVisible({ timeout: 10_000 });
     console.log("✓ Token selection modal is visible");
 
     const pageText = await page.textContent("body");
@@ -226,12 +255,16 @@ test.describe("TokenAmount component in payment requests", () => {
 
     // Verify the TokenAmount is formatting these correctly
     // Should show "Tokens available: 0.12..." for 0.12345678 BTC
-    const btcBalanceText = pageText.match(/Tokens available:\s*[\d.]+\s*through\s*BTC/);
+    const btcBalanceText = pageText.match(
+      /Tokens available:\s*[\d.]+\s*through\s*BTC/
+    );
     if (btcBalanceText) {
       console.log(`✓ BTC balance formatted as: "${btcBalanceText[0]}"`);
     }
 
-    const ethBalanceText = pageText.match(/Tokens available:\s*[\d.]+\s*through\s*ETH/);
+    const ethBalanceText = pageText.match(
+      /Tokens available:\s*[\d.]+\s*through\s*ETH/
+    );
     if (ethBalanceText) {
       console.log(`✓ ETH balance formatted as: "${ethBalanceText[0]}"`);
     }

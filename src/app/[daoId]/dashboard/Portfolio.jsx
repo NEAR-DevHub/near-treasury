@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import {
   deserializeLockupContract,
   formatNearAmount,
+  formatTokenBalance,
+  convertBalanceToReadableFormat,
 } from "@/helpers/nearHelpers";
 import NearToken from "@/components/icons/NearToken";
 import Skeleton from "@/components/ui/Skeleton";
@@ -73,12 +75,6 @@ const Portfolio = ({
     ? TOOLTIP_TEXT.LOCKUP_CONTRACT
     : TOOLTIP_TEXT.DAO_ACCOUNT;
 
-  function convertBalanceToReadableFormat(amount, decimals) {
-    return Big(amount ?? "0")
-      .div(Big(10).pow(decimals ?? "1"))
-      .toFixed();
-  }
-
   function getPrice(tokensNumber, tokenPrice) {
     return Big(tokensNumber ?? "0")
       .mul(tokenPrice ?? "1")
@@ -100,9 +96,9 @@ const Portfolio = ({
   const [lockupUnvested, setLockupUnvested] = useState(null);
 
   function formatCurrency(amount) {
-    const formattedAmount = Number(amount).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    const formattedAmount = formatTokenBalance(amount, {
+      minAmount: 0.01,
+      maxDecimals: 2,
     });
     return "$" + formattedAmount;
   }
@@ -136,10 +132,7 @@ const Portfolio = ({
               <div className="d-flex flex-column align-items-end">
                 <div className="h6 mb-0 d-flex align-items-center gap-1">
                   <NearToken height={20} width={20} />
-                  {Number(balance).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatTokenBalance(balance)}
                 </div>
                 <div className="text-sm text-secondary">
                   {formatCurrency(
@@ -207,12 +200,7 @@ const Portfolio = ({
             </div>
             <div className="d-flex gap-2 align-items-center justify-content-end">
               <div className="d-flex flex-column align-items-end">
-                <div className="h6 mb-0">
-                  {Number(balance).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
+                <div className="h6 mb-0">{formatTokenBalance(balance)}</div>
                 <div className="text-sm text-secondary">
                   {formatCurrency(
                     formatToReadableDecimals(getPrice(balance, price))

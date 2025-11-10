@@ -57,16 +57,6 @@ export const parseString = (string) => {
 };
 
 /**
- * Format amount to readable format with commas and 2 decimals
- */
-export function formatAmountToReadableFormat(amount) {
-  return Number(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-/**
  * Parse key to readable format (snake_case/camelCase -> Title Case)
  */
 export const parseKeyToReadableFormat = (key) => {
@@ -80,4 +70,3 @@ export const parseKeyToReadableFormat = (key) => {
  * Check if string is 64-character hexadecimal (implicit account)
  */
 export const isHex64 = (str) => /^[0-9a-fA-F]{64}$/.test(str);
-

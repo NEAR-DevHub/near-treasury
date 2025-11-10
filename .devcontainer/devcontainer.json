@@ -6,12 +6,10 @@
     },
     "ghcr.io/devcontainers/features/git-lfs:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/desktop-lite:1": {
-
-    },
+    "ghcr.io/devcontainers/features/desktop-lite:1": {},
     "ghcr.io/devcontainers-community/features/llvm": {}
   },
-  "forwardPorts": [6080,5901],
+  "forwardPorts": [6080, 5901],
   "portsAttributes": {
     "6080": {
       "label": "desktop"

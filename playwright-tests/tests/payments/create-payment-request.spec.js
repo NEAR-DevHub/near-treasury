@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { NearSandbox, injectTestWallet, interceptIndexerAPI, parseNEAR } from "../../util/sandbox.js";
+import {
+  NearSandbox,
+  injectTestWallet,
+  interceptIndexerAPI,
+  parseNEAR,
+} from "../../util/sandbox.js";
 
 /**
  * Create Payment Request Tests
@@ -34,7 +39,10 @@ test.describe("Create Payment Request", () => {
 
     // Create a test account to be the DAO creator with 10000 NEAR initial balance
     // This ensures enough balance remains after DAO creation for proposal bonds and gas fees
-    creatorAccountId = await sandbox.createAccount("testcreator.near", "10000000000000000000000000000"); // 10000 NEAR
+    creatorAccountId = await sandbox.createAccount(
+      "testcreator.near",
+      "10000000000000000000000000000"
+    ); // 10000 NEAR
     console.log(`Creator account: ${creatorAccountId}`);
 
     // Initialize the factory
@@ -93,7 +101,11 @@ test.describe("Create Payment Request", () => {
                     Group: [creatorAccountId],
                   },
                   name: "Vote",
-                  permissions: ["*:VoteReject", "*:VoteApprove", "*:VoteRemove"],
+                  permissions: [
+                    "*:VoteReject",
+                    "*:VoteApprove",
+                    "*:VoteRemove",
+                  ],
                   vote_policy: {},
                 },
               ],
@@ -194,7 +206,7 @@ test.describe("Create Payment Request", () => {
     await expect(offcanvas.getByText("Treasury Wallet")).toBeVisible();
 
     // Find and click the dropdown button (it's a div with SputnikDAO text and chevron)
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
     await walletDropdown.click();
     await page.waitForTimeout(500);
     console.log("✓ Opened wallet dropdown");
@@ -210,26 +222,26 @@ test.describe("Create Payment Request", () => {
 
     // Fill in Title - first text input
     const titleInput = offcanvas.locator('input[type="text"]').first();
-    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
+    await titleInput.waitFor({ state: "visible", timeout: 10000 });
     await titleInput.fill("Test NEAR Payment Request");
     console.log("✓ Filled proposal title");
 
     // Fill in Summary textarea
-    const summaryInput = offcanvas.locator('textarea').first();
-    await summaryInput.waitFor({ state: 'visible', timeout: 10000 });
+    const summaryInput = offcanvas.locator("textarea").first();
+    await summaryInput.waitFor({ state: "visible", timeout: 10000 });
     await summaryInput.fill("Testing payment request creation via Playwright");
     console.log("✓ Filled proposal summary");
 
     // Fill in recipient - use creator account since it exists in sandbox
     const recipientInput = offcanvas.getByPlaceholder("treasury.near");
-    await recipientInput.waitFor({ state: 'visible', timeout: 10000 });
+    await recipientInput.waitFor({ state: "visible", timeout: 10000 });
     await recipientInput.fill(creatorAccountId);
     await page.waitForTimeout(500);
     console.log("✓ Filled recipient");
 
     // Select NEAR token
     const tokenDropdown = offcanvas.getByText("Select token");
-    await tokenDropdown.waitFor({ state: 'visible', timeout: 10000 });
+    await tokenDropdown.waitFor({ state: "visible", timeout: 10000 });
     await tokenDropdown.click();
     await page.waitForTimeout(500);
     await page.getByText("NEAR", { exact: true }).first().click();
@@ -237,8 +249,11 @@ test.describe("Create Payment Request", () => {
     console.log("✓ Selected NEAR token");
 
     // Fill in amount - find input near "Total Amount" label (might be type="number")
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
-    await amountInput.waitFor({ state: 'visible', timeout: 10000 });
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
+    await amountInput.waitFor({ state: "visible", timeout: 10000 });
     await amountInput.click();
     await amountInput.fill("5");
     await page.waitForTimeout(500);
@@ -287,7 +302,7 @@ test.describe("Create Payment Request", () => {
 
     // Verify proposal data is in the table (use more lenient matchers)
     // Title might be truncated, so just check it contains key words
-    const proposalRow = page.locator('table tbody tr').first();
+    const proposalRow = page.locator("table tbody tr").first();
     await expect(proposalRow).toBeVisible({ timeout: 5000 });
     console.log("✓ Proposal row visible in table");
 
@@ -301,17 +316,23 @@ test.describe("Create Payment Request", () => {
     console.log("✅ All assertions passed!");
   });
 
-  test("create, approve, and verify NEAR payment with balance changes", async ({ page }) => {
+  test("create, approve, and verify NEAR payment with balance changes", async ({
+    page,
+  }) => {
     test.setTimeout(240000); // 4 minutes
 
     console.log("\n=== Starting Create→Approve→Verify Test ===\n");
 
     // Create a recipient account
-    const recipientAccountId = await sandbox.createAccount("recipient.near", "1000000000000000000000000"); // 1 NEAR
+    const recipientAccountId = await sandbox.createAccount(
+      "recipient.near",
+      "1000000000000000000000000"
+    ); // 1 NEAR
     console.log(`Recipient account created: ${recipientAccountId}`);
 
     // Get initial balances
-    const initialRecipientBalance = await sandbox.viewAccount(recipientAccountId);
+    const initialRecipientBalance =
+      await sandbox.viewAccount(recipientAccountId);
     const initialDaoBalance = await sandbox.viewAccount(daoAccountId);
     console.log(`Initial recipient balance: ${initialRecipientBalance.amount}`);
     console.log(`Initial DAO balance: ${initialDaoBalance.amount}`);
@@ -346,7 +367,7 @@ test.describe("Create Payment Request", () => {
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 
     // Select wallet and fill form
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
     await walletDropdown.click();
     await page.waitForTimeout(500);
     await page.locator('text="SputnikDAO"').last().click();
@@ -355,7 +376,7 @@ test.describe("Create Payment Request", () => {
     // Fill form fields
     const titleInput = offcanvas.locator('input[type="text"]').first();
     await titleInput.fill("Payment for recipient");
-    const summaryInput = offcanvas.locator('textarea').first();
+    const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing end-to-end payment workflow");
     const recipientInput = offcanvas.getByPlaceholder("treasury.near");
     await recipientInput.fill(recipientAccountId);
@@ -369,7 +390,10 @@ test.describe("Create Payment Request", () => {
     await page.waitForTimeout(1000);
 
     // Enter amount (10 NEAR)
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
     await amountInput.fill("10");
     await page.waitForTimeout(500);
 
@@ -423,18 +447,25 @@ test.describe("Create Payment Request", () => {
     console.log(`Final DAO balance: ${finalDaoBalance.amount}`);
 
     // Recipient should have received approximately 10 NEAR
-    const recipientIncrease = BigInt(finalRecipientBalance.amount) - BigInt(initialRecipientBalance.amount);
+    const recipientIncrease =
+      BigInt(finalRecipientBalance.amount) -
+      BigInt(initialRecipientBalance.amount);
     const expectedAmount = BigInt("10000000000000000000000000"); // 10 NEAR in yocto
 
-    console.log(`Recipient balance increased by: ${recipientIncrease} yoctoNEAR`);
+    console.log(
+      `Recipient balance increased by: ${recipientIncrease} yoctoNEAR`
+    );
 
     // Allow some variance for gas fees
-    expect(recipientIncrease).toBeGreaterThan(BigInt("9900000000000000000000000")); // At least 9.9 NEAR
+    expect(recipientIncrease).toBeGreaterThan(
+      BigInt("9900000000000000000000000")
+    ); // At least 9.9 NEAR
     expect(recipientIncrease).toBeLessThanOrEqual(expectedAmount);
     console.log("✓ Recipient balance increased correctly");
 
     // DAO balance should have decreased
-    const daoDecrease = BigInt(initialDaoBalance.amount) - BigInt(finalDaoBalance.amount);
+    const daoDecrease =
+      BigInt(initialDaoBalance.amount) - BigInt(finalDaoBalance.amount);
     expect(daoDecrease).toBeGreaterThan(BigInt("9000000000000000000000000")); // At least 9 NEAR (account for fees)
     console.log("✓ DAO balance decreased correctly");
 
@@ -449,13 +480,18 @@ test.describe("Create Payment Request", () => {
     console.log("✅ Full workflow test passed!");
   });
 
-  test("create, approve, and verify fungible token (FT) payment with balance changes", async ({ page }) => {
+  test("create, approve, and verify fungible token (FT) payment with balance changes", async ({
+    page,
+  }) => {
     test.setTimeout(300000); // 5 minutes for FT setup and test
 
     console.log("\n=== Starting FT Payment Test ===\n");
 
     // Deploy wNEAR (wrap.near) as our test FT contract
-    const ftContractId = await sandbox.importMainnetContract("wrap.near", "wrap.near");
+    const ftContractId = await sandbox.importMainnetContract(
+      "wrap.near",
+      "wrap.near"
+    );
     console.log(`FT contract deployed: ${ftContractId}`);
 
     // Initialize the FT contract
@@ -507,7 +543,7 @@ test.describe("Create Payment Request", () => {
       {
         receiver_id: daoAccountId,
         amount: "30000000000000000000000000", // 30 wNEAR (24 decimals)
-        memo: "Initial funding for DAO"
+        memo: "Initial funding for DAO",
       },
       "300000000000000",
       "1" // 1 yoctoNEAR for ft_transfer
@@ -515,7 +551,10 @@ test.describe("Create Payment Request", () => {
     console.log("✓ Transferred 30 wNEAR to DAO treasury");
 
     // Create a recipient account and register it with FT
-    const recipientAccountId = await sandbox.createAccount("ft-recipient.near", "1000000000000000000000000");
+    const recipientAccountId = await sandbox.createAccount(
+      "ft-recipient.near",
+      "1000000000000000000000000"
+    );
     await sandbox.functionCall(
       creatorAccountId,
       ftContractId,
@@ -560,30 +599,33 @@ test.describe("Create Payment Request", () => {
     });
 
     // Intercept backend API call for FT tokens and return our sandbox wNEAR
-    await page.route("**/ref-sdk-test-cold-haze-1300-2.fly.dev/api/ft-tokens**", async (route) => {
-      console.log("Intercepting FT tokens API call");
+    await page.route(
+      "**/ref-sdk-test-cold-haze-1300-2.fly.dev/api/ft-tokens**",
+      async (route) => {
+        console.log("Intercepting FT tokens API call");
 
-      // Return our sandbox wNEAR token
-      const ftTokensResponse = {
-        fts: [
-          {
-            contract: ftContractId,
-            amount: "30000000000000000000000000", // 30 wNEAR
-            ft_meta: {
-              symbol: "wNEAR",
-              decimals: 24,
-              icon: null
-            }
-          }
-        ]
-      };
+        // Return our sandbox wNEAR token
+        const ftTokensResponse = {
+          fts: [
+            {
+              contract: ftContractId,
+              amount: "30000000000000000000000000", // 30 wNEAR
+              ft_meta: {
+                symbol: "wNEAR",
+                decimals: 24,
+                icon: null,
+              },
+            },
+          ],
+        };
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(ftTokensResponse)
-      });
-    });
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(ftTokensResponse),
+        });
+      }
+    );
 
     // Navigate to payments page
     await page.goto(`http://localhost:3000/${daoAccountId}/payments`, {
@@ -596,7 +638,7 @@ test.describe("Create Payment Request", () => {
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 
     // Select wallet
-    const walletDropdown = offcanvas.locator('div.dropdown').first();
+    const walletDropdown = offcanvas.locator("div.dropdown").first();
     await walletDropdown.click();
     await page.waitForTimeout(500);
     await page.locator('text="SputnikDAO"').last().click();
@@ -605,7 +647,7 @@ test.describe("Create Payment Request", () => {
     // Fill form fields
     const titleInput = offcanvas.locator('input[type="text"]').first();
     await titleInput.fill("wNEAR Payment for recipient");
-    const summaryInput = offcanvas.locator('textarea').first();
+    const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing FT payment workflow with wNEAR");
     const recipientInput = offcanvas.getByPlaceholder("treasury.near");
     await recipientInput.fill(recipientAccountId);
@@ -622,7 +664,10 @@ test.describe("Create Payment Request", () => {
     console.log("✓ Selected wNEAR token");
 
     // Enter amount (5 wNEAR)
-    const amountInput = offcanvas.locator('input').filter({ hasText: '' }).last();
+    const amountInput = offcanvas
+      .locator("input")
+      .filter({ hasText: "" })
+      .last();
     await amountInput.fill("5");
     await page.waitForTimeout(500);
 
@@ -683,7 +728,8 @@ test.describe("Create Payment Request", () => {
     console.log(`Final DAO FT balance: ${finalDaoBalance}`);
 
     // Recipient should have received 5 wNEAR
-    const recipientIncrease = BigInt(finalRecipientBalance) - BigInt(initialRecipientBalance);
+    const recipientIncrease =
+      BigInt(finalRecipientBalance) - BigInt(initialRecipientBalance);
     const expectedAmount = BigInt("5000000000000000000000000"); // 5 wNEAR (24 decimals)
 
     console.log(`Recipient FT balance increased by: ${recipientIncrease}`);

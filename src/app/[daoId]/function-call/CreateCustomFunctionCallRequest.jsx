@@ -11,6 +11,7 @@ import { Near } from "@/api/near";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { isValidNearAccount } from "@/helpers/nearHelpers";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
   const { daoId: treasuryDaoID, daoPolicy } = useDao();
@@ -184,9 +185,11 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
         showToast("ProposalAdded", null, "function");
-        setTxnCreated(false);
-        reset();
-        onCloseCanvas();
+        setTimeout(() => {
+          setTxnCreated(false);
+          reset();
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       showToast("ErrorAddingProposal", null, "function");

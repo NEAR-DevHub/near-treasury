@@ -23,6 +23,7 @@ import { encodeToMarkdown } from "@/helpers/daoHelpers";
 import { parseString } from "@/helpers/formatters";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
+import { REFRESH_DELAY } from "@/constants/ui";
 
 const tokenMapping = {
   NEAR: "NEAR",
@@ -347,29 +348,29 @@ const CreatePaymentRequest = ({
                   kind: selectedTokenIsIntent
                     ? proposalKind
                     : isLockupTransfer
-                    ? {
-                        FunctionCall: {
-                          receiver_id: lockupContract,
-                          actions: [
-                            {
-                              method_name: "transfer",
-                              args: toBase64({
-                                amount: parsedAmount,
-                                receiver_id: receiver,
-                              }),
-                              deposit: "0",
-                              gas,
-                            },
-                          ],
+                      ? {
+                          FunctionCall: {
+                            receiver_id: lockupContract,
+                            actions: [
+                              {
+                                method_name: "transfer",
+                                args: toBase64({
+                                  amount: parsedAmount,
+                                  receiver_id: receiver,
+                                }),
+                                deposit: "0",
+                                gas,
+                              },
+                            ],
+                          },
+                        }
+                      : {
+                          Transfer: {
+                            token_id: isNEAR ? "" : tokenId,
+                            receiver_id: receiver,
+                            amount: parsedAmount,
+                          },
                         },
-                      }
-                    : {
-                        Transfer: {
-                          token_id: isNEAR ? "" : tokenId,
-                          receiver_id: receiver,
-                          amount: parsedAmount,
-                        },
-                      },
                 },
               },
               gas,
@@ -422,10 +423,13 @@ const CreatePaymentRequest = ({
       console.log("Payment request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
-        cleanInputs();
         showToast("ProposalAdded", null, "payment");
-        setTxnCreated(false);
-        onCloseCanvas();
+
+        setTimeout(() => {
+          cleanInputs();
+          setTxnCreated(false);
+          onCloseCanvas();
+        }, REFRESH_DELAY);
       }
     } catch (error) {
       console.error("Payment request error:", error);

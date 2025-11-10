@@ -153,7 +153,8 @@ export const fetchDryQuote = async ({
       .mul(Big(10).pow(decimals))
       .toFixed(0);
     const deadline = new Date();
-    const proposalPeriodMs = Number(daoPolicy?.proposal_period || 0) / 1_000_000; // ns → ms
+    const proposalPeriodMs =
+      Number(daoPolicy?.proposal_period || 0) / 1_000_000; // ns → ms
     deadline.setTime(deadline.getTime() + proposalPeriodMs);
 
     const quoteRequest = {
@@ -190,7 +191,7 @@ export const fetchDryQuote = async ({
     }
 
     const data = await response.json();
-    return data
+    return data;
   } catch (error) {
     logger.error("Error fetching dry quote:", error);
     return { error: error.message || "Unable to fetch quote", result: null };

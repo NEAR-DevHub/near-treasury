@@ -25,8 +25,13 @@ const BalanceDisplay = ({ selectedWallet }) => {
   // Calculate balances based on selected wallet
   const balances = useMemo(() => {
     if (selectedWallet?.value === lockupContract) {
+      console.log(
+        "lockupNearBalances",
+        lockupNearBalances,
+        lockupStakedBalances
+      );
       const total = lockupNearBalances?.totalParsed || 0;
-      const staked = lockupStakedBalances?.totalParsed || 0;
+      const staked = lockupStakedBalances?.total || 0;
       const available = Math.max(
         0,
         parseFloat(total) -

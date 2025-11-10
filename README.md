@@ -13,11 +13,13 @@ We chose to rebuild NEAR Treasury as a standard Next.js React app to accelerate 
 ### DevContainer Setup
 
 This project includes a DevContainer configuration with:
+
 - Pre-configured development environment with all dependencies
 - **Remote Desktop** via noVNC - accessible in your web browser
 - Useful for running Playwright tests in UI mode or headed mode
 
 To access the remote desktop:
+
 1. Open the project in the DevContainer
 2. Check the Ports panel in VS Code for the noVNC port (typically 6080)
 3. Click "Open in Browser" to access the desktop environment
@@ -31,6 +33,7 @@ The remote desktop allows you to run `npm run test:e2e:ui` and interact with the
 This project uses [Playwright](https://playwright.dev/) for end-to-end testing.
 
 Available test commands:
+
 ```bash
 npm run test:e2e              # Run all tests
 npm run test:e2e:ui           # Run tests in UI mode (requires remote desktop)
@@ -48,12 +51,14 @@ npm run test:video-merge
 ```
 
 This script:
+
 - Finds all test video recordings in `test-results/`
 - Overlays test titles on each video
 - Adds 1-second freeze frames between tests
 - Merges everything into `final_output.mp4`
 
 **Requirements:**
+
 - `ffmpeg` must be installed (included in the DevContainer)
 - Tests must be run with video recording enabled (automatic for local runs)
 
