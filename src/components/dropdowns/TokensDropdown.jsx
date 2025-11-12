@@ -100,10 +100,17 @@ const TokensDropdown = ({
       title: token.ft_meta.symbol,
       tokenId: token.contract_id,
       value: `intents_${token.contract_id}`,
-      tokenBalance: formatTokenAmount(
-        convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals),
-        token.ft_meta.price
-      ),
+      tokenBalance: token.ft_meta.price
+        ? formatTokenAmount(
+            convertBalanceToReadableFormat(
+              token.amount,
+              token.ft_meta.decimals
+            ),
+            token.ft_meta.price
+          )
+        : formatTokenBalance(
+            convertBalanceToReadableFormat(token.amount, token.ft_meta.decimals)
+          ),
       blockchain: token.blockchain,
       isIntent: true,
     }));
@@ -132,13 +139,20 @@ const TokensDropdown = ({
           title: token.ft_meta.symbol,
           value: token.contract,
           blockchain: null,
-          tokenBalance: formatTokenAmount(
-            convertBalanceToReadableFormat(
-              token.amount,
-              token.ft_meta.decimals
-            ),
-            token.ft_meta.price
-          ),
+          tokenBalance: token.ft_meta.price
+            ? formatTokenAmount(
+                convertBalanceToReadableFormat(
+                  token.amount,
+                  token.ft_meta.decimals
+                ),
+                token.ft_meta.price
+              )
+            : formatTokenBalance(
+                convertBalanceToReadableFormat(
+                  token.amount,
+                  token.ft_meta.decimals
+                )
+              ),
         }))
       );
     }
@@ -151,6 +165,7 @@ const TokensDropdown = ({
     return tokens;
   }, [walletConfig, tokensWithBalance, formattedIntentsTokens]);
 
+  console.log(options);
   // Get staked tokens for display
   const stakedTokens = walletConfig.isLockup
     ? lockupStakedBalances?.total
