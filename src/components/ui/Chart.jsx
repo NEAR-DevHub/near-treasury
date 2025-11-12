@@ -51,6 +51,13 @@ const Chart = ({
   const [selectedToken, setSelectedToken] = useState("near");
   const [selectedPeriod, setSelectedPeriod] = useState("1Y");
   const chartRef = useRef(null);
+  const [chartKey, setChartKey] = useState(0);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      setChartKey((prev) => prev + 1);
+    });
+  }, [isDarkTheme]);
 
   // Period configuration
   const periodMap = {
@@ -207,10 +214,18 @@ const Chart = ({
         },
         tooltip: {
           enabled: true,
-          backgroundColor: getCSSVariable("--bg-page-color"),
-          titleColor: getCSSVariable("--text-color"),
-          bodyColor: getCSSVariable("--text-color"),
-          borderColor: getCSSVariable("--border-color"),
+          backgroundColor: getComputedStyle(document.documentElement)
+            .getPropertyValue("--bg-page-color")
+            .trim(),
+          titleColor: getComputedStyle(document.documentElement)
+            .getPropertyValue("--text-color")
+            .trim(),
+          bodyColor: getComputedStyle(document.documentElement)
+            .getPropertyValue("--text-color")
+            .trim(),
+          borderColor: getComputedStyle(document.documentElement)
+            .getPropertyValue("--border-color")
+            .trim(),
           borderWidth: 1,
           displayColors: false,
           callbacks: {
@@ -257,7 +272,7 @@ const Chart = ({
         duration: 0,
       },
     }),
-    [chartData.history, isDarkTheme]
+    [chartData.history, isDarkTheme, chartKey]
   );
 
   return (
@@ -377,6 +392,7 @@ const Chart = ({
           style={{ height: "400px" }}
         >
           <Line
+            key={`chart-${chartKey}`}
             ref={chartRef}
             data={{
               labels: chartData.history.map((item) =>
@@ -394,8 +410,14 @@ const Chart = ({
                     const { ctx, chartArea } = chart;
                     return createGradient(ctx, chartArea);
                   },
-                  borderColor: getCSSVariable("--text-color"),
-                  pointBackgroundColor: getCSSVariable("--bg-page-color"),
+                  borderColor: getComputedStyle(document.documentElement)
+                    .getPropertyValue("--text-color")
+                    .trim(),
+                  pointBackgroundColor: getComputedStyle(
+                    document.documentElement
+                  )
+                    .getPropertyValue("--bg-page-color")
+                    .trim(),
                   pointRadius: 0,
                   tension: 0.2,
                   borderWidth: 1.5,

@@ -85,13 +85,17 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     console.log(`✓ Created USDT subaccount: ${tetherTokenContractId}`);
 
     // Fetch wrap.near contract WASM from mainnet and deploy to usdt.tether-token.near
-    const mainnetRpcClient = new NearRpcClient("https://rpc.mainnet.fastnear.com");
+    const mainnetRpcClient = new NearRpcClient(
+      "https://rpc.mainnet.fastnear.com"
+    );
     const contractCode = await query(mainnetRpcClient, {
       requestType: "view_code",
       finality: "final",
       accountId: "wrap.near",
     });
-    const wrapNearWasm = contractCode.codeBase64 ? Buffer.from(contractCode.codeBase64, "base64") : null;
+    const wrapNearWasm = contractCode.codeBase64
+      ? Buffer.from(contractCode.codeBase64, "base64")
+      : null;
     if (!wrapNearWasm) {
       throw new Error("No contract code found for wrap.near");
     }
@@ -298,7 +302,9 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     console.log("✓ Deposited 2 USDT NEAR to treasury");
 
     // Deploy USDT TRC20 token (so the proposal can reference it, but DAO won't have any)
-    console.log("\n=== Deploying USDT TRC20 token (DAO will NOT have this) ===\n");
+    console.log(
+      "\n=== Deploying USDT TRC20 token (DAO will NOT have this) ===\n"
+    );
 
     const usdtTrc20Metadata = {
       spec: "ft-1.0.0",
@@ -336,7 +342,9 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     // Create an asset exchange proposal matching prod (romakqatesting.sputnik-dao.near proposal #43)
     // Treasury has USDT NEAR but proposal tries to swap USDT TRX → TRX
     // Requesting to swap 1 USDT TRX (treasury has 2 USDT NEAR, but 0 USDT TRX)
-    const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const deadline = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    ).toISOString();
 
     await sandbox.functionCall(
       creatorAccountId,
@@ -351,11 +359,15 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "b787d39a440943ec04aef938c0803118e56f43d173c2282913725f615bac86b2",
-                    amount: "1000000", // 1 USDT TRX (6 decimals) - matching prod
-                    token_id: "nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near", // USDT TRX token ID
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "b787d39a440943ec04aef938c0803118e56f43d173c2282913725f615bac86b2",
+                      amount: "1000000", // 1 USDT TRX (6 decimals) - matching prod
+                      token_id:
+                        "nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near", // USDT TRX token ID
+                    })
+                  ).toString("base64"),
                   deposit: "1",
                   gas: "100000000000000",
                 },
@@ -368,7 +380,9 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       await parseNEAR("0.1")
     );
 
-    console.log("✓ Created USDT TRX → TRX asset exchange proposal (network mismatch scenario)");
+    console.log(
+      "✓ Created USDT TRX → TRX asset exchange proposal (network mismatch scenario)"
+    );
 
     await page.waitForTimeout(2000);
 
@@ -393,14 +407,18 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     const usdtText = await usdtElement.textContent();
     console.log("✓ USDT token is displayed in Intents portfolio");
     console.log(`  Dashboard shows: ${usdtText}`);
-    console.log("  NOTE: Dashboard shows 'USDT' but doesn't clearly indicate it's on NEAR network");
+    console.log(
+      "  NOTE: Dashboard shows 'USDT' but doesn't clearly indicate it's on NEAR network"
+    );
 
     // Take a screenshot of the dashboard
     await page.screenshot({
       path: "test-results/usdt-network-mismatch-dashboard.png",
       fullPage: true,
     });
-    console.log("✓ Screenshot saved: test-results/usdt-network-mismatch-dashboard.png");
+    console.log(
+      "✓ Screenshot saved: test-results/usdt-network-mismatch-dashboard.png"
+    );
 
     // Navigate to asset exchange page to see the proposal
     console.log("\n=== Viewing USDT TRX proposal (network mismatch) ===");
@@ -421,13 +439,17 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
 
     // Check if insufficient balance warning appeared (it should!)
     const insufficientBalanceHeading = page.getByRole("heading", {
-      name: /Insufficient Balance/i
+      name: /Insufficient Balance/i,
     });
 
     // This test EXPECTS the warning to appear
     await expect(insufficientBalanceHeading).toBeVisible({ timeout: 5000 });
-    console.log("✓ EXPECTED BEHAVIOR: Insufficient balance warning appeared correctly!");
-    console.log("   Treasury has 2 USDT NEAR, but proposal needs 1 USDT TRX (network mismatch)");
+    console.log(
+      "✓ EXPECTED BEHAVIOR: Insufficient balance warning appeared correctly!"
+    );
+    console.log(
+      "   Treasury has 2 USDT NEAR, but proposal needs 1 USDT TRX (network mismatch)"
+    );
 
     // Take a screenshot
     await page.screenshot({
@@ -436,15 +458,23 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     });
 
     // Get the balance display to see what it thinks the balance is
-    const balanceText = await page.getByText(/Your current balance:/i).textContent();
+    const balanceText = await page
+      .getByText(/Your current balance:/i)
+      .textContent();
     console.log("   Warning shows:", balanceText);
 
     console.log("\n✓ Scenario successfully reproduced!");
-    console.log("  This matches prod (romakqatesting.sputnik-dao.near proposal #43):");
+    console.log(
+      "  This matches prod (romakqatesting.sputnik-dao.near proposal #43):"
+    );
     console.log(`    - Treasury has: ${tetherTokenContractId} (USDT NEAR)`);
-    console.log("    - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
+    console.log(
+      "    - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)"
+    );
     console.log("    - Dashboard shows: 'USDT' without network indicator");
-    console.log("    - Result: User confused about which USDT network they have");
+    console.log(
+      "    - Result: User confused about which USDT network they have"
+    );
 
     // Wait for video recording
     await page.waitForTimeout(1000);
@@ -472,7 +502,8 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     console.log("✓ Registered intents.near with OMFT contract");
 
     // Also register intents with the USDT TRX token contract
-    const usdtTrxTokenId = "tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near";
+    const usdtTrxTokenId =
+      "tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near";
     await sandbox.functionCall(
       omftContractId,
       usdtTrxTokenId,
@@ -504,10 +535,15 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       "300000000000000",
       "1250000000000000000000"
     );
-    console.log("✓ Deposited 2 USDT TRX to treasury", JSON.stringify(depositUsdtTrxResult));
+    console.log(
+      "✓ Deposited 2 USDT TRX to treasury",
+      JSON.stringify(depositUsdtTrxResult)
+    );
 
     // Create a USDT TRX → TRX proposal (matching the TRX balance we just added)
-    const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const deadline = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    ).toISOString();
     await sandbox.functionCall(
       creatorAccountId,
       daoAccountId,
@@ -521,11 +557,15 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
               actions: [
                 {
                   method_name: "mt_transfer",
-                  args: Buffer.from(JSON.stringify({
-                    receiver_id: "b787d39a440943ec04aef938c0803118e56f43d173c2282913725f615bac86b2",
-                    amount: "1000000", // 1 USDT TRX (6 decimals)
-                    token_id: "nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near",
-                  })).toString("base64"),
+                  args: Buffer.from(
+                    JSON.stringify({
+                      receiver_id:
+                        "b787d39a440943ec04aef938c0803118e56f43d173c2282913725f615bac86b2",
+                      amount: "1000000", // 1 USDT TRX (6 decimals)
+                      token_id:
+                        "nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near",
+                    })
+                  ).toString("base64"),
                   deposit: "1",
                   gas: "100000000000000",
                 },
@@ -537,7 +577,9 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       "300000000000000",
       await parseNEAR("0.1")
     );
-    console.log("✓ Created USDT TRX → TRX proposal (treasury has matching USDT TRX balance)");
+    console.log(
+      "✓ Created USDT TRX → TRX proposal (treasury has matching USDT TRX balance)"
+    );
 
     await page.waitForTimeout(2000);
 
@@ -562,7 +604,9 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     const usdtText = await usdtElement.textContent();
     console.log("✓ USDT token is displayed in Intents portfolio");
     console.log(`  Dashboard shows: ${usdtText}`);
-    console.log("  NOTE: Dashboard now shows USDT from both networks (NEAR + TRX)");
+    console.log(
+      "  NOTE: Dashboard now shows USDT from both networks (NEAR + TRX)"
+    );
     console.log("        but doesn't clearly distinguish between them");
 
     // Take screenshot
@@ -570,7 +614,9 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
       path: "test-results/usdt-network-match-dashboard.png",
       fullPage: true,
     });
-    console.log("✓ Screenshot saved: test-results/usdt-network-match-dashboard.png");
+    console.log(
+      "✓ Screenshot saved: test-results/usdt-network-match-dashboard.png"
+    );
 
     // Navigate to asset exchange page
     console.log("\n=== Viewing USDT TRX proposal (network match) ===");
@@ -581,23 +627,29 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     // Now that we've added USDT TRX balance, it should NOT show insufficient balance
     const approveButton = page.getByRole("button", { name: "Approve" }).first();
     await expect(approveButton).toBeVisible({ timeout: 10000 });
-    console.log("✓ Clicking Approve on USDT TRX proposal (now with matching balance)");
+    console.log(
+      "✓ Clicking Approve on USDT TRX proposal (now with matching balance)"
+    );
     await approveButton.click();
 
     // EXPECTED: No insufficient balance warning (network matches)
     await page.waitForTimeout(2000);
 
     const insufficientBalanceHeading = page.getByRole("heading", {
-      name: /Insufficient Balance/i
+      name: /Insufficient Balance/i,
     });
 
     // Warning should NOT appear (network matches)
     await expect(insufficientBalanceHeading).not.toBeVisible();
     console.log("✓ EXPECTED: No insufficient balance warning appeared!");
-    console.log("   Treasury has 2 USDT TRX and proposal needs 1 USDT TRX (network matches)");
+    console.log(
+      "   Treasury has 2 USDT TRX and proposal needs 1 USDT TRX (network matches)"
+    );
 
     // Confirm modal should appear instead
-    const confirmHeading = page.getByRole("heading", { name: /Confirm your vote/i });
+    const confirmHeading = page.getByRole("heading", {
+      name: /Confirm your vote/i,
+    });
     await expect(confirmHeading).toBeVisible({ timeout: 5000 });
     console.log("✓ Confirm modal appeared correctly");
 
@@ -611,9 +663,15 @@ test.describe("Asset Exchange USDT TRX Bug Reproduction - Issue #61", () => {
     console.log("✓ Screenshot saved: confirm modal for matching network");
 
     console.log("\n✓ Test passed: Network match scenario works correctly!");
-    console.log("  - Treasury has: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
-    console.log("  - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)");
-    console.log("  - Result: No insufficient balance warning (correct behavior)");
+    console.log(
+      "  - Treasury has: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)"
+    );
+    console.log(
+      "  - Proposal needs: tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near (USDT TRX)"
+    );
+    console.log(
+      "  - Result: No insufficient balance warning (correct behavior)"
+    );
 
     // Wait for video recording
     await page.waitForTimeout(1000);
