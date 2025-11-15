@@ -62,19 +62,19 @@ const Preferences = () => {
           "{}"
       );
 
-      if (storedPreferences.timeFormat) {
-        setValue("timeFormat", storedPreferences.timeFormat);
-      }
-      if (storedPreferences.useLocation !== undefined) {
-        setValue("useLocation", storedPreferences.useLocation);
-      }
-      if (storedPreferences.timezone) {
-        setValue("timezone", storedPreferences.timezone);
-      }
+      // Build preferences object with loaded or default values
+      const loadedPreferences = {
+        timeFormat: storedPreferences.timeFormat || "12-hour",
+        useLocation: storedPreferences.useLocation || false,
+        timezone: storedPreferences.timezone || null,
+      };
+
+      // Reset form with loaded values to establish them as the baseline
+      reset(loadedPreferences);
     } catch (error) {
       logger.error("Error loading preferences:", error);
     }
-  }, []);
+  }, [reset]);
 
   const detectUserTimezone = () => {
     try {

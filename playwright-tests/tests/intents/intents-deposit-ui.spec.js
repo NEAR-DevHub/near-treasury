@@ -226,6 +226,19 @@ test.describe("Intents Deposit UI", () => {
     test.setTimeout(180_000);
     await page.goto(`/${daoAccount}/dashboard`);
 
+    // Hide Next.js dev tools overlay to prevent it from interfering with QR code screenshots
+    await page.addStyleTag({
+      content: `
+        nextjs-portal,
+        [data-nextjs-dialog-overlay],
+        [data-nextjs-errors-dialog-left-right-close-button],
+        #__next-build-watcher { 
+          display: none !important; 
+          visibility: hidden !important;
+        }
+      `,
+    });
+
     // Open the deposit modal
     const totalBalanceCardLocator = page.locator(".card.card-body", {
       hasText: "Total Balance",
@@ -429,7 +442,9 @@ INFO: Verifying asset: ${assetName}`);
           .filter({ hasText: apiDepositAddress })
           .first();
         await expect(depositAddressElement).toBeVisible({ timeout: 5000 });
-        const uiDepositAddress = await depositAddressElement.innerText();
+
+        // Use textContent instead of innerText to get full address even when truncated
+        const uiDepositAddress = await depositAddressElement.textContent();
 
         // Verify the UI address matches the API address
         expect(uiDepositAddress).toEqual(apiDepositAddress);
@@ -439,9 +454,17 @@ INFO: Verifying asset: ${assetName}`);
         await expect(qrCodeSvg).toBeVisible();
         await qrCodeSvg.scrollIntoViewIfNeeded();
 
-        // Take a screenshot of the QR code and decode it
+        // Take a screenshot of the QR code and save it for inspection
+        const screenshotPath = `test-results/qr-screenshot-${assetName}-${network.id.replace(/:/g, "-")}.png`;
+        await qrCodeSvg.screenshot({ path: screenshotPath });
+        console.log(`Saved QR screenshot to: ${screenshotPath}`);
+
+        // Try to decode the QR code
         const qrCodeImageBuffer = await qrCodeSvg.screenshot();
         const image = await Jimp.read(qrCodeImageBuffer);
+        console.log(
+          `QR Code image dimensions: ${image.bitmap.width}x${image.bitmap.height}`
+        );
 
         const imageData = {
           data: new Uint8ClampedArray(image.bitmap.data),
@@ -449,12 +472,13 @@ INFO: Verifying asset: ${assetName}`);
           height: image.bitmap.height,
         };
 
-        // Decode the QR code using jsQR
         const decodedQR = jsQR(
           imageData.data,
           imageData.width,
           imageData.height
         );
+        console.log(`QR decode result: ${decodedQR?.data || "FAILED"}`);
+        console.log(`Expected address: ${uiDepositAddress}`);
         expect(decodedQR?.data).toEqual(uiDepositAddress);
 
         // Find the copy button within the deposit address card (already defined above)
@@ -462,7 +486,7 @@ INFO: Verifying asset: ${assetName}`);
         await expect(intentsCopyButton).toBeVisible();
 
         // Double-check the address is still correct right before copying
-        const addressBeforeCopy = await depositAddressElement.innerText();
+        const addressBeforeCopy = await depositAddressElement.textContent();
         expect(addressBeforeCopy).toEqual(apiDepositAddress);
 
         await intentsCopyButton.click();
