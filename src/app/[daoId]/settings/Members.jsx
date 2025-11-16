@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDao } from "@/context/DaoContext";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
@@ -23,13 +24,18 @@ const MembersEditor = ({
   isEdit,
   availableRoles,
   selectedMembers = [],
+  initialValues = null,
   onSubmitClick,
   onCancel,
   disableCancel = false,
   isSubmitLoading = false,
 }) => {
   const [members, setMembers] = useState(
-    isEdit ? selectedMembers : [{ member: "", roles: [] }]
+    isEdit
+      ? selectedMembers
+      : initialValues
+        ? [initialValues]
+        : [{ member: "", roles: [] }]
   );
   const [rolesError, setRolesError] = useState("");
   const [accountValidity, setAccountValidity] = useState({});
@@ -47,11 +53,11 @@ const MembersEditor = ({
   // Reset to empty member when switching from edit mode to add mode
   useEffect(() => {
     if (!isEdit && selectedMembers.length === 0) {
-      setMembers([{ member: "", roles: [] }]);
+      setMembers(initialValues ? [initialValues] : [{ member: "", roles: [] }]);
     } else if (isEdit) {
       setMembers(selectedMembers);
     }
-  }, [isEdit, selectedMembers]);
+  }, [isEdit, selectedMembers, initialValues]);
 
   // Track if form has changes
   const hasChanges = useMemo(() => {
@@ -255,10 +261,16 @@ const MembersEditor = ({
                       const role = availableRoles.find(
                         (r) => r.value === roleValue
                       );
-                      if (!role) return null;
+                      // Display custom roles as well as predefined ones
+                      // Capitalize first letter for custom roles
+                      const displayTitle = role
+                        ? role.title
+                        : roleValue.charAt(0).toUpperCase() +
+                          roleValue.slice(1);
+
                       return (
                         <span key={roleValue} className="badge">
-                          {role.title}
+                          {displayTitle}
                           <i
                             className="bi bi-x-lg"
                             onClick={() => {
@@ -279,7 +291,10 @@ const MembersEditor = ({
                         </span>
                       );
                     })}
-                    {member.roles.length < availableRoles.length && (
+                    {/* Show dropdown only if there are predefined roles not yet selected */}
+                    {availableRoles.some(
+                      (role) => !member.roles.includes(role.value)
+                    ) && (
                       <div className="dropdown">
                         <button
                           className="select-tag d-flex gap-1 align-items-center"
@@ -385,6 +400,7 @@ const Members = () => {
   const { daoId, daoPolicy, hasPermission } = useDao();
   const { accountId, signAndSendTransactions } = useNearWallet();
   const { showToast } = useProposalToastContext();
+  const searchParams = useSearchParams();
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(0);
@@ -395,6 +411,7 @@ const Members = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isEdit, setIsEdit] = useState(false);
+  const [initialFormValues, setInitialFormValues] = useState(null);
   const [
     showProposalsOverrideConfirmModal,
     setShowProposalsOverrideConfirmModal,
@@ -413,6 +430,43 @@ const Members = () => {
   }, [currentPage, rowsPerPage, allMembers]);
 
   const hasCreatePermission = hasPermission?.("policy", "AddProposal") ?? false;
+
+  // Handle URL parameters to auto-open and pre-fill add member form
+  useEffect(() => {
+    if (!searchParams || !hasCreatePermission || loading) return;
+
+    const memberParam = searchParams.get("member");
+    const permissionsParam = searchParams.get("permissions");
+
+    if (memberParam && permissionsParam) {
+      // Map common role names (case-insensitive) to proper capitalization
+      const roleMapping = {
+        requestor: "Requestor",
+        approver: "Approver",
+        admin: "Admin",
+      };
+
+      // Accept any permission value from URL (comma-separated)
+      const permissions = permissionsParam
+        .split(",")
+        .map((p) => {
+          const trimmed = p.trim();
+          // Check if it's a known role (case-insensitive)
+          const knownRole = roleMapping[trimmed.toLowerCase()];
+          return knownRole || trimmed;
+        })
+        .filter(Boolean);
+
+      if (permissions.length > 0) {
+        setInitialFormValues({
+          member: memberParam,
+          roles: permissions,
+        });
+        setIsEdit(false);
+        setShowEditor(true);
+      }
+    }
+  }, [searchParams, hasCreatePermission, loading]);
 
   // Helper functions
   const getMembersAndPermissions = () => {
@@ -979,7 +1033,10 @@ const Members = () => {
       {/* Members Editor OffCanvas */}
       <OffCanvas
         showCanvas={showEditor}
-        onClose={() => setShowEditor(false)}
+        onClose={() => {
+          setShowEditor(false);
+          setInitialFormValues(null);
+        }}
         disableScroll={true}
         title={isEdit ? "Edit Members" : "Add Members"}
       >
@@ -987,8 +1044,12 @@ const Members = () => {
           isEdit={isEdit}
           availableRoles={availableRoles}
           selectedMembers={selectedMembers}
+          initialValues={initialFormValues}
           onSubmitClick={handleEditorSubmit}
-          onCancel={() => setShowEditor(false)}
+          onCancel={() => {
+            setShowEditor(false);
+            setInitialFormValues(null);
+          }}
           disableCancel={isTxnCreated}
           isSubmitLoading={isTxnCreated}
         />
