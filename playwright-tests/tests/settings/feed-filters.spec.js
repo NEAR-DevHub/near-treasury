@@ -9,6 +9,7 @@ import {
   checkColumnDateRange,
   switchToHistoryTab,
   addFilter,
+  checkVoteStatusWithImages,
 } from "../../util/filter-utils.js";
 
 const DAO_ID = "testing-astradao.sputnik-dao.near";
@@ -324,15 +325,17 @@ test.describe("Logged in user", () => {
   test.use({
     storageState: "playwright-tests/util/logged-in-state.json",
   });
-  console.log("Applied");
 
   test("should add and display My Vote Status filter", async ({ page }) => {
     await navigateToTab(page, "history");
     await page.waitForTimeout(5000);
-    await addFilter(page, { filterName: "My Vote Status" });
+    await addFilterAndOpenPopup(page, { filterName: "My Vote Status" });
 
     // Approved
-    await page.getByText("Approved", { exact: true }).click();
+    await page
+      .locator(".dropdown-item")
+      .getByText("Approved", { exact: true })
+      .click();
     await page.waitForTimeout(3000);
     await checkVoteStatusWithImages(page, "theori.near", "approved", true);
 

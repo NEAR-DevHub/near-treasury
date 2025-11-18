@@ -208,6 +208,10 @@ export async function checkColumnAmounts(page, columnIndex, amount, operator) {
   }
 }
 
+function getFilterButton(page, filterName) {
+  return page.locator(`button:has-text("${filterName}")`).first();
+}
+
 export async function addFilter(page, options) {
   const { filterName } = options;
 
@@ -223,9 +227,7 @@ export async function addFilter(page, options) {
   // Now the filter appears in the active filters bar as a button
   // We need to find and click that button to expand its options
   // The button text will match the filterName (e.g., "Created by", "Recipient", etc.)
-  const activeFilterButton = page
-    .locator(`button:has-text("${filterName}")`)
-    .first();
+  const activeFilterButton = getFilterButton(page, filterName);
   await expect(activeFilterButton).toBeVisible({ timeout: 5000 });
 }
 
@@ -233,6 +235,7 @@ export async function addFilter(page, options) {
 export async function addFilterAndOpenPopup(page, options) {
   addFilter(page, options);
 
+  const activeFilterButton = getFilterButton(page, options.filterName);
   // Click the active filter button to expand its dropdown
   await activeFilterButton.click();
   await page.waitForTimeout(1000);
