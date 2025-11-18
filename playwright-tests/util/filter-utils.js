@@ -208,9 +208,8 @@ export async function checkColumnAmounts(page, columnIndex, amount, operator) {
   }
 }
 
-// Helper function to add a specific filter
 export async function addFilter(page, options) {
-  const { filterName, isMultiple = true } = options;
+  const { filterName } = options;
 
   await openFiltersPanel(page);
   await page.locator("text=Add Filter").click();
@@ -228,6 +227,11 @@ export async function addFilter(page, options) {
     .locator(`button:has-text("${filterName}")`)
     .first();
   await expect(activeFilterButton).toBeVisible({ timeout: 5000 });
+}
+
+// Helper function to add a specific filter
+export async function addFilterAndOpenPopup(page, options) {
+  addFilter(page, options);
 
   // Click the active filter button to expand its dropdown
   await activeFilterButton.click();
