@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
+const browserFilter = process.argv[2];
+
 // Configuration
 const VIDEO_DIR = "test-results";
 const OUTPUT_DIR = "processed_videos";
@@ -48,7 +50,9 @@ function findVideoFiles(dir) {
     if (item.isDirectory()) {
       results.push(...findVideoFiles(fullPath));
     } else if (item.name === "video.webm") {
-      results.push(fullPath);
+      if (!browserFilter || fullPath.includes(`-${browserFilter}`)) {
+        results.push(fullPath);
+      }
     }
   }
 
