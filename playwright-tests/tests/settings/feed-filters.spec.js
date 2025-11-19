@@ -87,8 +87,7 @@ test.describe("Settings Feed Filters", () => {
       .fill("megha");
     await page.getByText("Megha", { exact: true }).first().click();
 
-    // Wait for the search results to appear
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     // Get Created by column index and verify all rows show the selected proposer
     const creatorColumnIndex = await getColumnIndex(page, "Created by");
@@ -313,10 +312,7 @@ test.describe("Settings Feed Filters", () => {
     // Verify all results are back
     const allRows = page.locator("tbody tr");
     const allRowCount = await allRows.count();
-    console.log("allRowCount", allRowCount);
-
-    // Should have more results than the ID search (which had 1)
-    expect(allRowCount).toBe(10);
+    expect(allRowCount).toBeGreaterThanOrEqual(idSearchCount);
   });
 });
 

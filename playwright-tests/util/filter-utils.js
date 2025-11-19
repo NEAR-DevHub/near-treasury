@@ -209,7 +209,9 @@ export async function checkColumnAmounts(page, columnIndex, amount, operator) {
 }
 
 function getFilterButton(page, filterName) {
-  return page.locator(`button:has-text("${filterName}")`).first();
+  return page
+    .locator(`button:not(.dropdown-item):has-text("${filterName}")`)
+    .first();
 }
 
 export async function addFilter(page, options) {
@@ -233,7 +235,7 @@ export async function addFilter(page, options) {
 
 // Helper function to add a specific filter
 export async function addFilterAndOpenPopup(page, options) {
-  addFilter(page, options);
+  await addFilter(page, options);
 
   const activeFilterButton = getFilterButton(page, options.filterName);
   // Click the active filter button to expand its dropdown
