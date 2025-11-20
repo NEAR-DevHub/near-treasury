@@ -161,10 +161,13 @@ const Chart = ({
     }
   };
 
-  // Get CSS variable helper
   const getCSSVariable = (variable) => {
-    if (typeof window !== "undefined") {
-      return getComputedStyle(document.documentElement)
+    if (
+      typeof window !== "undefined" &&
+      typeof window.getComputedStyle === "function"
+    ) {
+      return window
+        .getComputedStyle(document.documentElement)
         .getPropertyValue(variable)
         .trim();
     }
@@ -214,18 +217,10 @@ const Chart = ({
         },
         tooltip: {
           enabled: true,
-          backgroundColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--bg-page-color")
-            .trim(),
-          titleColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--text-color")
-            .trim(),
-          bodyColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--text-color")
-            .trim(),
-          borderColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--border-color")
-            .trim(),
+          backgroundColor: getCSSVariable("--bg-page-color"),
+          titleColor: getCSSVariable("--text-color"),
+          bodyColor: getCSSVariable("--text-color"),
+          borderColor: getCSSVariable("--border-color"),
           borderWidth: 1,
           displayColors: false,
           callbacks: {
@@ -413,11 +408,7 @@ const Chart = ({
                   borderColor: getComputedStyle(document.documentElement)
                     .getPropertyValue("--text-color")
                     .trim(),
-                  pointBackgroundColor: getComputedStyle(
-                    document.documentElement
-                  )
-                    .getPropertyValue("--bg-page-color")
-                    .trim(),
+                  pointBackgroundColor: getCSSVariable("--bg-page-color"),
                   pointRadius: 0,
                   tension: 0.2,
                   borderWidth: 1.5,
