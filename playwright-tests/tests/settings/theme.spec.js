@@ -68,13 +68,19 @@ async function navigateToThemePage({
   await expect(page.getByText("Theme & Logo").nth(1)).toBeVisible();
 }
 
+async function expectImageUploadLabelVisible(page) {
+  const imageUploaderLabel = page.locator("label[for='imageUpload']");
+  await expect(imageUploaderLabel).toBeVisible();
+  return imageUploaderLabel;
+}
+
 export async function getTransactionModalObject(page) {
   return await JSON.parse(
     await page.locator("div.modal-body code").first().innerText()
   );
 }
 
-test.describe.parallel("User logged in with different roles", function () {
+test.describe.parallel("Theme & Logo permissions by user role", function () {
   const roles = [
     {
       name: "Create role",
@@ -96,7 +102,7 @@ test.describe.parallel("User logged in with different roles", function () {
   ];
 
   for (const { name, storageState, hasAllRole } of roles) {
-    test.describe(`User with '${name}'`, function () {
+    test.describe(`User with role '${name}'`, function () {
       test.use({ storageState });
 
       test("should only allow authorized users to change config", async ({
@@ -121,7 +127,7 @@ test.describe.parallel("User logged in with different roles", function () {
   }
 });
 
-test.describe("User is logged in", () => {
+test.describe("Theme & Logo behavior for logged-in user", () => {
   test.use({ storageState: "playwright-tests/util/logged-in-state.json" });
 
   test.beforeEach(async ({ page, instanceAccount }, testInfo) => {
@@ -136,7 +142,7 @@ test.describe("User is logged in", () => {
     await navigateToThemePage({ page, instanceAccount });
   });
 
-  test("insufficient account balance should show warning modal, disallow action", async ({
+  test("should show warning modal and block action when account balance is insufficient", async ({
     page,
   }) => {
     // TODO: doesn't appeared
@@ -167,7 +173,7 @@ let factoryContractId;
 let creatorAccountId;
 let daoAccountId;
 
-test.describe("User logged in with sandbox", () => {
+test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => {
   test.beforeAll(async () => {
     test.setTimeout(300000); // 5 minutes for setup
 
@@ -256,87 +262,137 @@ test.describe("User logged in with sandbox", () => {
     console.log("\n=== Sandbox Environment Stopped ===\n");
   });
 
-  test("should be able to upload image, should show error with incorrect width and allow correct one", async ({
-    page,
-  }) => {
+  test.describe("Theme & Logo image upload validations", () => {
     const MOCKED_CID = "simple_cid_1";
     const EXPECTED_IMAGE_URL = `https://ipfs.near.social/ipfs/${MOCKED_CID}`;
 
-    // Inject test wallet and intercept API calls
-    await injectTestWallet(page, sandbox, creatorAccountId);
-    await interceptIndexerAPI(page, sandbox);
-    await interceptRPC(page, sandbox);
+    test.beforeEach(async ({ page }) => {
+      // Inject test wallet and intercept API calls
+      await injectTestWallet(page, sandbox, creatorAccountId);
+      await interceptIndexerAPI(page, sandbox);
+      await interceptRPC(page, sandbox);
 
-    await navigateToThemePage({
-      page,
-      instanceAccount: creatorAccountId,
-      daoId: daoAccountId,
-      useMocks: false,
-    });
+      await navigateToThemePage({
+        page,
+        instanceAccount: creatorAccountId,
+        daoId: daoAccountId,
+        useMocks: false,
+      });
 
-    // Mock IPFS for upload
-    await page.route("https://ipfs.near.social/add", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ cid: MOCKED_CID }),
+      // Mock IPFS for upload
+      await page.route("https://ipfs.near.social/add", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ cid: MOCKED_CID }),
+        });
       });
     });
 
-    const logoInput = page.locator("input[type=file]");
-    const submitBtn = page.getByRole("button", {
-      name: "Submit Request",
+    test("should show error when logo image with invalid dimensions is uploaded", async ({
+      page,
+    }) => {
+      await expectImageUploadLabelVisible(page);
+      const logoInput = page.locator("input[type=file]");
+      const submitBtn = page.getByRole("button", {
+        name: "Submit Request",
+      });
+
+      // invalid image
+      await logoInput.setInputFiles(path.join(ASSETS_PATH, "invalid.png"));
+      await expect(
+        page.getByText(
+          "Invalid logo. Please upload a PNG, JPG, or SVG file that is exactly 256x256 px"
+        )
+      ).toBeVisible();
+      await expect(submitBtn).toBeDisabled();
     });
 
-    // invalid image
-    await logoInput.setInputFiles(path.join(ASSETS_PATH, "invalid.png"));
-    await expect(
-      page.getByText(
-        "Invalid logo. Please upload a PNG, JPG, or SVG file that is exactly 256x256 px"
-      )
-    ).toBeVisible();
-    await expect(submitBtn).toBeDisabled();
-
-    // valid image
-    await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
-    await expect(page.locator("img[alt='DAO Logo']")).toHaveAttribute(
-      "src",
-      EXPECTED_IMAGE_URL
-    );
-    await submitBtn.click();
-
-    await expect(
-      page.getByText("Awaiting transaction confirmation...")
-    ).toBeVisible();
-
-    // Wait for success message
-    await expect(
-      page.getByText("Proposal has been successfully created")
-    ).toBeVisible({ timeout: 20000 });
-
-    // Verify the proposal was created on the sandbox
-    const lastProposalId = await sandbox.viewFunction(
-      daoAccountId,
-      "get_last_proposal_id",
-      {}
-    );
-
-    expect(lastProposalId).toBeGreaterThan(-1);
-
-    const proposal = await sandbox.viewFunction(daoAccountId, "get_proposal", {
-      id: lastProposalId - 1,
+    test("should show error when upload image fails", async ({ page }) => {
+      test.setTimeout(150_000);
+      await expectImageUploadLabelVisible(page);
+      await page.route("https://ipfs.near.social/add", async (route) => {
+        await route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "" }),
+        });
+      });
+      const submitBtn = page.getByRole("button", { name: "Submit Request" });
+      const logoInput = page.locator("input[type=file]");
+      await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
+      await expect(submitBtn).toBeDisabled();
+      await expect(
+        page.getByText(
+          "Error occurred while uploading image, please try again."
+        )
+      ).toBeVisible();
     });
 
-    // Verify it's a ChangeConfig proposal
-    expect(proposal.kind.ChangeConfig).toBeDefined();
+    test("should preview uploaded logo when image is valid", async ({
+      page,
+    }) => {
+      await expectImageUploadLabelVisible(page);
+      const logoInput = page.locator("input[type=file]");
 
-    // Verify the flagLogo in the metadata (base64 decoded)
-    const configMetadata = JSON.parse(
-      Buffer.from(
-        proposal.kind.ChangeConfig.config.metadata,
-        "base64"
-      ).toString()
-    );
-    expect(configMetadata.flagLogo).toBe(EXPECTED_IMAGE_URL);
+      // valid image
+      await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
+      await expect(page.locator("img[alt='DAO Logo']")).toHaveAttribute(
+        "src",
+        EXPECTED_IMAGE_URL
+      );
+    });
+
+    test("should create ChangeConfig proposal after successful logo upload", async ({
+      page,
+    }) => {
+      await expectImageUploadLabelVisible(page);
+      const logoInput = page.locator("input[type=file]");
+      const submitBtn = page.getByRole("button", {
+        name: "Submit Request",
+      });
+
+      // valid image
+      await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
+      await submitBtn.click();
+
+      await expect(
+        page.getByText("Awaiting transaction confirmation...")
+      ).toBeVisible();
+
+      // Wait for success message
+      await expect(
+        page.getByText("Proposal has been successfully created")
+      ).toBeVisible({ timeout: 20000 });
+
+      // Verify the proposal was created on the sandbox
+      const lastProposalId = await sandbox.viewFunction(
+        daoAccountId,
+        "get_last_proposal_id",
+        {}
+      );
+
+      expect(lastProposalId).toBeGreaterThan(-1);
+
+      const proposal = await sandbox.viewFunction(
+        daoAccountId,
+        "get_proposal",
+        {
+          id: lastProposalId - 1,
+        }
+      );
+
+      // Verify it's a ChangeConfig proposal
+      expect(proposal.kind.ChangeConfig).toBeDefined();
+
+      // Verify the flagLogo in the metadata (base64 decoded)
+      const configMetadata = JSON.parse(
+        Buffer.from(
+          proposal.kind.ChangeConfig.config.metadata,
+          "base64"
+        ).toString()
+      );
+      expect(configMetadata.flagLogo).toBe(EXPECTED_IMAGE_URL);
+    });
   });
 });
