@@ -111,7 +111,7 @@ test.describe.parallel("Theme & Logo permissions by user role", function () {
       }) => {
         await navigateToThemePage({ page, instanceAccount, hasAllRole });
         await page.waitForTimeout(5000);
-        const colorInput = page.locator("input[type='color']");
+        const colorInput = page.getByTestId("color-picker-input");
         const submitButton = page.getByRole("button", {
           name: "Submit Request",
         });
@@ -151,7 +151,7 @@ test.describe("Theme & Logo behavior for logged-in user", () => {
         "Hey Ori, you don't have enough NEAR to complete actions on your treasury."
       )
     ).toBeVisible();
-    const colorInput = page.getByRole("textbox").nth(1);
+    const colorInput = page.getByTestId("color-text-input");
     await colorInput.fill("#000");
     await page
       .getByText("Submit Request", {
@@ -309,7 +309,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     });
 
     test("should show error when upload image fails", async ({ page }) => {
-      test.setTimeout(150_000);
       await expectImageUploadLabelVisible(page);
       await page.route("https://ipfs.near.social/add", async (route) => {
         await route.fulfill({
@@ -396,17 +395,11 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     });
 
     test("should be able to change color and theme", async ({ page }) => {
-      test.setTimeout(150_000);
-
       await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
       const newColor = "#000000";
-
-      await page.getByRole("textbox").nth(1).fill(newColor);
-
+      await page.getByTestId("color-text-input").fill(newColor);
       await page.getByTestId("theme-toggle").click();
-
       await page.getByRole("button", { name: "Submit Request" }).click();
-
       await expect(
         page.getByText("Awaiting transaction confirmation...")
       ).toBeVisible();
@@ -424,7 +417,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       );
 
       expect(lastProposalId).toBeGreaterThan(-1);
-
       const proposal = await sandbox.viewFunction(
         daoAccountId,
         "get_proposal",
@@ -432,10 +424,8 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
           id: lastProposalId - 1,
         }
       );
-
       // Verify it's a ChangeConfig proposal
       expect(proposal.kind.ChangeConfig).toBeDefined();
-
       // Verify the metadata
       const configMetadata = JSON.parse(
         Buffer.from(
@@ -445,6 +435,31 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       );
       expect(configMetadata.primaryColor).toBe(newColor);
       expect(configMetadata.theme).toBe("dark");
+    });
+
+    test("should toggle action buttons based on form changes", async ({
+      page,
+    }) => {
+      const submitRequestButton = page.getByRole("button", {
+        name: "Submit Request",
+      });
+      const cancelButton = page.getByRole("button", { name: "Cancel" });
+
+      // Initially, both buttons should be disabled
+      await expect(submitRequestButton).toBeDisabled();
+      await expect(cancelButton).toBeDisabled();
+
+      // Changing color input should enable the buttons
+      const colorInput = page.getByTestId("color-text-input");
+      await colorInput.fill("#000000");
+
+      await expect(submitRequestButton).toBeEnabled();
+      await expect(cancelButton).toBeEnabled();
+
+      // Clicking the cancel button should reset the form and disable both buttons
+      await cancelButton.click();
+      await expect(submitRequestButton).toBeDisabled();
+      await expect(cancelButton).toBeDisabled();
     });
   });
 });

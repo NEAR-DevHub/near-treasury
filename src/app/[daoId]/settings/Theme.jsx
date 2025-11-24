@@ -283,6 +283,7 @@ const Theme = () => {
               <label className="form-label">Primary color</label>
               <div className="d-flex border border-1 align-items-center rounded-3 gap-2 p-1 px-2">
                 <input
+                  data-testid="color-picker-input"
                   type="color"
                   value={color}
                   onChange={(e) =>
@@ -300,6 +301,7 @@ const Theme = () => {
                   disabled={!hasCreatePermission}
                 />
                 <input
+                  data-testid="color-text-input"
                   type="text"
                   value={color}
                   onChange={(e) =>
