@@ -122,6 +122,7 @@ test.describe("Settings Feed Filters", () => {
     await checkColumnImages(page, approversColumnIndex, "frol.near", false);
   });
 
+// TODO: to be fixed by Megha, need to update indexer to show correct result
   // test("should filter by Members Permissions proposal type", async ({
   //   page,
   // }) => {
