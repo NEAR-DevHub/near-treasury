@@ -394,5 +394,57 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       );
       expect(configMetadata.flagLogo).toBe(EXPECTED_IMAGE_URL);
     });
+
+    test("should be able to change color and theme", async ({ page }) => {
+      test.setTimeout(150_000);
+
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+      const newColor = "#000000";
+
+      await page.getByRole("textbox").nth(1).fill(newColor);
+
+      await page.getByTestId("theme-toggle").click();
+
+      await page.getByRole("button", { name: "Submit Request" }).click();
+
+      await expect(
+        page.getByText("Awaiting transaction confirmation...")
+      ).toBeVisible();
+
+      // Wait for success message
+      await expect(
+        page.getByText("Proposal has been successfully created")
+      ).toBeVisible({ timeout: 20000 });
+
+      // Verify the proposal was created on the sandbox
+      const lastProposalId = await sandbox.viewFunction(
+        daoAccountId,
+        "get_last_proposal_id",
+        {}
+      );
+
+      expect(lastProposalId).toBeGreaterThan(-1);
+
+      const proposal = await sandbox.viewFunction(
+        daoAccountId,
+        "get_proposal",
+        {
+          id: lastProposalId - 1,
+        }
+      );
+
+      // Verify it's a ChangeConfig proposal
+      expect(proposal.kind.ChangeConfig).toBeDefined();
+
+      // Verify the metadata
+      const configMetadata = JSON.parse(
+        Buffer.from(
+          proposal.kind.ChangeConfig.config.metadata,
+          "base64"
+        ).toString()
+      );
+      expect(configMetadata.primaryColor).toBe(newColor);
+      expect(configMetadata.theme).toBe("dark");
+    });
   });
 });

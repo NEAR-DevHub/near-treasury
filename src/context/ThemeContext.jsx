@@ -38,7 +38,7 @@ export const ThemeProvider = ({ children }) => {
     if (isDarkTheme) {
       root.setAttribute("data-theme", "dark");
     } else {
-      root.removeAttribute("data-theme");
+      root.setAttribute("data-theme", "light");
     }
   }, [isDarkTheme]);
 
