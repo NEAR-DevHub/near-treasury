@@ -1,5 +1,12 @@
 import path from "path";
 import { expect } from "@playwright/test";
+import {
+  NearSandbox,
+  injectTestWallet,
+  interceptIndexerAPI,
+  interceptRPC,
+  parseNEAR,
+} from "../../util/sandbox.js";
 import { test } from "../../util/test.js";
 import {
   updateDaoPolicyMembers,
@@ -7,8 +14,7 @@ import {
   mockNearBalances,
 } from "../../util/rpcmock.js";
 
-const DAO_ID = "testing-astradao.sputnik-dao.near";
-const SETTINGS_BASE_URL = `http://localhost:3000/${DAO_ID}/settings`;
+const DAO_ID = "devdao.sputnik-dao.near";
 const ASSETS_PATH = path.join(
   process.cwd(),
   "playwright-tests/tests/settings/assets"
@@ -45,10 +51,19 @@ async function updateDaoConfig({ page }) {
   });
 }
 
-async function navigateToThemePage({ page, instanceAccount, hasAllRole }) {
-  await page.goto(`${SETTINGS_BASE_URL}?tab=theme-logo`);
-  await updateDaoPolicyMembers({ instanceAccount, page, hasAllRole });
-  await updateDaoConfig({ page });
+async function navigateToThemePage({
+  page,
+  instanceAccount,
+  hasAllRole,
+  daoId = DAO_ID,
+  useMocks = true,
+}) {
+  const baseUrl = `http://localhost:3000/${daoId}/settings`;
+  await page.goto(`${baseUrl}?tab=theme-logo`);
+  if (useMocks) {
+    await updateDaoPolicyMembers({ instanceAccount, page, hasAllRole });
+    await updateDaoConfig({ page });
+  }
   await page.waitForTimeout(5_000);
   await expect(page.getByText("Theme & Logo").nth(1)).toBeVisible();
 }
@@ -143,16 +158,128 @@ test.describe("User is logged in", () => {
         .nth(1)
     ).toBeVisible();
   });
+});
+
+const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
+
+let sandbox;
+let factoryContractId;
+let creatorAccountId;
+let daoAccountId;
+
+test.describe("User logged in with sandbox", () => {
+  test.beforeAll(async () => {
+    test.setTimeout(300000); // 5 minutes for setup
+
+    sandbox = new NearSandbox();
+    await sandbox.start();
+
+    console.log("\n=== Sandbox Environment Started ===\n");
+
+    // Import sputnik-dao factory from mainnet
+    factoryContractId = await sandbox.importMainnetContract(
+      SPUTNIK_DAO_FACTORY_ID,
+      SPUTNIK_DAO_FACTORY_ID
+    );
+
+    // Create a test account to be the DAO creator with 100 NEAR
+    creatorAccountId = await sandbox.createAccount(
+      "testcreator.near",
+      "100000000000000000000000000"
+    );
+    console.log(`Creator account: ${creatorAccountId}`);
+
+    // Initialize the factory
+    await sandbox.functionCall(
+      factoryContractId,
+      SPUTNIK_DAO_FACTORY_ID,
+      "new",
+      {},
+      "300000000000000"
+    );
+
+    // Create a DAO
+    const daoName = "testdao";
+    const daoPolicy = {
+      roles: [
+        {
+          kind: { Group: [creatorAccountId] },
+          name: "Manage Members",
+          permissions: [
+            "config:*",
+            "policy:*",
+            "add_member_to_role:*",
+            "remove_member_from_role:*",
+            "*:AddProposal",
+          ],
+          vote_policy: {},
+        },
+      ],
+      default_vote_policy: {
+        weight_kind: "RoleWeight",
+        quorum: "0",
+        threshold: [1, 2],
+      },
+      proposal_bond: "0",
+      proposal_period: "604800000000000",
+      bounty_bond: "100000000000000000000000",
+      bounty_forgiveness_period: "604800000000000",
+    };
+
+    await sandbox.functionCall(
+      creatorAccountId,
+      factoryContractId,
+      "create",
+      {
+        name: daoName,
+        args: Buffer.from(
+          JSON.stringify({
+            config: {
+              name: "testing-astradao",
+              metadata: toBase64(metadata),
+              purpose: "Test DAO for theme settings",
+            },
+            policy: daoPolicy,
+          })
+        ).toString("base64"),
+      },
+      "300000000000000",
+      await parseNEAR("6")
+    );
+
+    daoAccountId = `${daoName}.${factoryContractId}`;
+    console.log(`DAO created: ${daoAccountId}`);
+  });
+
+  test.afterAll(async () => {
+    await sandbox.stop();
+    console.log("\n=== Sandbox Environment Stopped ===\n");
+  });
 
   test("should be able to upload image, should show error with incorrect width and allow correct one", async ({
     page,
   }) => {
-    await expect(page.getByText("Upload Logo"), { exact: true }).toBeVisible();
+    const MOCKED_CID = "simple_cid_1";
+    const EXPECTED_IMAGE_URL = `https://ipfs.near.social/ipfs/${MOCKED_CID}`;
+
+    // Inject test wallet and intercept API calls
+    await injectTestWallet(page, sandbox, creatorAccountId);
+    await interceptIndexerAPI(page, sandbox);
+    await interceptRPC(page, sandbox);
+
+    await navigateToThemePage({
+      page,
+      instanceAccount: creatorAccountId,
+      daoId: daoAccountId,
+      useMocks: false,
+    });
+
+    // Mock IPFS for upload
     await page.route("https://ipfs.near.social/add", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ cid: "simple_cid_1" }),
+        body: JSON.stringify({ cid: MOCKED_CID }),
       });
     });
 
@@ -160,36 +287,56 @@ test.describe("User is logged in", () => {
     const submitBtn = page.getByRole("button", {
       name: "Submit Request",
     });
+
     // invalid image
     await logoInput.setInputFiles(path.join(ASSETS_PATH, "invalid.png"));
-    await page.waitForTimeout(5_000);
     await expect(
       page.getByText(
         "Invalid logo. Please upload a PNG, JPG, or SVG file that is exactly 256x256 px"
       )
     ).toBeVisible();
     await expect(submitBtn).toBeDisabled();
+
+    // valid image
     await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
+    await expect(page.locator("img[alt='DAO Logo']")).toHaveAttribute(
+      "src",
+      EXPECTED_IMAGE_URL
+    );
     await submitBtn.click();
+
     await expect(
       page.getByText("Awaiting transaction confirmation...")
     ).toBeVisible();
 
-    await expect(await getTransactionModalObject(page)).toEqual({
-      proposal: {
-        description: "* Title: Update Config - Theme & logo",
-        kind: {
-          ChangeConfig: {
-            config: {
-              ...config,
-              metadata: toBase64({
-                ...metadata,
-                flagLogo: "https://ipfs.near.social/ipfs/simple_cid_1",
-              }),
-            },
-          },
-        },
-      },
+    // Wait for success message
+    await expect(
+      page.getByText("Proposal has been successfully created")
+    ).toBeVisible({ timeout: 20000 });
+
+    // Verify the proposal was created on the sandbox
+    const lastProposalId = await sandbox.viewFunction(
+      daoAccountId,
+      "get_last_proposal_id",
+      {}
+    );
+
+    expect(lastProposalId).toBeGreaterThan(-1);
+
+    const proposal = await sandbox.viewFunction(daoAccountId, "get_proposal", {
+      id: lastProposalId - 1,
     });
+
+    // Verify it's a ChangeConfig proposal
+    expect(proposal.kind.ChangeConfig).toBeDefined();
+
+    // Verify the flagLogo in the metadata (base64 decoded)
+    const configMetadata = JSON.parse(
+      Buffer.from(
+        proposal.kind.ChangeConfig.config.metadata,
+        "base64"
+      ).toString()
+    );
+    expect(configMetadata.flagLogo).toBe(EXPECTED_IMAGE_URL);
   });
 });
