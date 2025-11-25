@@ -361,7 +361,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
         <BalanceDisplay selectedWallet={selectedWallet} />
 
         {/* Warning if no staked tokens */}
-        {parseFloat(balances.staked) === 0 && (
+        {parseFloat(balances.staked) === 0 ? (
           <div
             className="d-flex gap-2 align-items-center p-3 rounded-2"
             style={{
@@ -376,142 +376,167 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
               tokens first.
             </span>
           </div>
-        )}
-
-        {/* Validator Selection */}
-        <div className="d-flex flex-column">
-          <label className="form-label fw-medium mb-1">
-            Validator
-            {errors.selectedValidator && (
-              <span className="text-danger ms-1">*</span>
-            )}
-          </label>
-          <ValidatorDropdown
-            options={validators}
-            selectedValidator={selectedValidator}
-            onSelect={(validator) =>
-              setValue("selectedValidator", validator, { shouldValidate: true })
-            }
-            disabled={isTxnCreated || validators.length === 0}
-            showStakingInfo={true}
-            selectedWallet={selectedWallet?.value}
-            isLoading={isLoadingValidators}
-          />
-          <input
-            type="hidden"
-            {...register("selectedValidator", {
-              required: "Please select a validator",
-            })}
-          />
-          {errors.selectedValidator && (
-            <div className="text-danger mt-1" style={{ fontSize: "0.875rem" }}>
-              {errors.selectedValidator.message}
-            </div>
-          )}
-        </div>
-
-        {/* Amount Input */}
-        <div className="d-flex flex-column">
-          <div className="d-flex justify-content-between mb-1">
-            <label className="form-label fw-medium">
-              Amount
-              {errors.amount && <span className="text-danger ms-1">*</span>}
-            </label>
-            {selectedValidator && maxUnstakeAmount > 0 && (
-              <div
-                className="px-3 py-1 rounded-2"
-                style={{ color: "#007aff", cursor: "pointer", fontSize: 13 }}
-                onClick={() =>
-                  setValue("amount", maxUnstakeAmount.toString(), {
+        ) : (
+          <div className="d-flex flex-column gap-2">
+            {/* Validator Selection */}
+            <div className="d-flex flex-column">
+              <label className="form-label fw-medium mb-1">
+                Validator
+                {errors.selectedValidator && (
+                  <span className="text-danger ms-1">*</span>
+                )}
+              </label>
+              <ValidatorDropdown
+                options={validators}
+                selectedValidator={selectedValidator}
+                onSelect={(validator) =>
+                  setValue("selectedValidator", validator, {
                     shouldValidate: true,
                   })
                 }
+                disabled={isTxnCreated || validators.length === 0}
+                showStakingInfo={true}
+                selectedWallet={selectedWallet?.value}
+                isLoading={isLoadingValidators}
+              />
+              <input
+                type="hidden"
+                {...register("selectedValidator", {
+                  required: "Please select a validator",
+                })}
+              />
+              {errors.selectedValidator && (
+                <div
+                  className="text-danger mt-1"
+                  style={{ fontSize: "0.875rem" }}
+                >
+                  {errors.selectedValidator.message}
+                </div>
+              )}
+            </div>
+
+            {/* Amount Input */}
+            <div className="d-flex flex-column">
+              <div className="d-flex justify-content-between mb-1">
+                <label
+                  htmlFor="unstake-amount"
+                  className="form-label fw-medium"
+                >
+                  Amount
+                  {errors.amount && <span className="text-danger ms-1">*</span>}
+                </label>
+                {selectedValidator && maxUnstakeAmount > 0 && (
+                  <div
+                    className="px-3 py-1 rounded-2"
+                    style={{
+                      color: "#007aff",
+                      cursor: "pointer",
+                      fontSize: 13,
+                    }}
+                    onClick={() =>
+                      setValue("amount", maxUnstakeAmount.toString(), {
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    Use Max
+                  </div>
+                )}
+              </div>
+              <input
+                type="number"
+                step="any"
+                id="unstake-amount"
+                className="form-control"
+                placeholder="Enter amount in NEAR"
+                disabled={isTxnCreated || !selectedValidator}
+                {...register("amount", {
+                  required: "Amount is required",
+                  validate: {
+                    positive: (v) =>
+                      parseFloat(v) > 0 || "Amount must be positive",
+                    sufficient: (v) =>
+                      parseFloat(v) <= maxUnstakeAmount ||
+                      `Amount exceeds staked balance (${maxUnstakeAmount} NEAR)`,
+                  },
+                })}
+              />
+              {selectedValidator && (
+                <div
+                  className="d-flex align-items-center gap-1 text-secondary mt-1"
+                  style={{ fontSize: 13 }}
+                >
+                  Available to unstake: {maxUnstakeAmount} NEAR
+                </div>
+              )}
+              {errors.amount && (
+                <div
+                  className="text-danger mt-1"
+                  style={{ fontSize: "0.875rem" }}
+                >
+                  {errors.amount.message}
+                </div>
+              )}
+            </div>
+
+            {/* Warning about unstaking */}
+            {selectedValidator && amount && parseFloat(amount) > 0 && (
+              <div
+                className="d-flex gap-2 align-items-center p-3 rounded-2"
+                style={{
+                  backgroundColor: "var(--grey-04)",
+                  color: "var(--grey-02)",
+                  fontSize: 13,
+                }}
               >
-                Use Max
+                <i className="bi bi-info-circle h6 mb-0"></i>
+                <span>
+                  By submitting, you create two requests: an unstake request and
+                  a follow-up withdrawal request. The withdrawal request will
+                  appear after the unstake is approved and the 52-65 hour
+                  waiting period completes.
+                </span>
               </div>
             )}
-          </div>
-          <input
-            type="number"
-            step="any"
-            className="form-control"
-            placeholder="Enter amount in NEAR"
-            disabled={isTxnCreated || !selectedValidator}
-            {...register("amount", {
-              required: "Amount is required",
-              validate: {
-                positive: (v) => parseFloat(v) > 0 || "Amount must be positive",
-                sufficient: (v) =>
-                  parseFloat(v) <= maxUnstakeAmount ||
-                  `Amount exceeds staked balance (${maxUnstakeAmount} NEAR)`,
-              },
-            })}
-          />
-          {selectedValidator && (
-            <div
-              className="d-flex align-items-center gap-1 text-secondary mt-1"
-              style={{ fontSize: 13 }}
-            >
-              Available to unstake: {maxUnstakeAmount} NEAR
-            </div>
-          )}
-          {errors.amount && (
-            <div className="text-danger mt-1" style={{ fontSize: "0.875rem" }}>
-              {errors.amount.message}
-            </div>
-          )}
-        </div>
 
-        {/* Warning about unstaking */}
-        {selectedValidator && amount && parseFloat(amount) > 0 && (
-          <div
-            className="d-flex gap-2 align-items-center p-3 rounded-2"
-            style={{
-              backgroundColor: "var(--grey-04)",
-              color: "var(--grey-02)",
-              fontSize: 13,
-            }}
-          >
-            <i className="bi bi-info-circle h6 mb-0"></i>
-            <span>
-              By submitting, you create two requests: an unstake request and a
-              follow-up withdrawal request. The withdrawal request will appear
-              after the unstake is approved and the 52-65 hour waiting period
-              completes.
-            </span>
+            {/* Notes */}
+            <div className="d-flex flex-column">
+              <label
+                htmlFor="unstake-notes"
+                className="form-label fw-medium mb-1"
+              >
+                Notes
+              </label>
+              <textarea
+                id="unstake-notes"
+                className="form-control"
+                rows="3"
+                placeholder="Enter your notes here..."
+                disabled={isTxnCreated}
+                {...register("notes")}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="d-flex gap-3 align-items-center justify-content-end">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => setShowCancelModal(true)}
+                disabled={isTxnCreated}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn theme-btn"
+                disabled={isTxnCreated || validators.length === 0}
+              >
+                Submit
+              </button>
+            </div>
           </div>
         )}
-
-        {/* Notes */}
-        <div className="d-flex flex-column">
-          <label className="form-label fw-medium mb-1">Notes</label>
-          <textarea
-            className="form-control"
-            rows="3"
-            placeholder="Enter your notes here..."
-            disabled={isTxnCreated}
-            {...register("notes")}
-          />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="d-flex gap-3 align-items-center justify-content-end">
-          <button
-            type="button"
-            className="btn btn-outline-secondary"
-            onClick={() => setShowCancelModal(true)}
-            disabled={isTxnCreated}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="btn theme-btn"
-            disabled={isTxnCreated || validators.length === 0}
-          >
-            Submit
-          </button>
-        </div>
       </form>
     </>
   );

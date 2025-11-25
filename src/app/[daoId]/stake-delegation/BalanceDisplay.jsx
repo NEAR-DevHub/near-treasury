@@ -90,7 +90,10 @@ const BalanceDisplay = ({ selectedWallet }) => {
   );
 
   return (
-    <div className="d-flex flex-column gap-1 border border-1 rounded-3 py-2">
+    <div
+      className="d-flex flex-column gap-1 border border-1 rounded-3 py-2"
+      data-testid="balance-display"
+    >
       <BalanceRow
         label="Ready to stake"
         balance={balances.available}
