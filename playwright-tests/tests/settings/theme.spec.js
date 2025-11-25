@@ -131,38 +131,7 @@ test.describe("Theme & Logo behavior for logged-in user", () => {
   test.use({ storageState: "playwright-tests/util/logged-in-state.json" });
 
   test.beforeEach(async ({ page, instanceAccount }, testInfo) => {
-    if (testInfo.title.includes("insufficient account balance")) {
-      await mockNearBalances({
-        page,
-        accountId: "theori.near",
-        balance: InsufficientBalance,
-        storage: 8,
-      });
-    }
     await navigateToThemePage({ page, instanceAccount });
-  });
-
-  test("should show warning modal and block action when account balance is insufficient", async ({
-    page,
-  }) => {
-    // TODO: doesn't appeared
-    await expect(
-      page.getByText(
-        "Hey Ori, you don't have enough NEAR to complete actions on your treasury."
-      )
-    ).toBeVisible();
-    const colorInput = page.getByTestId("color-text-input");
-    await colorInput.fill("#000");
-    await page
-      .getByText("Submit Request", {
-        exact: true,
-      })
-      .click();
-    await expect(
-      page
-        .getByText("Please add more funds to your account and try again")
-        .nth(1)
-    ).toBeVisible();
   });
 });
 
@@ -172,6 +141,7 @@ let sandbox;
 let factoryContractId;
 let creatorAccountId;
 let daoAccountId;
+let lowBalanceVoterAccountId;
 
 test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => {
   test.beforeAll(async () => {
@@ -195,6 +165,13 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     );
     console.log(`Creator account: ${creatorAccountId}`);
 
+    // Create voter account with INSUFFICIENT balance (0.05 NEAR)
+    lowBalanceVoterAccountId = await sandbox.createAccount(
+      "lowbalancevoter.near",
+      await parseNEAR("0.05")
+    );
+    console.log(`Low balance voter account: ${lowBalanceVoterAccountId}`);
+
     // Initialize the factory
     await sandbox.functionCall(
       factoryContractId,
@@ -209,7 +186,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     const daoPolicy = {
       roles: [
         {
-          kind: { Group: [creatorAccountId] },
+          kind: { Group: [creatorAccountId, lowBalanceVoterAccountId] },
           name: "Manage Members",
           permissions: [
             "config:*",
@@ -460,6 +437,43 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       await cancelButton.click();
       await expect(submitRequestButton).toBeDisabled();
       await expect(cancelButton).toBeDisabled();
+    });
+
+    test("should show warning modal and block action when account balance is insufficient", async ({
+      page,
+    }) => {
+      // Inject test wallet with LOW BALANCE voter
+      await injectTestWallet(page, sandbox, lowBalanceVoterAccountId);
+      await interceptIndexerAPI(page, sandbox);
+      await interceptRPC(page, sandbox);
+
+      await navigateToThemePage({
+        page,
+        instanceAccount: lowBalanceVoterAccountId,
+        daoId: daoAccountId,
+        useMocks: false,
+      });
+
+      await expect(
+        page.getByText(
+          /you don't have enough NEAR to complete actions on your treasury/i
+        )
+      ).toBeVisible({ timeout: 10000 });
+
+      const colorInput = page.getByTestId("color-text-input");
+      await colorInput.fill("#000000");
+
+      await page
+        .getByText("Submit Request", {
+          exact: true,
+        })
+        .click();
+
+      await expect(
+        page
+          .getByText("Please add more funds to your account and try again")
+          .nth(1)
+      ).toBeVisible();
     });
   });
 });
