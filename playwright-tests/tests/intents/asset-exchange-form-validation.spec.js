@@ -40,7 +40,7 @@ test.describe("Asset Exchange Form Validation", () => {
 
     // Verify form modal opened
     await expect(
-      page.getByRole("heading", { name: /Asset Exchange Request/i })
+      page.getByRole("heading", { name: "Create Asset Exchange Request" })
     ).toBeVisible({ timeout: 10000 });
   });
 
