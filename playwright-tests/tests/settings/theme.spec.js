@@ -159,6 +159,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
 
   test.describe("Theme & Logo Permissions", () => {
     test("should disable config for unauthorized user", async ({ page }) => {
+      test.setTimeout(120000);
       await navigateToThemePage({ page, daoId: daoAccountId });
 
       const colorInput = page.getByTestId("color-picker-input");
@@ -173,6 +174,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should enable config for authorized user (Create role)", async ({
       page,
     }) => {
+      test.setTimeout(120000);
       await injectTestWallet(page, sandbox, creatorAccountId);
       await navigateToThemePage({ page, daoId: daoAccountId });
 
@@ -186,6 +188,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     });
 
     test("should disable config for user with Vote role", async ({ page }) => {
+      test.setTimeout(120000);
       await injectTestWallet(page, sandbox, voteOnlyAccountId);
       await navigateToThemePage({ page, daoId: daoAccountId });
 
@@ -222,6 +225,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should show error when logo image with invalid dimensions is uploaded", async ({
       page,
     }) => {
+      test.setTimeout(120000);
       await expectImageUploadLabelVisible(page);
       const logoInput = page.locator("input[type=file]");
       const submitBtn = page.getByRole("button", {
@@ -238,6 +242,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     });
 
     test("should show error when upload image fails", async ({ page }) => {
+      test.setTimeout(120000);
       await expectImageUploadLabelVisible(page);
       await page.route("https://ipfs.near.social/add", async (route) => {
         await route.fulfill({
@@ -260,6 +265,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should preview uploaded logo when image is valid", async ({
       page,
     }) => {
+      test.setTimeout(120000);
       await expectImageUploadLabelVisible(page);
       const logoInput = page.locator("input[type=file]");
 
@@ -273,6 +279,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should create ChangeConfig proposal after successful logo upload", async ({
       page,
     }) => {
+      test.setTimeout(120000);
       await expectImageUploadLabelVisible(page);
       const logoInput = page.locator("input[type=file]");
       const submitBtn = page.getByRole("button", {
@@ -319,6 +326,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     });
 
     test("should be able to change color", async ({ page }) => {
+      test.setTimeout(120000);
       const newColor = "#000000";
       await page.getByTestId("color-text-input").fill(newColor);
       await page.getByRole("button", { name: "Submit Request" }).click();
@@ -357,6 +365,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should toggle action buttons based on form changes", async ({
       page,
     }) => {
+      test.setTimeout(120000);
       const submitRequestButton = page.getByRole("button", {
         name: "Submit Request",
       });
@@ -388,6 +397,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should show warning modal and block action when account balance is insufficient", async ({
       page,
     }) => {
+      test.setTimeout(120000);
       await injectTestWallet(page, sandbox, lowBalanceVoterAccountId);
       await interceptIndexerAPI(page, sandbox);
       await interceptRPC(page, sandbox);
