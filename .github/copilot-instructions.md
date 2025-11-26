@@ -123,14 +123,36 @@ npm run test:e2e:headed       # See browser
 npm run test:video-merge      # Merge test recordings into demo video
 ```
 
-**Test Categories** (see `playwright-tests/README.md`):
+**Test Categories** - See comprehensive guide in `playwright-tests/README.md`:
 
 1. **Integration tests** (`*-ui.spec.js`) - Use near-sandbox for full blockchain state
-2. **Read-only with mainnet** (`*-detail.spec.js`) - Historical data, no mocking
-3. **Read-only with RPC mocking** (`*-dashboard.spec.js`) - Controlled test data via `mock-intents-rpc.js`
-4. **Component tests** (`tests/components/`) - Isolated UI logic
+   - For testing flows that create new blockchain state (proposals, votes, transfers)
+   - Setup time: 2-5 minutes, run time: 1-3 minutes per test
+   - Example: `tests/intents/payment-request-ui.spec.js`
 
-**Writing Tests**: Always use `NearSandbox` class from `playwright-tests/util/sandbox.js` for blockchain interactions. Setup takes 2-5 minutes, so use `test.beforeAll()`.
+2. **Read-only with mainnet** (`*-detail.spec.js`) - Historical data, no mocking
+   - For testing display of existing historical proposals/data
+   - Fast: < 30 seconds, no blockchain changes
+   - Example: `tests/intents/payment-request-detail.spec.js`
+
+3. **Read-only with RPC mocking** (`*-dashboard.spec.js`) - Controlled test data
+   - For testing current/changing data with deterministic values
+   - Fast: < 30 seconds, uses `mock-intents-rpc.js` or `mock-indexer-api.js`
+   - Example: `tests/intents/intents-dashboard.spec.js`
+
+4. **Component tests** (`tests/components/`) - Isolated UI logic
+   - For testing validation, formatting, input components
+   - Very fast: < 10 seconds, no backend needed
+   - Example: `tests/components/token-amount.spec.js`
+
+**Decision Tree for Test Type**:
+
+- Creating new blockchain state? → Integration test with sandbox
+- Testing historical data display? → Read-only with mainnet
+- Testing current data that changes? → Read-only with RPC mocking
+- Testing UI component in isolation? → Component test
+
+**Writing Tests**: See `playwright-tests/README.md` for detailed examples and patterns for each test category.
 
 ### DevContainer Features
 
