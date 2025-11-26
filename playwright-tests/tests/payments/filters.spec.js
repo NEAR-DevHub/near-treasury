@@ -3,7 +3,7 @@ import {
   getColumnIndex,
   checkColumnValues,
   openFiltersPanel,
-  addFilter,
+  addFilterAndOpenPopup,
 } from "../../util/filter-utils.js";
 
 /**
@@ -109,7 +109,7 @@ test.describe("Payments Filters", () => {
       waitUntil: "networkidle",
     });
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Created by",
       isMultiple: true,
     });
@@ -144,7 +144,7 @@ test.describe("Payments Filters", () => {
       waitUntil: "networkidle",
     });
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Recipient",
       isMultiple: true,
     });
