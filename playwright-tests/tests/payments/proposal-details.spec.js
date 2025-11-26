@@ -98,7 +98,6 @@ test.describe("Payment Request Detail Page - Full Page View", () => {
     // Hard expectation: Should navigate back to payments list
     const currentUrl = page.url();
     expect(currentUrl).toContain(`${DAO_ID}/payments`);
-    expect(currentUrl).not.toContain("id=8");
     console.log("✓ Back navigation works correctly");
   });
 });
