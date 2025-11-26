@@ -8,11 +8,6 @@ import {
   parseNEAR,
 } from "../../util/sandbox.js";
 import { test } from "../../util/test.js";
-import {
-  updateDaoPolicyMembers,
-  mockRpcRequest,
-  mockNearBalances,
-} from "../../util/rpcmock.js";
 
 const DAO_ID = "devdao.sputnik-dao.near";
 const ASSETS_PATH = path.join(
@@ -24,8 +19,6 @@ function toBase64(json) {
   return Buffer.from(JSON.stringify(json)).toString("base64");
 }
 
-const InsufficientBalance = BigInt(0.05 * 10 ** 24).toString();
-
 const metadata = {
   flagLogo:
     "https://ipfs.near.social/ipfs/bafkreiboarigt5w26y5jyxyl4au7r2dl76o5lrm2jqjgqpooakck5xsojq",
@@ -34,36 +27,9 @@ const metadata = {
   theme: "dark",
 };
 
-const config = {
-  name: "testing-astradao",
-  metadata: toBase64(metadata),
-};
-
-async function updateDaoConfig({ page }) {
-  await mockRpcRequest({
-    page,
-    filterParams: {
-      method_name: "get_config",
-    },
-    modifyOriginalResultFunction: () => {
-      return config;
-    },
-  });
-}
-
-async function navigateToThemePage({
-  page,
-  instanceAccount,
-  hasAllRole,
-  daoId = DAO_ID,
-  useMocks = true,
-}) {
+async function navigateToThemePage({ page, daoId = DAO_ID }) {
   const baseUrl = `http://localhost:3000/${daoId}/settings`;
   await page.goto(`${baseUrl}?tab=theme-logo`);
-  if (useMocks) {
-    await updateDaoPolicyMembers({ instanceAccount, page, hasAllRole });
-    await updateDaoConfig({ page });
-  }
   await page.waitForTimeout(5_000);
   await expect(page.getByText("Theme & Logo").nth(1)).toBeVisible();
 }
@@ -80,53 +46,6 @@ export async function getTransactionModalObject(page) {
   );
 }
 
-test.describe.parallel("Theme & Logo permissions by user role", function () {
-  const roles = [
-    {
-      name: "Create role",
-      storageState: "playwright-tests/util/logout-state.json",
-      hasAllRole: false,
-    },
-    {
-      name: "Vote role",
-      storageState:
-        // TODO: replace with correct logged in state with Vote role
-        "playwright-tests/util/logged-in-state.json",
-      hasAllRole: false,
-    },
-    {
-      name: "All role",
-      storageState: "playwright-tests/util/logged-in-state.json",
-      hasAllRole: true,
-    },
-  ];
-
-  for (const { name, storageState, hasAllRole } of roles) {
-    test.describe(`User with role '${name}'`, function () {
-      test.use({ storageState });
-
-      test("should only allow authorized users to change config", async ({
-        page,
-        instanceAccount,
-      }) => {
-        await navigateToThemePage({ page, instanceAccount, hasAllRole });
-        await page.waitForTimeout(5000);
-        const colorInput = page.getByTestId("color-picker-input");
-        const submitButton = page.getByRole("button", {
-          name: "Submit Request",
-        });
-        if (hasAllRole) {
-          await expect(colorInput).toBeEnabled();
-          await expect(submitButton).toBeVisible();
-        } else {
-          await expect(colorInput).toBeDisabled();
-          await expect(submitButton).not.toBeVisible();
-        }
-      });
-    });
-  }
-});
-
 test.describe("Theme & Logo behavior for logged-in user", () => {
   test.use({ storageState: "playwright-tests/util/logged-in-state.json" });
 
@@ -142,6 +61,7 @@ let factoryContractId;
 let creatorAccountId;
 let daoAccountId;
 let lowBalanceVoterAccountId;
+let voteOnlyAccountId;
 
 test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => {
   test.beforeAll(async () => {
@@ -172,6 +92,13 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     );
     console.log(`Low balance voter account: ${lowBalanceVoterAccountId}`);
 
+    // Create a user with only vote permissions
+    voteOnlyAccountId = await sandbox.createAccount(
+      "voteonly.near",
+      await parseNEAR("100")
+    );
+    console.log(`Vote only account: ${voteOnlyAccountId}`);
+
     // Initialize the factory
     await sandbox.functionCall(
       factoryContractId,
@@ -194,6 +121,18 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
             "add_member_to_role:*",
             "remove_member_from_role:*",
             "*:AddProposal",
+          ],
+          vote_policy: {},
+        },
+        {
+          kind: { Group: [voteOnlyAccountId] },
+          name: "Vote",
+          permissions: [
+            "*:VoteReject",
+            "*:VoteApprove",
+            "*:VoteRemove",
+            "*:RemoveProposal",
+            "*:Finalize",
           ],
           vote_policy: {},
         },
@@ -239,24 +178,64 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     console.log("\n=== Sandbox Environment Stopped ===\n");
   });
 
+  test.describe("Theme & Logo Permissions", () => {
+    test.beforeEach(async ({ page }) => {
+      await interceptIndexerAPI(page, sandbox);
+      await interceptRPC(page, sandbox);
+    });
+
+    test("should disable config for unauthorized user", async ({ page }) => {
+      await navigateToThemePage({ page, daoId: daoAccountId });
+
+      const colorInput = page.getByTestId("color-picker-input");
+      const submitButton = page.getByRole("button", {
+        name: "Submit Request",
+      });
+
+      await expect(colorInput).toBeDisabled();
+      await expect(submitButton).not.toBeVisible();
+    });
+
+    test("should enable config for authorized user (Create role)", async ({
+      page,
+    }) => {
+      await injectTestWallet(page, sandbox, creatorAccountId);
+      await navigateToThemePage({ page, daoId: daoAccountId });
+
+      const colorInput = page.getByTestId("color-picker-input");
+      const submitButton = page.getByRole("button", {
+        name: "Submit Request",
+      });
+
+      await expect(colorInput).toBeEnabled();
+      await expect(submitButton).toBeVisible();
+    });
+
+    test("should disable config for user with Vote role", async ({ page }) => {
+      await injectTestWallet(page, sandbox, voteOnlyAccountId);
+      await navigateToThemePage({ page, daoId: daoAccountId });
+
+      const colorInput = page.getByTestId("color-picker-input");
+      const submitButton = page.getByRole("button", {
+        name: "Submit Request",
+      });
+
+      await expect(colorInput).toBeDisabled();
+      await expect(submitButton).not.toBeVisible();
+    });
+  });
+
   test.describe("Theme & Logo image upload validations", () => {
     const MOCKED_CID = "simple_cid_1";
     const EXPECTED_IMAGE_URL = `https://ipfs.near.social/ipfs/${MOCKED_CID}`;
 
     test.beforeEach(async ({ page }) => {
-      // Inject test wallet and intercept API calls
       await injectTestWallet(page, sandbox, creatorAccountId);
       await interceptIndexerAPI(page, sandbox);
       await interceptRPC(page, sandbox);
 
-      await navigateToThemePage({
-        page,
-        instanceAccount: creatorAccountId,
-        daoId: daoAccountId,
-        useMocks: false,
-      });
+      await navigateToThemePage({ page, daoId: daoAccountId });
 
-      // Mock IPFS for upload
       await page.route("https://ipfs.near.social/add", async (route) => {
         await route.fulfill({
           status: 200,
@@ -275,7 +254,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         name: "Submit Request",
       });
 
-      // invalid image
       await logoInput.setInputFiles(path.join(ASSETS_PATH, "invalid.png"));
       await expect(
         page.getByText(
@@ -311,7 +289,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       await expectImageUploadLabelVisible(page);
       const logoInput = page.locator("input[type=file]");
 
-      // valid image
       await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
       await expect(page.locator("img[alt='DAO Logo']")).toHaveAttribute(
         "src",
@@ -328,7 +305,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         name: "Submit Request",
       });
 
-      // valid image
       await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
       await submitBtn.click();
 
@@ -336,12 +312,10 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         page.getByText("Awaiting transaction confirmation...")
       ).toBeVisible();
 
-      // Wait for success message
       await expect(
         page.getByText("Proposal has been successfully created")
       ).toBeVisible({ timeout: 20000 });
 
-      // Verify the proposal was created on the sandbox
       const lastProposalId = await sandbox.viewFunction(
         daoAccountId,
         "get_last_proposal_id",
@@ -361,7 +335,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       // Verify it's a ChangeConfig proposal
       expect(proposal.kind.ChangeConfig).toBeDefined();
 
-      // Verify the flagLogo in the metadata (base64 decoded)
       const configMetadata = JSON.parse(
         Buffer.from(
           proposal.kind.ChangeConfig.config.metadata,
@@ -381,7 +354,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         page.getByText("Awaiting transaction confirmation...")
       ).toBeVisible();
 
-      // Wait for success message
       await expect(
         page.getByText("Proposal has been successfully created")
       ).toBeVisible({ timeout: 20000 });
@@ -401,9 +373,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
           id: lastProposalId - 1,
         }
       );
-      // Verify it's a ChangeConfig proposal
       expect(proposal.kind.ChangeConfig).toBeDefined();
-      // Verify the metadata
       const configMetadata = JSON.parse(
         Buffer.from(
           proposal.kind.ChangeConfig.config.metadata,
@@ -442,23 +412,11 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     test("should show warning modal and block action when account balance is insufficient", async ({
       page,
     }) => {
-      // Inject test wallet with LOW BALANCE voter
       await injectTestWallet(page, sandbox, lowBalanceVoterAccountId);
       await interceptIndexerAPI(page, sandbox);
       await interceptRPC(page, sandbox);
 
-      await navigateToThemePage({
-        page,
-        instanceAccount: lowBalanceVoterAccountId,
-        daoId: daoAccountId,
-        useMocks: false,
-      });
-
-      await expect(
-        page.getByText(
-          /you don't have enough NEAR to complete actions on your treasury/i
-        )
-      ).toBeVisible({ timeout: 10000 });
+      await navigateToThemePage({ page, daoId: daoAccountId });
 
       const colorInput = page.getByTestId("color-text-input");
       await colorInput.fill("#000000");
@@ -470,10 +428,26 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         .click();
 
       await expect(
-        page
-          .getByText("Please add more funds to your account and try again")
-          .nth(1)
+        page.getByRole("heading", { name: /Insufficient Funds/i })
+      ).toBeVisible({ timeout: 5000 });
+
+      await expect(
+        page.getByText(
+          /you don't have enough NEAR to complete actions on your treasury/i
+        )
       ).toBeVisible();
+
+      await expect(
+        page.getByText("Please add more funds to your account and try again")
+      ).toBeVisible();
+
+      const closeButton = page.getByRole("button", { name: "Close" });
+      await expect(closeButton).toBeVisible({ timeout: 5000 });
+      await closeButton.click();
+
+      await expect(
+        page.getByRole("heading", { name: /Insufficient Funds/i })
+      ).not.toBeVisible();
     });
   });
 });
