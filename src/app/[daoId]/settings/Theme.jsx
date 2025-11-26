@@ -47,16 +47,20 @@ const Theme = () => {
   const hasCreatePermission = hasPermission?.("config", "AddProposal");
 
   useEffect(() => {
-    const metadata = config?.metadata;
-    const defaultImage =
-      metadata?.flagLogo ||
-      "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
-    const defaultColor = metadata?.primaryColor || "#01BF7A";
+    if (config) {
+      const metadata = config.metadata;
+      const defaultImage =
+        metadata?.flagLogo ||
+        "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
+      const defaultColor = metadata?.primaryColor || "#01BF7A";
 
-    setValue("image", defaultImage);
-    setValue("color", defaultColor);
-    setLoadingConfig(false);
-  }, [config, setValue]);
+      reset({
+        image: defaultImage,
+        color: defaultColor,
+      });
+      setLoadingConfig(false);
+    }
+  }, [config, reset]);
 
   const uploadImageToServer = async (file) => {
     setUploadingImage(true);
@@ -192,7 +196,7 @@ const Theme = () => {
 
   const cleanInputs = () => {
     // Reset form to saved values
-    if (config?.metadata) {
+    if (config) {
       const metadata = config.metadata;
       const defaultImage =
         metadata?.flagLogo ||
@@ -283,6 +287,7 @@ const Theme = () => {
               <label className="form-label">Primary color</label>
               <div className="d-flex border border-1 align-items-center rounded-3 gap-2 p-1 px-2">
                 <input
+                  data-testid="color-picker-input"
                   type="color"
                   value={color}
                   onChange={(e) =>
@@ -300,6 +305,7 @@ const Theme = () => {
                   disabled={!hasCreatePermission}
                 />
                 <input
+                  data-testid="color-text-input"
                   type="text"
                   value={color}
                   onChange={(e) =>
