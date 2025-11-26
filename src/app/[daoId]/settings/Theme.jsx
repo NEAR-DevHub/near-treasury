@@ -337,6 +337,7 @@ const Theme = () => {
                   )}
                   checkForDeposit={true}
                   callbackAction={handleSave}
+                  disabled={!isDirty || isTxnCreated}
                 />
               )}
             </div>

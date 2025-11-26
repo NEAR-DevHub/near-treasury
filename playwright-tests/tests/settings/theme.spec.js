@@ -370,6 +370,12 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       await expect(submitRequestButton).toBeDisabled();
       await expect(cancelButton).toBeDisabled();
 
+      // Ensure clicking disabled button does nothing
+      await submitRequestButton.click({ force: true });
+      await expect(
+        page.getByText("Awaiting transaction confirmation...")
+      ).not.toBeVisible();
+
       // Changing color input should enable the buttons
       const colorInput = page.getByTestId("color-text-input");
       await colorInput.fill("#000000");
