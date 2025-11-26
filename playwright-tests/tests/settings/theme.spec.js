@@ -15,22 +15,10 @@ const ASSETS_PATH = path.join(
   "playwright-tests/tests/settings/assets"
 );
 
-function toBase64(json) {
-  return Buffer.from(JSON.stringify(json)).toString("base64");
-}
-
-const metadata = {
-  flagLogo:
-    "https://ipfs.near.social/ipfs/bafkreiboarigt5w26y5jyxyl4au7r2dl76o5lrm2jqjgqpooakck5xsojq",
-  displayName: "testing-astradao",
-  primaryColor: "#2f5483",
-  theme: "dark",
-};
-
 async function navigateToThemePage({ page, daoId = DAO_ID }) {
   const baseUrl = `http://localhost:3000/${daoId}/settings`;
   await page.goto(`${baseUrl}?tab=theme-logo`);
-  await page.waitForTimeout(5_000);
+  await page.waitForTimeout(3000);
   await expect(page.getByText("Theme & Logo").nth(1)).toBeVisible();
 }
 
@@ -45,14 +33,6 @@ export async function getTransactionModalObject(page) {
     await page.locator("div.modal-body code").first().innerText()
   );
 }
-
-test.describe("Theme & Logo behavior for logged-in user", () => {
-  test.use({ storageState: "playwright-tests/util/logged-in-state.json" });
-
-  test.beforeEach(async ({ page, instanceAccount }, testInfo) => {
-    await navigateToThemePage({ page, instanceAccount });
-  });
-});
 
 const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
 
@@ -110,44 +90,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
 
     // Create a DAO
     const daoName = "testdao";
-    const daoPolicy = {
-      roles: [
-        {
-          kind: { Group: [creatorAccountId, lowBalanceVoterAccountId] },
-          name: "Manage Members",
-          permissions: [
-            "config:*",
-            "policy:*",
-            "add_member_to_role:*",
-            "remove_member_from_role:*",
-            "*:AddProposal",
-          ],
-          vote_policy: {},
-        },
-        {
-          kind: { Group: [voteOnlyAccountId] },
-          name: "Vote",
-          permissions: [
-            "*:VoteReject",
-            "*:VoteApprove",
-            "*:VoteRemove",
-            "*:RemoveProposal",
-            "*:Finalize",
-          ],
-          vote_policy: {},
-        },
-      ],
-      default_vote_policy: {
-        weight_kind: "RoleWeight",
-        quorum: "0",
-        threshold: [1, 2],
-      },
-      proposal_bond: "0",
-      proposal_period: "604800000000000",
-      bounty_bond: "100000000000000000000000",
-      bounty_forgiveness_period: "604800000000000",
-    };
-
     await sandbox.functionCall(
       creatorAccountId,
       factoryContractId,
@@ -157,11 +99,47 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         args: Buffer.from(
           JSON.stringify({
             config: {
-              name: "testing-astradao",
-              metadata: toBase64(metadata),
-              purpose: "Test DAO for theme settings",
+              name: daoName,
+              metadata: "",
+              purpose: "Test DAO for asset exchange",
             },
-            policy: daoPolicy,
+            policy: {
+              roles: [
+                {
+                  kind: { Group: [creatorAccountId, lowBalanceVoterAccountId] },
+                  name: "Manage Members",
+                  permissions: [
+                    "config:*",
+                    "policy:*",
+                    "add_member_to_role:*",
+                    "remove_member_from_role:*",
+                    "*:AddProposal",
+                  ],
+                  vote_policy: {},
+                },
+                {
+                  kind: { Group: [voteOnlyAccountId] },
+                  name: "Vote",
+                  permissions: [
+                    "*:VoteReject",
+                    "*:VoteApprove",
+                    "*:VoteRemove",
+                    "*:RemoveProposal",
+                    "*:Finalize",
+                  ],
+                  vote_policy: {},
+                },
+              ],
+              default_vote_policy: {
+                weight_kind: "RoleWeight",
+                quorum: "0",
+                threshold: [1, 2],
+              },
+              proposal_bond: "0",
+              proposal_period: "604800000000000",
+              bounty_bond: "100000000000000000000000",
+              bounty_forgiveness_period: "604800000000000",
+            },
           })
         ).toString("base64"),
       },
@@ -441,9 +419,13 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         page.getByText("Please add more funds to your account and try again")
       ).toBeVisible();
 
+      await expect(page.getByText(/You need at least/i)).toBeVisible();
+
+      await page.waitForTimeout(1000);
+
       const closeButton = page.getByRole("button", { name: "Close" });
       await expect(closeButton).toBeVisible({ timeout: 5000 });
-      await closeButton.click();
+      await closeButton.click({ force: true });
 
       await expect(
         page.getByRole("heading", { name: /Insufficient Funds/i })
