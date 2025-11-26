@@ -132,11 +132,7 @@ const Navbar = () => {
             {/* Right side buttons */}
             <div className="d-flex align-items-center gap-3">
               {/* Theme toggle */}
-              <div
-                onClick={toggleTheme}
-                className="cursor-pointer"
-                data-testid="theme-toggle"
-              >
+              <div onClick={toggleTheme} className="cursor-pointer">
                 {isDarkTheme ? (
                   <i className="bi bi-sun-fill"></i>
                 ) : (

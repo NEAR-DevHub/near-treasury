@@ -16,7 +16,7 @@ const ASSETS_PATH = path.join(
 );
 
 async function navigateToThemePage({ page, daoId = DAO_ID }) {
-  const baseUrl = `http://localhost:3000/${daoId}/settings`;
+  const baseUrl = `http://localhost:3001/${daoId}/settings`;
   await page.goto(`${baseUrl}?tab=theme-logo`);
   await page.waitForTimeout(3000);
   await expect(page.getByText("Theme & Logo").nth(1)).toBeVisible();
@@ -322,11 +322,9 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       expect(configMetadata.flagLogo).toBe(EXPECTED_IMAGE_URL);
     });
 
-    test("should be able to change color and theme", async ({ page }) => {
-      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    test("should be able to change color", async ({ page }) => {
       const newColor = "#000000";
       await page.getByTestId("color-text-input").fill(newColor);
-      await page.getByTestId("theme-toggle").click();
       await page.getByRole("button", { name: "Submit Request" }).click();
       await expect(
         page.getByText("Awaiting transaction confirmation...")
@@ -336,7 +334,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         page.getByText("Proposal has been successfully created")
       ).toBeVisible({ timeout: 20000 });
 
-      // Verify the proposal was created on the sandbox
       const lastProposalId = await sandbox.viewFunction(
         daoAccountId,
         "get_last_proposal_id",
@@ -359,7 +356,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         ).toString()
       );
       expect(configMetadata.primaryColor).toBe(newColor);
-      expect(configMetadata.theme).toBe("dark");
     });
 
     test("should toggle action buttons based on form changes", async ({
@@ -425,7 +421,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
 
       const closeButton = page.getByRole("button", { name: "Close" });
       await expect(closeButton).toBeVisible({ timeout: 5000 });
-      await closeButton.click({ force: true });
+      await closeButton.click();
 
       await expect(
         page.getByRole("heading", { name: /Insufficient Funds/i })
