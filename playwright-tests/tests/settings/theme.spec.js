@@ -17,8 +17,7 @@ const ASSETS_PATH = path.join(
 
 async function navigateToThemePage({ page, daoId = DAO_ID }) {
   const baseUrl = `http://localhost:3000/${daoId}/settings`;
-  await page.goto(`${baseUrl}?tab=theme-logo`);
-  await page.waitForTimeout(3000);
+  await page.goto(`${baseUrl}?tab=theme-logo`, { waitUntil: "networkidle" });
   await expect(page.getByText("Theme & Logo").nth(1)).toBeVisible();
 }
 
@@ -152,16 +151,13 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
   });
 
   test.afterAll(async () => {
-    await sandbox.stop();
-    console.log("\n=== Sandbox Environment Stopped ===\n");
+    if (sandbox) {
+      await sandbox.stop();
+      console.log("\n✓ Sandbox stopped");
+    }
   });
 
   test.describe("Theme & Logo Permissions", () => {
-    test.beforeEach(async ({ page }) => {
-      await interceptIndexerAPI(page, sandbox);
-      await interceptRPC(page, sandbox);
-    });
-
     test("should disable config for unauthorized user", async ({ page }) => {
       await navigateToThemePage({ page, daoId: daoAccountId });
 
