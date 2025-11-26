@@ -32,8 +32,6 @@ export async function mockStakingPoolsAPI({
   pools = [],
   mockRPC = true,
 }) {
-  console.log("accountId", accountId);
-  console.log("pools", pools);
   const poolData = pools.map((pool) => ({
     pool_id: pool.poolId,
     staked: toYoctoString(pool.staked || 0),
@@ -146,9 +144,7 @@ export const StakingScenarios = {
     poolId = "astro-stakers.poolv1.near"
   ) => ({
     accountId,
-    pools: [
-      { poolId, staked: 0, unstaked: amount, availableToWithdraw: amount },
-    ],
+    pools: [{ poolId, staked: 0, unstaked: 0, availableToWithdraw: amount }],
   }),
 
   /** Multiple validators */
@@ -184,4 +180,8 @@ export const StakingScenarios = {
  * await mockStakingScenario(page, StakingScenarios.STAKED(daoId, 15), false);
  */
 export const mockStakingScenario = (page, scenario, mockRPC = true) =>
-  mockStakingPoolsAPI({ page, ...scenario, mockRPC });
+  mockStakingPoolsAPI({
+    page,
+    ...scenario,
+    mockRPC,
+  });

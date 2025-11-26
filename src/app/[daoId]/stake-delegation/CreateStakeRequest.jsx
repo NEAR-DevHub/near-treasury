@@ -375,7 +375,7 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
 
         {/* Amount Input */}
         <div className="d-flex flex-column">
-          <div className="d-flex justify-content-between mb-1">
+          <div className="d-flex justify-content-between">
             <label htmlFor="stake-amount" className="form-label fw-medium mb-1">
               Amount
               {errors.amount && <span className="text-danger ms-1">*</span>}

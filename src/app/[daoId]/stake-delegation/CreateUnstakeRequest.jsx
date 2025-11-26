@@ -31,6 +31,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
     lockupStakedPools,
     lastProposalId,
     daoPolicy,
+    lockupStakedPoolId,
   } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
   const { showToast } = useProposalToastContext();
@@ -38,6 +39,7 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
   const [isLoadingValidators, setIsLoadingValidators] = useState(true);
   const [isTxnCreated, setTxnCreated] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [lockupAlreadyStaked, setLockupAlreadyStaked] = useState(false);
 
   // React Hook Form
   const {
@@ -72,6 +74,17 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
       });
     }
   }, [treasuryDaoID, selectedWallet, setValue]);
+
+  // Check if lockup already has a validator staked
+  useEffect(() => {
+    if (selectedWallet?.value === lockupContract && lockupStakedPoolId) {
+      setLockupAlreadyStaked(true);
+      // Auto-select the staked pool
+      setValue("selectedValidator", { pool_id: lockupStakedPoolId });
+    } else {
+      setLockupAlreadyStaked(false);
+    }
+  }, [selectedWallet, lockupContract, lockupStakedPoolId, setValue]);
 
   // Fetch validators - only those with staked balance
   useEffect(() => {
@@ -394,7 +407,9 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
                     shouldValidate: true,
                   })
                 }
-                disabled={isTxnCreated || validators.length === 0}
+                disabled={
+                  lockupAlreadyStaked || isTxnCreated || validators.length === 0
+                }
                 showStakingInfo={true}
                 selectedWallet={selectedWallet?.value}
                 isLoading={isLoadingValidators}
@@ -417,10 +432,10 @@ const CreateUnstakeRequest = ({ onCloseCanvas = () => {} }) => {
 
             {/* Amount Input */}
             <div className="d-flex flex-column">
-              <div className="d-flex justify-content-between mb-1">
+              <div className="d-flex justify-content-between">
                 <label
                   htmlFor="unstake-amount"
-                  className="form-label fw-medium"
+                  className="form-label fw-medium mb-1"
                 >
                   Amount
                   {errors.amount && <span className="text-danger ms-1">*</span>}

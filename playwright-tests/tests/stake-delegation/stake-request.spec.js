@@ -1,19 +1,19 @@
 import { test, expect } from "@playwright/test";
+import { setupLockupAccount } from "../../util/lockup.js";
+import { StakingScenarios, mockStakingScenario } from "./staking-mocks.js";
 import {
-  NearSandbox,
-  injectTestWallet,
-  interceptIndexerAPI,
-  parseNEAR,
-} from "../../util/sandbox.js";
-import {
-  setupLockupAccount,
-  setupLockupMocks,
-  deployStakingPool,
-} from "../../util/sandbox-lockup-helpers.js";
-import {
-  StakingScenarios,
-  mockStakingScenario,
-} from "../../util/staking-mocks.js";
+  setupTestDAO,
+  setupTestEnvironment,
+  navigateToStakeDelegation,
+  openCreateRequestForm,
+  voteAndApproveProposal,
+  verifyProposalInTable,
+  closeOffcanvas,
+  selectValidator,
+  reopenFormToCheckBalances,
+  selectWallet,
+  ASTRO_STAKERS_POOL_ID,
+} from "./test-helpers.js";
 
 /**
  * Stake Request Tests
@@ -24,13 +24,8 @@ import {
  * - Lockup Stake: Create → View → Vote
  */
 
-const SPUTNIK_DAO_FACTORY_ID = "sputnik-dao.near";
-const PROPOSAL_BOND = "0";
-const TEST_VALIDATOR = "legends.poolv1.near";
-
 // Variables for sandbox integration tests
 let sandbox;
-let factoryContractId;
 let creatorAccountId;
 let daoAccountId;
 let lockupContractId;
@@ -51,16 +46,7 @@ test.describe("Stake Request Form Validation", () => {
     await page.waitForTimeout(2000);
 
     // Click Create Request button to open dropdown
-    const createButton = page.getByRole("button", { name: /Create Request/i });
-    await expect(createButton).toBeVisible({ timeout: 10000 });
-    await createButton.click();
-    await page.waitForTimeout(500);
-
-    // Select "Stake" from dropdown
-    const stakeOption = page.getByText("Stake", { exact: true });
-    await expect(stakeOption).toBeVisible({ timeout: 5000 });
-    await stakeOption.click();
-    await page.waitForTimeout(1500);
+    await openCreateRequestForm({ page, requestType: "Stake" });
 
     // Verify form opened
     const canvasLocator = page.locator(".offcanvas-body");
@@ -281,116 +267,10 @@ test.describe("Stake Request Integration Tests", () => {
   test.beforeAll(async () => {
     test.setTimeout(300000); // 5 minutes for setup
 
-    sandbox = new NearSandbox();
-    await sandbox.start();
-
-    console.log("\n=== Sandbox Environment Started ===\n");
-
-    // Import and setup SputnikDAO factory
-    factoryContractId = await sandbox.importMainnetContract(
-      SPUTNIK_DAO_FACTORY_ID,
-      SPUTNIK_DAO_FACTORY_ID
-    );
-
-    await sandbox.functionCall(
-      factoryContractId,
-      SPUTNIK_DAO_FACTORY_ID,
-      "new",
-      {},
-      "300000000000000"
-    );
-
-    // Create testcreator account with initial balance
-    creatorAccountId = await sandbox.createAccount(
-      "testcreator.near",
-      "3000000000000000000000000000"
-    );
-
-    // Deploy staking pool infrastructure (astro-stakers.poolv1.near)
-    await deployStakingPool({ sandbox, creatorAccountId });
-
-    // Create testdao using the factory
-    const daoName = "testdao";
-    const create_testdao_args = {
-      name: daoName,
-      args: Buffer.from(
-        JSON.stringify({
-          config: {
-            name: daoName,
-            purpose: "testing stake delegation",
-            metadata: "",
-          },
-          policy: {
-            roles: [
-              {
-                kind: {
-                  Group: [creatorAccountId],
-                },
-                name: "Create Requests",
-                permissions: [
-                  "call:AddProposal",
-                  "transfer:AddProposal",
-                  "config:Finalize",
-                ],
-                vote_policy: {},
-              },
-              {
-                kind: {
-                  Group: [creatorAccountId],
-                },
-                name: "Manage Members",
-                permissions: [
-                  "config:*",
-                  "policy:*",
-                  "add_member_to_role:*",
-                  "remove_member_from_role:*",
-                ],
-                vote_policy: {},
-              },
-              {
-                kind: {
-                  Group: [creatorAccountId],
-                },
-                name: "Vote",
-                permissions: ["*:VoteReject", "*:VoteApprove", "*:VoteRemove"],
-                vote_policy: {},
-              },
-            ],
-            default_vote_policy: {
-              weight_kind: "RoleWeight",
-              quorum: "0",
-              threshold: [1, 2],
-            },
-            proposal_bond: PROPOSAL_BOND,
-            proposal_period: "604800000000000",
-            bounty_bond: "100000000000000000000000",
-            bounty_forgiveness_period: "604800000000000",
-          },
-        })
-      ).toString("base64"),
-    };
-
-    await sandbox.functionCall(
-      creatorAccountId,
-      SPUTNIK_DAO_FACTORY_ID,
-      "create",
-      create_testdao_args,
-      "300000000000000",
-      await parseNEAR("6")
-    );
-
-    daoAccountId = `${daoName}.${SPUTNIK_DAO_FACTORY_ID}`;
-    console.log(`✓ Created DAO: ${daoAccountId}`);
-
-    // Fund the DAO with 100 NEAR
-    await sandbox.transfer(
-      creatorAccountId,
-      daoAccountId,
-      await parseNEAR("100")
-    );
-    console.log("✓ Funded DAO with 100 NEAR");
-
-    console.log("\n=== Setup Complete ===\n");
+    const setup = await setupTestDAO();
+    sandbox = setup.sandbox;
+    creatorAccountId = setup.creatorAccountId;
+    daoAccountId = setup.daoAccountId;
   });
 
   test.afterEach(async ({ page }) => {
@@ -415,102 +295,21 @@ test.describe("Stake Request Integration Tests", () => {
   }) => {
     test.setTimeout(180000); // 3 minutes
 
-    // Inject test wallet before navigation
-    await injectTestWallet(page, sandbox, creatorAccountId);
-    console.log(`✓ Injected test wallet for: ${creatorAccountId}`);
-
-    // Get sandbox RPC URL
-    const sandboxRpcUrl = sandbox.getRpcUrl();
-
-    // Route all mainnet RPC requests to sandbox
-    await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
-      const postData = route.request().postDataJSON();
-      const response = await route.fetch({
-        url: sandboxRpcUrl,
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        postData: JSON.stringify(postData),
-      });
-      await route.fulfill({ response });
-    });
-
-    await page.route("**/rpc.mainnet.near.org/**", async (route) => {
-      const postData = route.request().postDataJSON();
-      const response = await route.fetch({
-        url: sandboxRpcUrl,
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        postData: JSON.stringify(postData),
-      });
-      await route.fulfill({ response });
-    });
-
-    // Intercept indexer API calls
-    await interceptIndexerAPI(page, sandbox);
+    // Setup test environment
+    await setupTestEnvironment({ page, sandbox, creatorAccountId });
 
     // Navigate to stake delegation page
-    const url = `http://localhost:3000/${daoAccountId}/stake-delegation`;
-    await page.goto(url);
-    console.log(`✓ Navigated to: ${url}`);
+    await navigateToStakeDelegation({ page, daoAccountId });
 
-    // Set localStorage
-    await page.evaluate(() => {
-      localStorage.setItem("selected-wallet", "test-wallet");
-    });
-
-    // Reload to apply localStorage changes
-    await page.reload();
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(3000);
-
-    console.log("✓ Page loaded with authenticated user");
-
-    // Click Create Request button to open dropdown
-    const createRequestButton = page.getByRole("button", {
-      name: /Create Request/i,
-    });
-    await expect(createRequestButton).toBeVisible({ timeout: 10000 });
-    await createRequestButton.click();
-    await page.waitForTimeout(500);
-    console.log("✓ Clicked 'Create Request' button");
-
-    // Select "Stake" from dropdown
-    const stakeOption = page.getByText("Stake", { exact: true });
-    await expect(stakeOption).toBeVisible({ timeout: 5000 });
-    await stakeOption.click();
-    await page.waitForTimeout(1500);
-    console.log("✓ Selected 'Stake' from dropdown");
+    // Open create request form
+    await openCreateRequestForm({ page, requestType: "Stake" });
 
     // Wait for form to open
     const canvasLocator = page.locator(".offcanvas-body");
     await page.waitForTimeout(1000);
 
     // Select validator
-    const validatorDropdown = canvasLocator.locator(
-      '[data-testid="validator-dropdown"]'
-    );
-    await validatorDropdown.click();
-    await page.waitForTimeout(1000);
-
-    // Click on modal and select astro-stakers validator
-    const modal = page.locator(".modal-content");
-    await modal.waitFor({ state: "visible", timeout: 5000 });
-
-    const astroValidator = modal
-      .getByTestId("validator-option")
-      .filter({ hasText: "astro-stakers.poolv1.near" });
-    await astroValidator.click();
-
-    // Close modal
-    await modal.waitFor({ state: "hidden", timeout: 5000 });
-
-    // Verify validator is selected
-    await expect(validatorDropdown).toContainText("astro-stakers.poolv1.near");
-    console.log("✓ Selected astro-stakers.poolv1.near validator");
+    await selectValidator({ page });
 
     // Fill amount
     const amountInput = canvasLocator.getByLabel("Amount");
@@ -533,15 +332,11 @@ test.describe("Stake Request Integration Tests", () => {
     ).toBeVisible({ timeout: 30000 });
     console.log("✓ Success toast displayed");
 
-    const closeButton = page.locator(".bi.bi-x-lg");
-    await closeButton.click();
-    await page.waitForTimeout(1000);
+    // Close offcanvas
+    await closeOffcanvas(page);
 
     // Verify proposal appears in table
-    await expect(page.getByText("Test DAO stake request")).toBeVisible({
-      timeout: 10000,
-    });
-    console.log("✓ Proposal appears in table");
+    await verifyProposalInTable({ page, text: "Test DAO stake request" });
 
     // Click on the proposal to view details
     await page.getByText("Test DAO stake request").click();
@@ -569,40 +364,10 @@ test.describe("Stake Request Integration Tests", () => {
     );
 
     // Vote on the proposal
-    const approveButton = page.getByRole("button", { name: "Approve" }).first();
-    await expect(approveButton).toBeVisible();
-    await approveButton.click();
-    console.log("✓ Clicked Approve button");
-
-    await page.waitForTimeout(2000);
-    const voteConfirmButton = page.getByRole("button", { name: "Confirm" });
-    await voteConfirmButton.click();
-    console.log("✓ Confirmed vote");
-
-    // Check for success message
-    await expect(
-      page.getByText("The request has been successfully approved.")
-    ).toBeVisible({
-      timeout: 30000,
-    });
-    console.log("✓ Stake request executed successfully");
+    await voteAndApproveProposal({ page });
 
     // Open create request form to check balances
-    await page.getByRole("button", { name: "" }).click();
-    await page.waitForTimeout(500);
-
-    await page
-      .locator("a")
-      .filter({ hasText: /^Stake$/ })
-      .click();
-    const balanceCanvas = page.locator(".offcanvas-body");
-    await balanceCanvas.waitFor({ state: "visible", timeout: 5000 });
-
-    // Check the BalanceDisplay component shows 10 NEAR staked
-    const balanceDisplay = balanceCanvas.locator(
-      '[data-testid="balance-display"]'
-    );
-    await expect(balanceDisplay).toBeVisible({ timeout: 10000 });
+    await reopenFormToCheckBalances({ page, requestType: "Stake" });
 
     await expect(page.getByText("Ready to stake 90.59 NEAR")).toBeVisible({
       timeout: 10000,
@@ -648,62 +413,14 @@ test.describe("Stake Request Integration Tests", () => {
       creatorAccountId,
     });
 
-    // Inject test wallet before navigation
-    await injectTestWallet(page, sandbox, creatorAccountId);
-    console.log(`✓ Injected test wallet for: ${creatorAccountId}`);
-
-    // Get sandbox RPC URL
-    const sandboxRpcUrl = sandbox.getRpcUrl();
-
-    // Route RPC requests to sandbox
-    await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
-      const postData = route.request().postDataJSON();
-      const response = await route.fetch({
-        url: sandboxRpcUrl,
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        postData: JSON.stringify(postData),
-      });
-      await route.fulfill({ response });
-    });
-
-    // Intercept indexer API calls
-    await interceptIndexerAPI(page, sandbox);
+    // Setup test environment
+    await setupTestEnvironment({ page, sandbox, creatorAccountId });
 
     // Navigate to stake delegation page
-    const url = `http://localhost:3000/${daoAccountId}/stake-delegation`;
-    await page.goto(url);
-    console.log(`✓ Navigated to: ${url}`);
+    await navigateToStakeDelegation({ page, daoAccountId });
 
-    // Set localStorage
-    await page.evaluate(() => {
-      localStorage.setItem("selected-wallet", "test-wallet");
-    });
-
-    // Reload to apply localStorage changes
-    await page.reload();
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(3000);
-
-    console.log("✓ Page loaded with authenticated user");
-
-    // Click Create Request button to open dropdown
-    const createRequestButton = page.getByRole("button", {
-      name: /Create Request/i,
-    });
-    await expect(createRequestButton).toBeVisible({ timeout: 10000 });
-    await createRequestButton.click();
-    await page.waitForTimeout(500);
-    console.log("✓ Clicked 'Create Request' button");
-
-    // Select "Stake" from dropdown
-    const stakeOption = page.getByText("Stake", { exact: true });
-    await expect(stakeOption).toBeVisible({ timeout: 5000 });
-    await stakeOption.click();
-    await page.waitForTimeout(1500);
-    console.log("✓ Selected 'Stake' from dropdown");
+    // Open create request form
+    await openCreateRequestForm({ page, requestType: "Stake" });
 
     // Wait for form to open
     const canvasLocator = page.locator(".offcanvas-body");
@@ -717,37 +434,10 @@ test.describe("Stake Request Integration Tests", () => {
     console.log("✓ Wallet dropdown is visible (lockup created)");
 
     // Switch to Lockup wallet
-    await walletDropdown.click();
-    await page.waitForTimeout(500);
-
-    const lockupOption = page.getByText("Lockup");
-    await expect(lockupOption).toBeVisible({ timeout: 5000 });
-    await lockupOption.click();
-    await page.waitForTimeout(1000);
-    console.log("✓ Selected Lockup wallet");
+    await selectWallet({ page, walletType: "Lockup" });
 
     // Select validator
-    const validatorDropdown = canvasLocator.locator(
-      '[data-testid="validator-dropdown"]'
-    );
-    await validatorDropdown.click();
-    await page.waitForTimeout(1000);
-
-    // Click on modal and select astro-stakers validator
-    const modal = page.locator(".modal-content");
-    await modal.waitFor({ state: "visible", timeout: 5000 });
-
-    const astroValidator = modal
-      .getByTestId("validator-option")
-      .filter({ hasText: "astro-stakers.poolv1.near" });
-    await astroValidator.click();
-
-    // Close modal
-    await modal.waitFor({ state: "hidden", timeout: 5000 });
-
-    // Verify validator is selected
-    await expect(validatorDropdown).toContainText("astro-stakers.poolv1.near");
-    console.log("✓ Selected astro-stakers.poolv1.near validator");
+    await selectValidator({ page });
 
     // Fill amount
     const amountInput = canvasLocator.getByLabel("Amount");
@@ -777,19 +467,17 @@ test.describe("Stake Request Integration Tests", () => {
     await page.waitForTimeout(3000);
 
     // Close the offcanvas/modal
-    const closeButton = page.locator(".bi-x-lg");
-    await closeButton.click();
-    await page.waitForTimeout(1000);
+    await closeOffcanvas(page);
 
     // Verify whitelist proposal appears in table
-    await expect(
-      page.getByText(
-        "Approve to designate this validator with this lockup account. Lockup accounts can only have one validator"
-      )
-    ).toBeVisible({
-      timeout: 10000,
+    await verifyProposalInTable({
+      page,
+      text: "Approve to designate this validator with this lockup account. Lockup accounts can only have one validator",
     });
-    console.log("✓ Whitelist proposal appears in table");
+
+    // Verify that stake request is NOT visible yet (waiting for whitelist approval)
+    await expect(page.getByText("Test lockup stake request")).not.toBeVisible();
+    console.log("✓ Stake request is hidden (waiting for whitelist approval)");
 
     // Click on the proposal to view details
     await page
@@ -799,30 +487,15 @@ test.describe("Stake Request Integration Tests", () => {
       .click();
     await page.waitForTimeout(2000);
 
-    const whitelistApproveButton = page
-      .getByRole("button", { name: "Approve" })
-      .first();
-    await expect(whitelistApproveButton).toBeVisible();
-    await whitelistApproveButton.click();
-    console.log("✓ Clicked Approve button");
-    await page.waitForTimeout(2000);
-    const whitelistVoteConfirmButton = page.getByRole("button", {
-      name: "Confirm",
-    });
-    await whitelistVoteConfirmButton.click();
-    console.log("✓ Confirmed vote");
-    await page.waitForTimeout(2000);
-    await expect(
-      page.getByText("The request has been successfully approved.")
-    ).toBeVisible({
-      timeout: 30000,
-    });
-    console.log("✓ Whitelist request executed successfully");
+    await voteAndApproveProposal({ page });
 
+    await page.waitForTimeout(2000);
+
+    // Verify stake request is NOW visible (after whitelist approval)
     await expect(page.getByText("Test lockup stake request")).toBeVisible({
       timeout: 10000,
     });
-    console.log("✓ Lockup stake request appears in table");
+    console.log("✓ Stake request is now visible (after whitelist approval)");
     await page.getByText("Test lockup stake request").click();
     await page.waitForTimeout(1000);
 
@@ -842,36 +515,13 @@ test.describe("Stake Request Integration Tests", () => {
       StakingScenarios.STAKED(lockupContractId, 10),
       false
     );
-    const stakeApproveButton = page
-      .getByRole("button", { name: "Approve" })
-      .first();
-    await expect(stakeApproveButton).toBeVisible();
-    await stakeApproveButton.click();
-    console.log("✓ Clicked Approve button");
-    await page.waitForTimeout(1000);
-    const stakeVoteConfirmButton = page.getByRole("button", {
-      name: "Confirm",
-    });
-    await stakeVoteConfirmButton.click();
-    console.log("✓ Confirmed vote");
-    await page.waitForTimeout(2000);
-    await expect(
-      page.getByText("The request has been successfully approved.")
-    ).toBeVisible({
-      timeout: 30000,
-    });
+    await voteAndApproveProposal({ page });
 
     await page.waitForTimeout(2000);
 
     // Open create request form to check balances
-    await page.getByRole("button", { name: "" }).click();
-    await page.waitForTimeout(500);
-    await page
-      .locator("a")
-      .filter({ hasText: /^Stake$/ })
-      .click();
-    await page.locator('[data-testid="wallet-dropdown"]').click();
-    await page.getByTestId("wallet-dropdown").getByText("Lockup").click();
+    await reopenFormToCheckBalances({ page, requestType: "Stake" });
+    await selectWallet({ page, walletType: "Lockup" });
 
     await expect(
       page.getByRole("button", { name: "astro-stakers.poolv1.near" }).first()

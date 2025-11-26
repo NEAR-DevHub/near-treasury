@@ -123,6 +123,7 @@ const FiltersDropdown = ({
         equal: "",
         value: option.value,
       });
+      setIsAmountTypeDropdownOpen(false); // Close dropdown after selection
     },
     [setAmountValues]
   );
@@ -213,11 +214,11 @@ const FiltersDropdown = ({
         </div>
 
         {amountValues.value && (
-          <div className="d-flex align-items-center gap-2">
+          <div className="d-flex align-items-center gap-2 mt-2">
             {amountValues.value === "between" ? (
               <div className="d-flex align-items-center gap-2">
                 <div>
-                  <label>From</label>
+                  <label className="form-label mb-1 text-sm">From</label>
                   <input
                     ref={(el) => (amountInputRefs.current["amount-min"] = el)}
                     name="amount-min"
@@ -233,7 +234,7 @@ const FiltersDropdown = ({
                   />
                 </div>
                 <div>
-                  <label>To</label>
+                  <label className="form-label mb-1 text-sm">To</label>
                   <input
                     ref={(el) => (amountInputRefs.current["amount-max"] = el)}
                     name="amount-max"

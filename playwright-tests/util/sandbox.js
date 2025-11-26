@@ -21,10 +21,13 @@ export class NearSandbox {
   }
 
   async start(config = {}) {
+    const { epochLength = 1000, ...restConfig } = config;
+
     const defaultConfig = {
       version: "2.8.0",
       config: {
         additionalGenesis: {
+          epoch_length: epochLength,
           records: [
             {
               Account: {
@@ -87,7 +90,7 @@ export class NearSandbox {
       },
     };
 
-    this.sandbox = await Sandbox.start({ ...defaultConfig, ...config });
+    this.sandbox = await Sandbox.start({ ...defaultConfig, ...restConfig });
 
     // Wait for sandbox to be ready
     await new Promise((resolve) => setTimeout(resolve, 3000));
