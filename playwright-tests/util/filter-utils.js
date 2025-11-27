@@ -197,13 +197,19 @@ export async function checkColumnAmounts(page, columnIndex, amount, operator) {
     const num = parseFloat(cellText.replace(/,/g, "")); // normalize
 
     if (!isNaN(num)) {
-      if (operator === ">") {
+      if (operator === ">=") {
         expect(num).toBeGreaterThanOrEqual(amount);
-      } else if (operator === "<") {
+      } else if (operator === "<=") {
         expect(num).toBeLessThanOrEqual(amount);
+      } else if (operator === ">") {
+        expect(num).toBeGreaterThan(amount);
+      } else if (operator === "<") {
+        expect(num).toBeLessThan(amount);
       } else if (operator === "=") {
         expect(num).toBe(amount);
       }
+    } else {
+      console.log(`  Row ${i}: "${cellText.trim()}" - not a number, skipping`);
     }
   }
 }
@@ -231,6 +237,8 @@ export async function addFilter(page, options) {
   // The button text will match the filterName (e.g., "Created by", "Recipient", etc.)
   const activeFilterButton = getFilterButton(page, filterName);
   await expect(activeFilterButton).toBeVisible({ timeout: 5000 });
+  await page.waitForTimeout(2000);
+  await activeFilterButton.click();
 }
 
 // Helper function to add a specific filter
