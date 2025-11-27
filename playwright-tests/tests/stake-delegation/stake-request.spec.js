@@ -85,7 +85,7 @@ test.describe("Stake Request Form Validation", () => {
 
     // Click to open validator dropdown/modal
     await validatorDropdown.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     // Verify modal is visible
     const validatorModal = page.locator('.modal-content, [role="dialog"]');

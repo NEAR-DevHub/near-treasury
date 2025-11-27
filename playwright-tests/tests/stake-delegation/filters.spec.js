@@ -26,6 +26,7 @@ import {
  */
 
 const DAO_ID = "testing-astradao.sputnik-dao.near";
+const TIMEOUT = 3000;
 
 test.describe("Stake Delegation Filters", () => {
   test("should open filters panel when filter button is clicked", async ({
@@ -140,7 +141,7 @@ test.describe("Stake Delegation Filters", () => {
       .locator(".dropdown-item")
       .getByText("Stake", { exact: true })
       .click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(
@@ -168,7 +169,7 @@ test.describe("Stake Delegation Filters", () => {
     await page.getByRole("button", { name: "Type : Stake " }).click();
     await page.getByText("is", { exact: true }).click();
     await page.getByText("is not", { exact: true }).click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: No rows should show "Stake" type when excluded
     await checkColumnValues(page, typeColumnIndex, "Stake", false);
@@ -205,7 +206,7 @@ test.describe("Stake Delegation Filters", () => {
     });
     await page.locator('input[name="amount-min"]').fill("0.01");
     await page.locator('input[name="amount-max"]').fill("10");
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible with range
     await expect(
@@ -238,7 +239,7 @@ test.describe("Stake Delegation Filters", () => {
     await expect(
       page.getByRole("button", { name: "Amount : 0.01 NEAR" })
     ).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
     console.log("✓ Amount filter applied: = 0.01 NEAR");
 
     // Hard expectation: All amounts must equal 0.01
@@ -263,7 +264,7 @@ test.describe("Stake Delegation Filters", () => {
     await expect(
       page.getByRole("button", { name: "Amount : < 0.2 NEAR" })
     ).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
     console.log("✓ Amount filter applied: < 0.2 NEAR");
 
     // Hard expectation: All amounts must be less than 0.2
@@ -288,7 +289,7 @@ test.describe("Stake Delegation Filters", () => {
     await expect(
       page.getByRole("button", { name: "Amount : > 0.1 NEAR" })
     ).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
     console.log("✓ Amount filter applied: > 0.1 NEAR");
 
     // Hard expectation: All amounts must be greater than 0.1
@@ -322,14 +323,16 @@ test.describe("Stake Delegation Filters", () => {
     });
 
     // Wait for validator options to load
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
-    await page.getByRole("textbox", { name: "Search by name" }).fill("astro");
+    await page
+      .getByRole("textbox", { name: "Search by name" })
+      .pressSequentially("astro");
     // Select first available validator
     const validatorOption = page.getByText(validatorText).first();
     await expect(validatorOption).toBeVisible({ timeout: 5000 });
     await validatorOption.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
     console.log(`✓ Selected validator: ${validatorText}`);
 
     // Hard expectation: Filter must be visible
@@ -357,7 +360,7 @@ test.describe("Stake Delegation Filters", () => {
     // Test "is not all" functionality
     await page.getByText("is any").click();
     await page.getByText("is not all", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: No rows should show the excluded validator
     await checkColumnValues(page, validatorColumnIndex, validatorText, false);
@@ -390,7 +393,7 @@ test.describe("Stake Delegation Filters", () => {
 
     // Select "Approved" status
     await page.getByText("Approved", { exact: true }).first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(
@@ -418,7 +421,7 @@ test.describe("Stake Delegation Filters", () => {
     await page.getByRole("button", { name: "Status : Approved" }).click();
     await page.getByText("is", { exact: true }).click();
     await page.getByText("is not", { exact: true }).click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: No rows should show "Approved" status when excluded
     await checkColumnValues(page, statusColumnIndex, "Approved", false);
@@ -451,16 +454,16 @@ test.describe("Stake Delegation Filters", () => {
     });
 
     // Wait for creator options to load
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Select first available creator
     await page
       .getByRole("textbox", { name: "Search by account address" })
-      .fill("megh");
+      .pressSequentially("megh");
     const creatorOption = page.getByText(creatorAccountAddress).first();
     await expect(creatorOption).toBeVisible({ timeout: 5000 });
     await creatorOption.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
     console.log(`✓ Selected creator: ${creatorAccountAddress}`);
 
     const creatorColumnIndex = await getColumnIndex(page, "Created by");
@@ -485,7 +488,7 @@ test.describe("Stake Delegation Filters", () => {
     // Test "is not all" functionality
     await page.getByText("is any").click();
     await page.getByText("is not all", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: No rows should show the excluded creator
     await checkColumnValues(
@@ -523,16 +526,16 @@ test.describe("Stake Delegation Filters", () => {
 
     const approverAccountAddress = "megha19.near";
     // Wait for approver options to load
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Select first available approver
     await page
       .getByRole("textbox", { name: "Search by account address" })
-      .fill("megh");
+      .pressSequentially("megh");
     const approverOption = page.getByText(approverAccountAddress).first();
     await expect(approverOption).toBeVisible({ timeout: 5000 });
     await approverOption.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
     console.log(`✓ Selected approver: ${approverAccountAddress}`);
 
     // Hard expectation: Verify all rows show the selected approver
@@ -559,7 +562,7 @@ test.describe("Stake Delegation Filters", () => {
     // Test "is not all" functionality
     await page.getByText("is any").click();
     await page.getByText("is not all", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Verify no rows show the excluded approver
     await checkColumnImages(
@@ -600,7 +603,7 @@ test.describe("Stake Delegation Filters", () => {
       .locator(".dropdown-item")
       .getByText("Stake", { exact: true })
       .click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     const activeFilter = page.getByRole("button", { name: "Type : Stake " });
@@ -612,7 +615,7 @@ test.describe("Stake Delegation Filters", () => {
     const trashIcon = page.locator(".bi.bi-trash").first();
     await expect(trashIcon).toBeVisible({ timeout: 5000 });
     await trashIcon.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be removed
     await expect(activeFilter).not.toBeVisible();
@@ -639,7 +642,7 @@ test.describe("Stake Delegation Filters", () => {
       .locator(".dropdown-item")
       .getByText("Stake", { exact: true })
       .click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(
@@ -649,7 +652,7 @@ test.describe("Stake Delegation Filters", () => {
 
     // Click clear all button (X button)
     await page.click("button:has(i.bi-x-lg)");
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be cleared
     await expect(
@@ -690,7 +693,7 @@ test.describe("Stake Delegation Filters", () => {
       .getByRole("textbox")
       .nth(2)
       .fill(endDate.toISOString().split("T")[0]);
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: All rows must have dates within range
     const createdDateColumnIndex = await getColumnIndex(page, "Created Date");
@@ -738,7 +741,7 @@ test.describe("Stake Delegation Filters", () => {
       .locator(".dropdown-item")
       .getByText("Stake", { exact: true })
       .click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(
@@ -776,8 +779,8 @@ test.describe("Stake Delegation Filters", () => {
     await expect(searchInput).toBeVisible({ timeout: 10000 });
 
     // Step 1: Search by title/keyword
-    await searchInput.fill("stake");
-    await page.waitForTimeout(3000);
+    await searchInput.pressSequentially("stake");
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Should have search results
     const searchRows = page.locator("tbody tr");
@@ -797,7 +800,7 @@ test.describe("Stake Delegation Filters", () => {
 
     // Step 2: Search by specific proposal ID
     await searchInput.fill("391");
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Should have results for ID 1
     const idSearchRows = page.locator("tbody tr");
@@ -818,7 +821,7 @@ test.describe("Stake Delegation Filters", () => {
     // Step 3: Clear search using clear button
     await page.locator(".bi.bi-x-lg").click();
     await expect(searchInput).toBeEmpty();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Should have more results after clearing
     const allRows = page.locator("tbody tr");
@@ -845,14 +848,14 @@ test.describe("Stake Delegation Filters", () => {
       .locator(".dropdown-item")
       .getByText("Stake", { exact: true })
       .click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Add Status filter
     await page.getByRole("button", { name: " Add Filter" }).click();
     await page.getByRole("button", { name: "Status" }).click();
     await page.getByRole("button", { name: "Status " }).click();
     await page.getByText("Approved", { exact: true }).first().click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Both filters must be visible
     await expect(
@@ -905,7 +908,7 @@ test.describe("Logged in user - Stake Delegation Filters", () => {
 
     // Test "Approved" vote status
     await page.getByText("Approved", { exact: true }).first().click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(
@@ -939,7 +942,7 @@ test.describe("Logged in user - Stake Delegation Filters", () => {
       .getByRole("button", { name: "My Vote Status : Approved" })
       .click();
     await page.getByText("Rejected", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(
@@ -969,7 +972,7 @@ test.describe("Logged in user - Stake Delegation Filters", () => {
       .getByRole("button", { name: "My Vote Status : Rejected" })
       .click();
     await page.getByText("Not Voted", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(TIMEOUT);
 
     // Hard expectation: Filter must be visible
     await expect(

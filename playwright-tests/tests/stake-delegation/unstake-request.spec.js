@@ -105,6 +105,8 @@ test.describe("Unstake Request Form Validation", () => {
     await expect(validatorModal).toBeVisible();
     console.log("✓ Validator modal opened");
 
+    await page.waitForTimeout(3000);
+
     // Verify search input is present
     const searchInput = page.getByPlaceholder(/Search validators/i);
     await expect(searchInput).toBeVisible();
