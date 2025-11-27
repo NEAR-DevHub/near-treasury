@@ -98,32 +98,3 @@ jobs:
       node-version: "20"
       browser: ${{ github.event.inputs.browser || 'chromium' }}
     secrets: inherit
-
-  summary:
-    name: Test Summary
-    needs:
-      - playwright_components
-      - playwright_dashboard
-      - playwright_settings
-      - playwright_payments
-      - playwright_intents
-      - playwright_stake_delegation
-      - playwright_sandbox
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Check test results
-        run: |
-          echo "## Test Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All test suites completed!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Components | ${{ needs.playwright_components.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dashboard | ${{ needs.playwright_dashboard.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Settings | ${{ needs.playwright_settings.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Payments | ${{ needs.playwright_payments.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Intents | ${{ needs.playwright_intents.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Stake Delegation | ${{ needs.playwright_stake_delegation.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Sandbox | ${{ needs.playwright_sandbox.result }} |" >> $GITHUB_STEP_SUMMARY

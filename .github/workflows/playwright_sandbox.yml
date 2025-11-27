@@ -51,11 +51,19 @@ jobs:
           HOME: /root
           NEXT_PUBLIC_FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
 
+      - name: Sanitize branch name
+        if: failure()
+        run: |
+          # Use head_ref for PRs, ref_name for direct pushes
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+          echo "SAFE_BRANCH_NAME=$SAFE_BRANCH_NAME" >> $GITHUB_ENV
+
       - name: Upload test artifacts on failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: sandbox-report-${{ inputs.browser }}-${{ github.ref_name }}
+          name: sandbox-report-${{ inputs.browser }}-${{ env.SAFE_BRANCH_NAME }}
           path: |
             playwright-report/
             test-results/
