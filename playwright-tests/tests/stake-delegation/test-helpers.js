@@ -18,7 +18,7 @@ const LOCKUP_WHITELIST_ID = "lockup-whitelist.near";
  *
  * @returns {Promise<Object>} Object containing sandbox, accounts, and factory IDs
  */
-export async function setupTestDAO({ epochLength = 1000 }) {
+export async function setupTestDAO({ epochLength = 1000 } = {}) {
   const sandbox = new NearSandbox();
   await sandbox.start({ epochLength });
 

@@ -13,11 +13,61 @@ import {
 } from "@near-js/jsonrpc-client";
 
 export class NearSandbox {
+  /**
+   * Mainnet RPC endpoints to try (in order) - prioritizing free tier with high limits
+   */
+  static MAINNET_RPC_ENDPOINTS = [
+    "https://near.drpc.org", // dRPC: 210M CU/month, 100 req/sec
+    "https://free.rpc.fastnear.com", // FASTNEAR free tier
+    "https://near.blockpi.network/v1/rpc/public", // BlockPI: 50M RUs/month, 20 req/sec
+    "https://rpc.web4.near.page", // fast-near web4
+    "https://near.lava.build:443", // Lava Network: archival available
+    "https://rpc.ankr.com/near", // ankr.com
+    "https://1rpc.io/near", // 1RPC: 20k req/day
+    "https://endpoints.omniatech.io/v1/near/mainnet/public", // OMNIA
+    "https://near.rpc.grove.city/v1/01fdb492", // Grove: archival available
+    "https://rpc.intea.rs", // Intear RPC
+    "https://rpc.shitzuapes.xyz", // Shitzu
+    "https://rpc.mainnet.near.org", // Official NEAR RPC
+    "https://archival-rpc.mainnet.near.org", // Official archival
+  ];
+
   constructor() {
     this.sandbox = null;
     this.rpcClient = null;
     this.accountKeys = new Map();
     this.defaultKeyPair = null;
+  }
+
+  /**
+   * Try an RPC operation across multiple endpoints with automatic fallback
+   * @param {Function} operation - Async function that takes an RPC client and performs the operation
+   * @param {string} operationName - Name for logging purposes
+   * @returns {Promise<any>} Result from the first successful RPC call
+   */
+  async tryRpcWithFallback(operation, operationName = "RPC operation") {
+    let lastError = null;
+
+    for (const rpcUrl of NearSandbox.MAINNET_RPC_ENDPOINTS) {
+      try {
+        console.log(`Attempting ${operationName} from ${rpcUrl}...`);
+        const rpcClient = new NearRpcClient(rpcUrl);
+        const result = await operation(rpcClient);
+        console.log(`✓ Successfully completed ${operationName} from ${rpcUrl}`);
+        return result;
+      } catch (error) {
+        console.warn(
+          `Failed ${operationName} from ${rpcUrl}: ${error.message}`
+        );
+        lastError = error;
+        // Continue to next RPC endpoint
+      }
+    }
+
+    // If all RPCs failed, throw the last error
+    throw new Error(
+      `Failed ${operationName} from all RPC endpoints. Last error: ${lastError?.message}`
+    );
   }
 
   async start(config = {}) {
@@ -446,30 +496,28 @@ export class NearSandbox {
   }
 
   async viewFunctionMainnet(contractId, methodName, args = {}) {
-    const mainnetRpcClient = new NearRpcClient(
-      "https://rpc.mainnet.fastnear.com"
-    );
-    return await viewFunctionAsJson(mainnetRpcClient, {
-      accountId: contractId,
-      methodName: methodName,
-      argsBase64: Buffer.from(JSON.stringify(args)).toString("base64"),
-      finality: "final",
-    });
+    return await this.tryRpcWithFallback(async (rpcClient) => {
+      return await viewFunctionAsJson(rpcClient, {
+        accountId: contractId,
+        methodName: methodName,
+        argsBase64: Buffer.from(JSON.stringify(args)).toString("base64"),
+        finality: "final",
+      });
+    }, `view function ${methodName} on ${contractId}`);
   }
 
   async importMainnetContract(accountId, mainnetContractId) {
     // First create the account
     await this.createAccount(accountId);
 
-    // Fetch contract code from mainnet
-    const mainnetRpcClient = new NearRpcClient(
-      "https://rpc.mainnet.fastnear.com"
-    );
-    const contractCode = await query(mainnetRpcClient, {
-      requestType: "view_code",
-      finality: "final",
-      accountId: mainnetContractId,
-    });
+    // Fetch contract code from mainnet using RPC fallback
+    const contractCode = await this.tryRpcWithFallback(async (rpcClient) => {
+      return await query(rpcClient, {
+        requestType: "view_code",
+        finality: "final",
+        accountId: mainnetContractId,
+      });
+    }, `fetch contract ${mainnetContractId}`);
 
     // Deploy the contract code to sandbox
     const wasmCode = contractCode.codeBase64

@@ -608,6 +608,7 @@ test.describe("Stake Delegation Filters", () => {
     console.log("✓ Type filter is visible");
 
     // Click trash icon to remove filter
+    await activeFilter.click();
     const trashIcon = page.locator(".bi.bi-trash").first();
     await expect(trashIcon).toBeVisible({ timeout: 5000 });
     await trashIcon.click();
