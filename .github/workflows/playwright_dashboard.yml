@@ -1,0 +1,63 @@
+name: Playwright - Dashboard
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        default: "20"
+        type: string
+      browser:
+        description: "Browser to test"
+        required: false
+        default: "chromium"
+        type: string
+
+jobs:
+  test-dashboard:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: deps-${{ hashFiles('package-lock.json') }}
+
+      - name: Restore build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .next
+          key: build-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', 'package-lock.json', 'next.config.mjs') }}
+
+      - name: Run Dashboard tests
+        run: npm run test:e2e -- --project=${{ inputs.browser }} playwright-tests/tests/dashboard/
+        env:
+          CI: true
+          HOME: /root
+          NEXT_PUBLIC_FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
+
+      - name: Upload test artifacts on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dashboard-report-${{ inputs.browser }}-${{ github.ref_name }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 1
+          overwrite: true
