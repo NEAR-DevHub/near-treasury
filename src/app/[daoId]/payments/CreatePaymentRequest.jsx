@@ -787,6 +787,17 @@ const CreatePaymentRequest = ({
                       required: "Recipient is required",
                       validate: (value) => {
                         if (!value) return "Recipient is required";
+
+                        // Check if receiver is the same as the DAO creating the request
+                        if (
+                          (selectedWallet?.value === treasuryDaoID &&
+                            value === treasuryDaoID) ||
+                          (selectedWallet?.value === lockupContract &&
+                            value === lockupContract)
+                        ) {
+                          return "Cannot send payment to the same DAO that is creating the request";
+                        }
+
                         // Only validate account validity if we have a value and it's not currently being checked
                         if (value && !isReceiverAccountValid) {
                           return "Invalid recipient address";
