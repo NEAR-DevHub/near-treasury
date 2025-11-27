@@ -6,9 +6,9 @@ import {
   checkColumnImages,
   checkColumnDateRange,
   openFiltersPanel,
-  addFilter,
   checkExportUrlWithFilters,
   switchToHistoryTab,
+  addFilterAndOpenPopup,
 } from "../../util/filter-utils.js";
 
 /**
@@ -131,9 +131,8 @@ test.describe("Stake Delegation Filters", () => {
     );
     await page.waitForTimeout(2000);
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Type",
-      isMultiple: false,
     });
 
     // Select "Stake" type
@@ -195,9 +194,8 @@ test.describe("Stake Delegation Filters", () => {
     );
     await page.waitForTimeout(1000);
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Amount",
-      isMultiple: false,
     });
 
     // Test "between" range
@@ -317,9 +315,8 @@ test.describe("Stake Delegation Filters", () => {
     await page.waitForTimeout(2000);
     const validatorText = "astro-stakers.poolv1.near";
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Validator",
-      isMultiple: true,
     });
 
     // Wait for validator options to load
@@ -386,9 +383,8 @@ test.describe("Stake Delegation Filters", () => {
     );
     await page.waitForTimeout(2000);
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Status",
-      isMultiple: false,
     });
 
     // Select "Approved" status
@@ -448,9 +444,8 @@ test.describe("Stake Delegation Filters", () => {
     await page.waitForTimeout(2000);
     const creatorAccountAddress = "megha19.near";
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Created by",
-      isMultiple: true,
     });
 
     // Wait for creator options to load
@@ -519,9 +514,8 @@ test.describe("Stake Delegation Filters", () => {
     );
     await page.waitForTimeout(2000);
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Approver",
-      isMultiple: true,
     });
 
     const approverAccountAddress = "megha19.near";
@@ -593,9 +587,8 @@ test.describe("Stake Delegation Filters", () => {
     );
     await page.waitForTimeout(2000);
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Type",
-      isMultiple: false,
     });
 
     // Select "Stake" type
@@ -634,9 +627,8 @@ test.describe("Stake Delegation Filters", () => {
     await page.waitForTimeout(2000);
 
     // Add Type filter
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Type",
-      isMultiple: false,
     });
     await page
       .locator(".dropdown-item")
@@ -672,9 +664,8 @@ test.describe("Stake Delegation Filters", () => {
     );
     await page.waitForTimeout(2000);
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Created Date",
-      isMultiple: false,
     });
 
     // Hard expectation: Date inputs must be visible
@@ -733,9 +724,8 @@ test.describe("Stake Delegation Filters", () => {
     });
 
     // Add a filter
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Type",
-      isMultiple: false,
     });
     await page
       .locator(".dropdown-item")
@@ -840,9 +830,8 @@ test.describe("Stake Delegation Filters", () => {
     await page.waitForTimeout(2000);
 
     // Add Type filter
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "Type",
-      isMultiple: false,
     });
     await page
       .locator(".dropdown-item")
@@ -901,9 +890,8 @@ test.describe("Logged in user - Stake Delegation Filters", () => {
     await page.waitForTimeout(2000);
     const approverAccountAddress = "megha19.near";
 
-    await addFilter(page, {
+    await addFilterAndOpenPopup(page, {
       filterName: "My Vote Status",
-      isMultiple: false,
     });
 
     // Test "Approved" vote status

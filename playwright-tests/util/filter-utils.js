@@ -237,8 +237,6 @@ export async function addFilter(page, options) {
   // The button text will match the filterName (e.g., "Created by", "Recipient", etc.)
   const activeFilterButton = getFilterButton(page, filterName);
   await expect(activeFilterButton).toBeVisible({ timeout: 5000 });
-  await page.waitForTimeout(2000);
-  await activeFilterButton.click();
 }
 
 // Helper function to add a specific filter

@@ -67,7 +67,7 @@ jobs:
         run: |
           # Use head_ref for PRs, ref_name for direct pushes
           BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-          SAFE_BRANCH_NAME="${BRANCH_NAME//\//-}"
+          SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
           echo "SAFE_BRANCH_NAME=$SAFE_BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Upload test artifacts on failure
