@@ -1,13 +1,8 @@
 import path from "path";
 import { expect } from "@playwright/test";
-import {
-  NearSandbox,
-  injectTestWallet,
-  interceptIndexerAPI,
-  interceptRPC,
-  parseNEAR,
-} from "../../util/sandbox.js";
+import { NearSandbox, parseNEAR } from "../../util/sandbox.js";
 import { test } from "../../util/test.js";
+import { setupTestEnvironment } from "../stake-delegation/test-helpers.js";
 
 const DAO_ID = "devdao.sputnik-dao.near";
 const ASSETS_PATH = path.join(
@@ -123,8 +118,6 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
                     "*:VoteReject",
                     "*:VoteApprove",
                     "*:VoteRemove",
-                    "*:RemoveProposal",
-                    "*:Finalize",
                   ],
                   vote_policy: {},
                 },
@@ -175,7 +168,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       page,
     }) => {
       test.setTimeout(120000);
-      await injectTestWallet(page, sandbox, creatorAccountId);
+      await setupTestEnvironment({ page, sandbox, creatorAccountId });
       await navigateToThemePage({ page, daoId: daoAccountId });
 
       const colorInput = page.getByTestId("color-picker-input");
@@ -189,7 +182,11 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
 
     test("should disable config for user with Vote role", async ({ page }) => {
       test.setTimeout(120000);
-      await injectTestWallet(page, sandbox, voteOnlyAccountId);
+      await setupTestEnvironment({
+        page,
+        sandbox,
+        creatorAccountId: voteOnlyAccountId,
+      });
       await navigateToThemePage({ page, daoId: daoAccountId });
 
       const colorInput = page.getByTestId("color-picker-input");
@@ -207,9 +204,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
     const EXPECTED_IMAGE_URL = `https://ipfs.near.social/ipfs/${MOCKED_CID}`;
 
     test.beforeEach(async ({ page }) => {
-      await injectTestWallet(page, sandbox, creatorAccountId);
-      await interceptIndexerAPI(page, sandbox);
-      await interceptRPC(page, sandbox);
+      await setupTestEnvironment({ page, sandbox, creatorAccountId });
 
       await navigateToThemePage({ page, daoId: daoAccountId });
 
@@ -398,9 +393,11 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       page,
     }) => {
       test.setTimeout(120000);
-      await injectTestWallet(page, sandbox, lowBalanceVoterAccountId);
-      await interceptIndexerAPI(page, sandbox);
-      await interceptRPC(page, sandbox);
+      await setupTestEnvironment({
+        page,
+        sandbox,
+        creatorAccountId: lowBalanceVoterAccountId,
+      });
 
       await navigateToThemePage({ page, daoId: daoAccountId });
 
