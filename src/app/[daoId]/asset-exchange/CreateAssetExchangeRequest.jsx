@@ -139,7 +139,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       }
     }
     const sum = nets.reduce((acc, n) => acc + (Number(n.amount || 0) || 0), 0);
-    return sum > 0 ? sum : null;
+    return sum > 0 ? sum : 0;
   }
 
   // Build aggregated token list from defuse + metadata; merge balances from intents
@@ -853,6 +853,19 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
           </div>
         </div>
 
+        {/* Rate line */}
+        {sendToken && receiveToken && dryQuote && (
+          <div
+            className="mt-2 text-secondary text-end"
+            style={{ fontSize: 14 }}
+          >
+            1 {sendToken.symbol} ($
+            {formatNumberWithCommas(sendToken?.price || 0)}) ≈{" "}
+            {formatNumberWithCommas(dryQuote?.rate || 0) || "-"}{" "}
+            {receiveToken.symbol}
+          </div>
+        )}
+
         {/* Error box for quote failures */}
         {dryQuoteError && (
           <div className="d-flex gap-3 align-items-center px-3 py-2 rounded-3 mt-3 error-box">
@@ -866,17 +879,21 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
           </div>
         )}
 
-        {/* Rate line */}
-        <div className="mt-2 text-secondary text-end" style={{ fontSize: 14 }}>
-          {sendToken && receiveToken && dryQuote && (
-            <>
-              1 {sendToken.symbol} ($
-              {formatNumberWithCommas(sendToken?.price || 0)}) ≈{" "}
-              {formatNumberWithCommas(dryQuote?.rate || 0) || "-"}{" "}
-              {receiveToken.symbol}
-            </>
+        {sendToken &&
+          sendNetwork &&
+          sendAmount &&
+          getTokenNetworkBalance(sendToken, sendNetwork) !== null &&
+          parseFloat(sendAmount) >
+            parseFloat(getTokenNetworkBalance(sendToken, sendNetwork)) && (
+            <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3 mt-3">
+              <i className="bi bi-exclamation-triangle h5"></i>
+              <div>
+                The treasury balance is insufficient to cover the exchange. You
+                can create the request, but it won't be approved until the
+                balance is topped up.
+              </div>
+            </div>
           )}
-        </div>
       </div>
 
       {/* Network selection modal (triggered after token selection) */}
@@ -973,21 +990,6 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         <textarea className="form-control" rows={3} {...register("notes")} />
       </div>
 
-      {sendToken &&
-        sendNetwork &&
-        sendAmount &&
-        getTokenNetworkBalance(sendToken, sendNetwork) !== null &&
-        parseFloat(sendAmount) >
-          parseFloat(getTokenNetworkBalance(sendToken, sendNetwork)) && (
-          <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3">
-            <i className="bi bi-exclamation-triangle h5"></i>
-            <div>
-              The treasury balance is insufficient to cover the exchange. You
-              can create the request, but it won't be approved until the balance
-              is topped up.
-            </div>
-          </div>
-        )}
       <div className="d-flex mt-2 gap-3 justify-content-end">
         <button
           type="button"
