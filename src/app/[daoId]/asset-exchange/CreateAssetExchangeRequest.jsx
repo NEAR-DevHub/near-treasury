@@ -82,7 +82,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
     reset,
     formState: { errors, isDirty },
   } = useForm({
-    mode: "onSubmit",
+    mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
       sendToken: null,
@@ -193,6 +193,11 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
   }
 
   async function fetchProposalQuote() {
+    // Check for validation errors
+    if (errors.slippagePct || errors.sendAmount) {
+      return;
+    }
+
     if (
       !sendToken ||
       !receiveToken ||
@@ -378,6 +383,13 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       return;
     }
 
+    // Don't fetch if there are any form validation errors
+    if (errors.slippagePct || errors.sendAmount) {
+      setDryQuote(null);
+      setIsFetchingDryQuote(false);
+      return;
+    }
+
     if (
       !sendToken ||
       !sendNetwork ||
@@ -417,6 +429,8 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
     sendAmount,
     slippagePct,
     showPreview,
+    errors.slippagePct,
+    errors.sendAmount,
   ]);
 
   async function onSubmit() {
@@ -691,16 +705,26 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
             </div>
             <div className="text-end flex-2">
               {(() => {
-                const { ref, ...rest } = register("sendAmount");
+                const { ref, ...rest } = register("sendAmount", {
+                  required: "Amount is required",
+                  validate: {
+                    isNumber: (value) => {
+                      const num = parseFloat(value);
+                      return !isNaN(num) || "Please enter a valid amount";
+                    },
+                    isPositive: (value) => {
+                      const num = parseFloat(value);
+                      return num > 0 || "Amount must be greater than 0";
+                    },
+                  },
+                });
                 return (
                   <input
                     style={{ fontSize: 24 }}
                     type="number"
                     min="0"
                     step="any"
-                    className={`no-focus hide-bg form-control text-end border-0 p-0 fw-semibold  ${
-                      errors.sendAmount ? "is-invalid" : ""
-                    }`}
+                    className={`no-focus hide-bg form-control text-end border-0 p-0 fw-semibold`}
                     placeholder="00.00"
                     {...rest}
                     ref={(e) => {
@@ -977,11 +1001,35 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         <input
           type="number"
           step="0.1"
-          min="0"
-          className="form-control"
+          className={`form-control ${errors.slippagePct ? "is-invalid" : ""}`}
           defaultValue="1"
-          {...register("slippagePct")}
+          {...register("slippagePct", {
+            required: "Slippage tolerance is required",
+            min: {
+              value: 0.01,
+              message: "Minimum slippage is 0.01%",
+            },
+            max: {
+              value: 100,
+              message: "Maximum slippage is 100%",
+            },
+            validate: {
+              isNumber: (value) => {
+                const num = parseFloat(value);
+                return !isNaN(num) || "Please enter a valid number";
+              },
+              isPositive: (value) => {
+                const num = parseFloat(value);
+                return num > 0 || "Slippage must be greater than 0";
+              },
+            },
+          })}
         />
+        {errors.slippagePct && (
+          <div className="invalid-feedback d-block">
+            {errors.slippagePct.message}
+          </div>
+        )}
       </div>
 
       {/* Notes */}
@@ -1003,7 +1051,17 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
           type="button"
           className="btn theme-btn"
           onClick={fetchProposalQuote}
-          disabled={isFetchingDryQuote || isFetchingProposalQuote}
+          disabled={
+            isFetchingDryQuote ||
+            isFetchingProposalQuote ||
+            !!errors.slippagePct ||
+            !!errors.sendAmount ||
+            !sendAmount ||
+            !sendToken ||
+            !sendNetwork ||
+            !receiveToken ||
+            !receiveNetwork
+          }
         >
           {isFetchingProposalQuote
             ? "Fetching Deposit Address..."
