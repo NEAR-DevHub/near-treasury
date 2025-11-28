@@ -832,30 +832,39 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 </div>
               )}
             </div>
-            {dryQuoteError ? (
-              <div className="text-danger flex-2 text-end">{dryQuoteError}</div>
-            ) : (
-              <div className="text-end flex-2">
-                <div className="fw-semibold border-0" style={{ fontSize: 24 }}>
-                  {dryQuote
-                    ? formatNumberWithCommas(dryQuote.receiveAmount)
-                    : "00.00"}
-                </div>
-                {dryQuote && (
-                  <div className="text-secondary" style={{ fontSize: 16 }}>
-                    ≈$
-                    {dryQuote
-                      ? formatNumberWithCommas(
-                          (dryQuote.receiveAmount || 0) *
-                            (receiveToken?.price || 0)
-                        )
-                      : "0.00"}
-                  </div>
-                )}
+            <div className="text-end flex-2">
+              <div className="fw-semibold border-0" style={{ fontSize: 24 }}>
+                {dryQuote
+                  ? formatNumberWithCommas(dryQuote.receiveAmount)
+                  : "00.00"}
               </div>
-            )}
+              {dryQuote && (
+                <div className="text-secondary" style={{ fontSize: 16 }}>
+                  ≈$
+                  {dryQuote
+                    ? formatNumberWithCommas(
+                        (dryQuote.receiveAmount || 0) *
+                          (receiveToken?.price || 0)
+                      )
+                    : "0.00"}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Error box for quote failures */}
+        {dryQuoteError && (
+          <div className="d-flex gap-3 align-items-center px-3 py-2 rounded-3 mt-3 error-box">
+            <i className="bi bi-exclamation-circle warning-icon h5 mb-0"></i>
+            <div className="text-red">
+              {dryQuoteError.toLowerCase().includes("failed") ||
+              dryQuoteError.toLowerCase().includes("unable to fetch")
+                ? "We couldn't find a swap for the selected tokens. Try a smaller amount or different token."
+                : dryQuoteError}
+            </div>
+          </div>
+        )}
 
         {/* Rate line */}
         <div className="mt-2 text-secondary text-end" style={{ fontSize: 14 }}>
