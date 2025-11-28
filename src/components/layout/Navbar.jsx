@@ -8,12 +8,13 @@ import { useDao } from "@/context/DaoContext";
 import { NAVIGATION_LINKS, NEAR_TREASURY_CONFIG } from "@/constants/navigation";
 import NearTreasuryLogo from "@/components/icons/Logo";
 import Profile from "@/components/ui/Profile";
+import Skeleton from "@/components/ui/Skeleton";
 import MyTreasuries from "@/app/[daoId]/dashboard/MyTreasuries";
 
 const Navbar = () => {
-  const { accountId, connect, disconnect } = useNearWallet();
+  const { accountId, isInitializing, connect, disconnect } = useNearWallet();
   const { isDarkTheme, toggleTheme } = useTheme();
-  const { daoId, customConfig } = useDao();
+  const { daoId, isDaoLoading, customConfig } = useDao();
   const pathname = usePathname();
 
   const handleSignIn = async () => {
@@ -111,20 +112,35 @@ const Navbar = () => {
           </Link>
 
           <div className="d-flex justify-content-between align-items-center gap-3">
-            {/* Navigation content - only show if daoId exists */}
-            {daoId && (
+            {/* Navigation content - show if daoId exists or is loading */}
+            {(daoId || isDaoLoading) && (
               <div className="collapse navbar-collapse" id="navbarNav">
                 <ul className="navbar-nav me-auto mx-1">
-                  {getFilteredNavigationLinks().map((link, idx) => (
-                    <li key={idx} className="nav-item">
-                      <Link
-                        href={`/${daoId}${link.href}`}
-                        className={`nav-link ${isActive(link.title)}`}
-                      >
-                        {link.title}
-                      </Link>
-                    </li>
-                  ))}
+                  {isDaoLoading && !daoId ? (
+                    <>
+                      {[1, 2, 3, 4, 5].map((idx) => (
+                        <li key={idx} className="nav-item">
+                          <div className="nav-link">
+                            <Skeleton
+                              style={{ width: "80px", height: "20px" }}
+                              className="rounded-3"
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </>
+                  ) : (
+                    getFilteredNavigationLinks().map((link, idx) => (
+                      <li key={idx} className="nav-item">
+                        <Link
+                          href={`/${daoId}${link.href}`}
+                          className={`nav-link ${isActive(link.title)}`}
+                        >
+                          {link.title}
+                        </Link>
+                      </li>
+                    ))
+                  )}
                 </ul>
               </div>
             )}
@@ -141,7 +157,10 @@ const Navbar = () => {
               </div>
 
               {/* Wallet */}
-              {accountId ? (
+              {isInitializing ? (
+                // Show a subtle placeholder while initializing to prevent layout shift
+                <div style={{ width: "88px", height: "38px" }}></div>
+              ) : accountId ? (
                 <div className="dropdown">
                   <button
                     className="btn btn-outline-secondary border-0 d-flex align-items-center gap-2"
@@ -188,10 +207,16 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
-      {daoId && (
+      {(daoId || isDaoLoading) && (
         <div className="px-4 mt-1 d-flex gap-3 align-items-center">
-          <MyTreasuries />
-          <div className="h4 mb-0 text-color">{getCurrentPageTitle()}</div>
+          {isDaoLoading && !daoId ? (
+            <></>
+          ) : (
+            <>
+              <MyTreasuries />
+              <div className="h4 mb-0 text-color">{getCurrentPageTitle()}</div>
+            </>
+          )}
         </div>
       )}
     </div>

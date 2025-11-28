@@ -13,7 +13,7 @@ const getContextFromPath = (pathname) => {
   if (pathname.includes("/payments")) return "payment";
   if (pathname.includes("/stake-delegation")) return "stake";
   if (pathname.includes("/asset-exchange")) return "exchange";
-  if (pathname.includes("/function-call")) return "function";
+  if (pathname.includes("/function-call")) return "function-call";
   if (pathname.includes("/settings")) return "settings";
 
   // Return null for unknown routes (no transaction handling)

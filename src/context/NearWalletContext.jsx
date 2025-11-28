@@ -17,6 +17,7 @@ const NearWalletContext = createContext(null);
 export const NearWalletProvider = ({ children }) => {
   const [connector, setConnector] = useState(null);
   const [accountId, setAccountId] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const init = useCallback(async () => {
     if (connector) {
@@ -40,6 +41,7 @@ export const NearWalletProvider = ({ children }) => {
       });
     } catch (err) {
       logger.error(err);
+      setIsInitializing(false);
       return;
     }
 
@@ -58,6 +60,7 @@ export const NearWalletProvider = ({ children }) => {
       }
     } catch {} // No existing wallet connection found
 
+    setIsInitializing(false);
     return newConnector;
   }, [connector]);
 
@@ -104,6 +107,7 @@ export const NearWalletProvider = ({ children }) => {
     return {
       connector,
       accountId,
+      isInitializing,
       connect,
       disconnect,
       signMessage,
@@ -112,6 +116,7 @@ export const NearWalletProvider = ({ children }) => {
   }, [
     connector,
     accountId,
+    isInitializing,
     connect,
     disconnect,
     signMessage,

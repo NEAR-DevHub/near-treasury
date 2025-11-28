@@ -48,6 +48,7 @@ function aggregateStakedBalances(stakedBalances) {
 export const DaoProvider = ({ children }) => {
   const params = useParams();
   const [daoId, setDaoId] = useState(null);
+  const [isDaoLoading, setIsDaoLoading] = useState(true);
   const [lockupContract, setLockupContract] = useState(null);
   const [ftLockups, setFtLockups] = useState(null);
   const [daoNearBalances, setDaoNearBalances] = useState(null);
@@ -76,11 +77,13 @@ export const DaoProvider = ({ children }) => {
   // Extract daoId from URL params and validate
   useEffect(() => {
     if (params?.daoId) {
+      setIsDaoLoading(true);
       // Validate format and check blockchain in one call
       validateDaoId(params.daoId).then((validation) => {
         if (validation.isValid) {
           setDaoId(validation.daoId);
           setCustomConfig(getDaoConfig(validation.daoId));
+          setIsDaoLoading(false);
         } else {
           // Redirect to home page if invalid with error flag
           window.location.href = "/?error=invalid-dao";
@@ -90,6 +93,7 @@ export const DaoProvider = ({ children }) => {
       // Clear daoId when no daoId in URL (e.g., navigating to home page)
       setDaoId(null);
       setCustomConfig(getDaoConfig(null));
+      setIsDaoLoading(false);
     }
   }, [params]);
 
@@ -172,11 +176,11 @@ export const DaoProvider = ({ children }) => {
 
   function fetchFtLockups() {
     Near.view("ft-lockup.near", "get_instances").then((instances) => {
-      if (instances.length === 0) {
+      if (instances?.length === 0) {
         return;
       } else {
-        const instanceIds = instances.map((instance) => instance?.[1] || "");
-        if (instanceIds.length > 0) {
+        const instanceIds = instances?.map((instance) => instance?.[1] || "");
+        if (instanceIds?.length > 0) {
           Promise.all(
             instanceIds.map((instanceId) => {
               return Near.view(instanceId, "get_account", {
@@ -429,6 +433,7 @@ export const DaoProvider = ({ children }) => {
 
   const value = {
     daoId,
+    isDaoLoading,
     lockupContract,
     ftLockups,
     daoNearBalances,

@@ -42,9 +42,11 @@ const SettingsFeed = () => {
           "AddMemberToRole",
           "RemoveMemberFromRole",
         ],
+        search_not: "voting thresholds",
       },
       "Voting Thresholds": {
         proposalTypes: ["ChangePolicy"],
+        search_not: "members",
       },
       "Voting Duration": {
         proposalTypes: ["ChangePolicyUpdateParameters"],
@@ -65,6 +67,7 @@ const SettingsFeed = () => {
       "ChangePolicyUpdateParameters",
       "UpgradeSelf",
     ];
+    let searchNotValue = null;
 
     if (
       filters?.proposal_type?.values &&
@@ -75,13 +78,24 @@ const SettingsFeed = () => {
 
       if (include) {
         const mappedTypes = [];
+        const searchNotValues = [];
         selectedTypes.forEach((type) => {
           if (proposalTypeMapping[type]) {
             mappedTypes.push(...proposalTypeMapping[type].proposalTypes);
+            // Collect all search_not values
+            if (proposalTypeMapping[type].search_not) {
+              searchNotValues.push(proposalTypeMapping[type].search_not);
+            }
           }
         });
         if (mappedTypes.length > 0) {
           finalProposalTypes = [...new Set(mappedTypes)];
+        }
+        // Only use search_not if there's exactly one unique value
+        // If multiple different search_not values exist, don't use any
+        const uniqueSearchNotValues = [...new Set(searchNotValues)];
+        if (uniqueSearchNotValues.length === 1) {
+          searchNotValue = uniqueSearchNotValues[0];
         }
       } else {
         const excludedTypes = [];
@@ -96,10 +110,10 @@ const SettingsFeed = () => {
       }
     }
 
-    return finalProposalTypes;
+    return { proposalTypes: finalProposalTypes, searchNot: searchNotValue };
   };
 
-  const proposalTypes = mapProposalTypeFilters(activeFilters);
+  const { proposalTypes, searchNot } = mapProposalTypeFilters(activeFilters);
 
   // Use the proposals hook
   const {
@@ -119,6 +133,7 @@ const SettingsFeed = () => {
     sortDirection,
     filters: activeFilters,
     search,
+    searchNot,
   });
 
   // Reset page when tab changes

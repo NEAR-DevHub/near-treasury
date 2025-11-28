@@ -193,7 +193,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
         result.length > 0 &&
         typeof result[0]?.status?.SuccessValue === "string"
       ) {
-        showToast("ProposalAdded", null, "function");
+        showToast("ProposalAdded", null, "function-call");
         setTimeout(() => {
           setTxnCreated(false);
           reset();
@@ -201,7 +201,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
         }, REFRESH_DELAY);
       }
     } catch (error) {
-      showToast("ErrorAddingProposal", null, "function");
+      showToast("ErrorAddingProposal", null, "function-call");
       console.error("Error creating proposal:", error);
     } finally {
       setTxnCreated(false);
@@ -305,6 +305,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                 errors.contractId || contractValidationError ? "is-invalid" : ""
               }`}
               id="contractId"
+              data-testid="contract-id-input"
               placeholder="e.g., example.near or 1234567890abcdef..."
               disabled={isValidatingContract}
               {...register("contractId", {
@@ -314,7 +315,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                     return "Contract ID is required";
                   }
                   if (!isValidNearAccount(value)) {
-                    return "Invalid NEAR account format";
+                    return "Invalid account format. Must be a .near, .aurora, .tg account or 64-character hex";
                   }
                   return true;
                 },
@@ -374,6 +375,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                       ? "is-invalid"
                       : ""
                   }`}
+                  data-testid={`method-name-input-${index}`}
                   placeholder="e.g., ft_transfer"
                   {...register(`actions.${index}.methodName`, {
                     required: "Method Name is required",
@@ -411,6 +413,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                       ? "is-invalid"
                       : ""
                   }`}
+                  data-testid={`arguments-input-${index}`}
                   rows="4"
                   placeholder={`{
   "receiver_id": "alice.near",
@@ -462,16 +465,17 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                         ? "is-invalid"
                         : ""
                     }`}
+                    data-testid={`deposit-input-${index}`}
                     placeholder={
                       watchedActions?.[index]?.depositUnit === "yoctoNEAR"
                         ? "0"
                         : "0"
                     }
                     {...register(`actions.${index}.deposit`, {
-                      required: "Deposit is required",
+                      required: "Deposit (NEAR) is required",
                       validate: (value) => {
                         if (!value || value.trim() === "")
-                          return "Deposit is required";
+                          return "Deposit (NEAR) is required";
                         const depositNumber = parseFloat(value);
                         if (isNaN(depositNumber) || depositNumber < 0)
                           return "Deposit must be a non-negative number";
@@ -513,6 +517,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
                       ? "is-invalid"
                       : ""
                   }`}
+                  data-testid={`gas-input-${index}`}
                   placeholder="30"
                   {...register(`actions.${index}.gas`, {
                     required: "Gas (Tgas) is required",
@@ -559,6 +564,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
           <textarea
             className={`form-control ${errors.notes ? "is-invalid" : ""}`}
             id="notes"
+            data-testid="notes-input"
             rows="3"
             {...register("notes")}
           />
@@ -581,6 +587,7 @@ const CreateCustomFunctionCallRequest = ({ onCloseCanvas = () => {} }) => {
           <button
             type="submit"
             className="btn primary-button"
+            data-testid="submit-button"
             disabled={isTxnCreated}
           >
             Create Request
