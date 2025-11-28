@@ -93,13 +93,19 @@ export function generateFilteredProposalsQuery(
   filters,
   accountId,
   amountValues,
-  search
+  search,
+  searchNot
 ) {
   let queryParams = [];
 
   // Handle search parameter
   if (search && search.trim()) {
     queryParams.push(`search=${encodeURIComponent(search.trim())}`);
+  }
+
+  // Handle search_not parameter
+  if (searchNot && searchNot.trim()) {
+    queryParams.push(`search_not=${encodeURIComponent(searchNot.trim())}`);
   }
 
   // Handle filters object
@@ -269,6 +275,7 @@ export const getProposalsFromIndexer = async ({
   sortDirection = "desc",
   filters,
   search,
+  searchNot,
   amountValues,
   accountId,
 }) => {
@@ -297,12 +304,13 @@ export const getProposalsFromIndexer = async ({
       query += `&statuses=${statuses.join(",")}`;
     }
 
-    // Add filter-related query parameters (including search)
+    // Add filter-related query parameters (including search and search_not)
     const filterQueryParams = generateFilteredProposalsQuery(
       filters,
       accountId,
       amountValues,
-      search
+      search,
+      searchNot
     );
     if (filterQueryParams) {
       query += `&${filterQueryParams}`;

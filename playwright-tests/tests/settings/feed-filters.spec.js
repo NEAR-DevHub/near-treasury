@@ -122,30 +122,29 @@ test.describe("Settings Feed Filters", () => {
     await checkColumnImages(page, approversColumnIndex, "frol.near", false);
   });
 
-  // TODO: to be fixed by Megha, need to update indexer to show correct result
-  // test("should filter by Members Permissions proposal type", async ({
-  //   page,
-  // }) => {
-  //   await navigateToTab(page, "history");
-  //   await addFilterAndOpenPopup(page, { filterName: "Proposal Type" });
+  test("should filter by Members Permissions proposal type", async ({
+    page,
+  }) => {
+    await navigateToTab(page, "history");
+    await addFilterAndOpenPopup(page, { filterName: "Proposal Type" });
 
-  //   await selectFilterDropdownItem(page, "Members Permissions");
-  //   await page.waitForTimeout(2000);
+    await selectFilterDropdownItem(page, "Members Permissions");
+    await page.waitForTimeout(2000);
 
-  //   const titleColumnIndex = await getColumnIndex(page, "Title");
-  //   await checkColumnValues(page, titleColumnIndex, "Member", true);
-  // });
+    const titleColumnIndex = await getColumnIndex(page, "Title");
+    await checkColumnValues(page, titleColumnIndex, "Member", true);
+  });
 
-  // test("should filter by Voting Thresholds proposal type", async ({ page }) => {
-  //   await navigateToTab(page, "history");
-  //   await addFilterAndOpenPopup(page, { filterName: "Proposal Type" });
+  test("should filter by Voting Thresholds proposal type", async ({ page }) => {
+    await navigateToTab(page, "history");
+    await addFilterAndOpenPopup(page, { filterName: "Proposal Type" });
 
-  //   await selectFilterDropdownItem(page, "Voting Thresholds");
-  //   await page.waitForTimeout(2000);
+    await selectFilterDropdownItem(page, "Voting Thresholds");
+    await page.waitForTimeout(2000);
 
-  //   const titleColumnIndex = await getColumnIndex(page, "Title");
-  //   await checkColumnValues(page, titleColumnIndex, "Voting Thresholds", true);
-  // });
+    const titleColumnIndex = await getColumnIndex(page, "Title");
+    await checkColumnValues(page, titleColumnIndex, "Voting Thresholds", true);
+  });
 
   test("should filter by Voting Duration proposal type", async ({ page }) => {
     await navigateToTab(page, "history");
