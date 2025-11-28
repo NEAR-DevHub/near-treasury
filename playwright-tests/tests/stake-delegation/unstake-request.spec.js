@@ -489,6 +489,12 @@ test.describe("Unstake Request Integration Tests", () => {
     await expect(
       page.getByText("Voting is not available before unstaking release")
     ).toBeVisible();
+    await page.getByTestId("proposal-request-#2").click();
+    await page.waitForTimeout(1000);
+    await expect(
+      page.getByText("Voting is not available before unstaking release")
+    ).toHaveCount(2);
+
     console.log("✓ Withdraw request is now visible (after unstake approval)");
 
     // Open create request form to check updated balances

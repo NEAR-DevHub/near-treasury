@@ -346,140 +346,181 @@ const VoteActions = ({
           />
         </div>
       ) : (
-        <div className={containerClass}>
-          {isQuoteExpired ? (
-            <div>
-              {/* Check if we're in table view (hasOneDeleteIcon is only passed from table) */}
-              {isProposalDetailsPage ? (
-                <div className="d-flex align-items-center gap-3 text-secondary flex-grow-1">
-                  <i className="bi bi-info-circle"></i>
-                  <span>
-                    Voting is not available due to expired swap quote. The
-                    1Click API quote for this request expired on{" "}
-                    {formatDateTimeWithTimezone(quoteDeadline)}.
+        <div>
+          {/* Determine if voting should be disabled */}
+          {(() => {
+            const isVotingDisabled = isQuoteExpired || !isReadyToBeWithdrawn;
+
+            const renderInfoText = () => {
+              if (isQuoteExpired) {
+                return isProposalDetailsPage ? (
+                  <div className="d-flex align-items-center gap-3 flex-grow-1 info-box mb-2">
+                    <i className="bi bi-info-circle h6 mb-0"></i>
+                    <span>
+                      Voting is not available due to expired swap quote. The
+                      1Click API quote for this request expired on{" "}
+                      {formatDateTimeWithTimezone(quoteDeadline)}.
+                      <Tooltip
+                        tooltip={
+                          <div>
+                            The exchange rate quoted by 1Click API has expired.
+                            Executing the swap at an outdated rate could result
+                            in loss of funds.
+                          </div>
+                        }
+                      >
+                        <span className="text-decoration-underline ms-1 cursor-pointer">
+                          Learn more
+                        </span>
+                      </Tooltip>
+                    </span>
+                  </div>
+                ) : (
+                  <div className="d-inline-block">
                     <Tooltip
                       tooltip={
                         <div>
-                          The exchange rate quoted by 1Click API has expired.
-                          Executing the swap at an outdated rate could result in
-                          loss of funds.
+                          Voting is not available due to expired swap quote. The
+                          1Click API quote for this request expired on{" "}
+                          {formatDateTimeWithTimezone(quoteDeadline)}. Executing
+                          the swap at an outdated rate could result in loss of
+                          funds.
                         </div>
                       }
                     >
-                      <span className="text-decoration-underline ms-1 cursor-pointer">
-                        Learn more
+                      <span className="text-secondary">
+                        <i className="bi bi-info-circle"></i> Voting not
+                        available due to expired swap quote
                       </span>
                     </Tooltip>
-                  </span>
-                </div>
-              ) : (
-                // Compact version for table view
-                <Tooltip
-                  tooltip={
-                    <div>
-                      Voting is not available due to expired swap quote. The
-                      1Click API quote for this request expired on{" "}
-                      {formatDateTimeWithTimezone(quoteDeadline)}. Executing the
-                      swap at an outdated rate could result in loss of funds.
-                    </div>
-                  }
-                >
-                  <span className="text-secondary">
-                    <i className="bi bi-info-circle"></i> Voting not available
-                    due to expired swap quote
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-          ) : !isReadyToBeWithdrawn ? (
-            <div className="text-center fw-bold">
-              Voting is not available before unstaking release{" "}
-              <Tooltip
-                tooltip={
-                  <div>
-                    These tokens were unstaked, but are not yet ready for
-                    withdrawal. Tokens are ready for withdrawal 52-65 hours
-                    after unstaking.
                   </div>
+                );
+              } else if (!isReadyToBeWithdrawn) {
+                return isProposalDetailsPage ? (
+                  <div className="d-flex align-items-center gap-3 flex-grow-1 info-box mb-2">
+                    <i className="bi bi-info-circle h6 mb-0"></i>
+                    <span>
+                      Voting is not available before unstaking release.{" "}
+                      <Tooltip
+                        tooltip={
+                          <div>
+                            These tokens were unstaked, but are not yet ready
+                            for withdrawal. Tokens are ready for withdrawal
+                            52-65 hours after unstaking.
+                          </div>
+                        }
+                      >
+                        <span className="text-decoration-underline ms-1 cursor-pointer">
+                          Learn more
+                        </span>
+                      </Tooltip>
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-secondary">
+                    <i className="bi bi-info-circle"></i> Voting is not
+                    available before unstaking release
+                  </div>
+                );
+              } else {
+                return null;
+              }
+            };
+
+            return (
+              <div
+                className={
+                  isProposalDetailsPage ? "d-flex flex-column gap-2" : ""
                 }
               >
-                <i className="bi bi-info-circle text-secondary cursor-pointer"></i>
-              </Tooltip>
-            </div>
-          ) : (
-            hasVotingPermission && (
-              <div className="d-flex gap-2 align-items-center w-100 justify-content-end">
-                <InsufficientBannerModal
-                  ActionButton={() => (
-                    <button
-                      className="btn btn-success w-100 text-center"
-                      disabled={isTxnCreated}
-                    >
-                      Approve
-                    </button>
-                  )}
-                  checkForDeposit={false}
-                  treasuryDaoID={treasuryDaoID}
-                  disabled={isTxnCreated}
-                  callbackAction={(e) => {
-                    e.stopPropagation();
-                    setVote(actions.APPROVE);
-                    if (isInsufficientBalance) {
-                      setShowWarning(true);
-                    } else {
-                      setConfirmModal(true);
-                    }
-                  }}
-                  className={isProposalDetailsPage ? "w-100" : ""}
-                />
-                <InsufficientBannerModal
-                  ActionButton={() => (
-                    <button
-                      className="btn btn-danger w-100 text-center"
-                      disabled={isTxnCreated}
-                    >
-                      Reject
-                    </button>
-                  )}
-                  disabled={isTxnCreated}
-                  checkForDeposit={false}
-                  treasuryDaoID={treasuryDaoID}
-                  callbackAction={(e) => {
-                    e.stopPropagation();
-                    setVote(actions.REJECT);
-                    setConfirmModal(true);
-                  }}
-                  className={isProposalDetailsPage ? "w-100" : ""}
-                />
+                {/* Show info text above buttons only on proposal details page */}
+                {isProposalDetailsPage && isVotingDisabled && renderInfoText()}
+
+                <div className={containerClass}>
+                  {!isProposalDetailsPage &&
+                    isVotingDisabled &&
+                    renderInfoText()}
+
+                  {/* Show voting buttons only if: 
+                      - Has voting permission AND
+                      - (Either on proposal details page OR voting is not disabled) */}
+                  {hasVotingPermission &&
+                    (isProposalDetailsPage || !isVotingDisabled) && (
+                      <div className="d-flex gap-2 align-items-center w-100 justify-content-end">
+                        <InsufficientBannerModal
+                          ActionButton={() => (
+                            <button
+                              className="btn btn-success w-100 text-center"
+                              disabled={isTxnCreated || isVotingDisabled}
+                            >
+                              Approve
+                            </button>
+                          )}
+                          checkForDeposit={false}
+                          treasuryDaoID={treasuryDaoID}
+                          disabled={isTxnCreated || isVotingDisabled}
+                          callbackAction={(e) => {
+                            e.stopPropagation();
+                            setVote(actions.APPROVE);
+                            if (isInsufficientBalance) {
+                              setShowWarning(true);
+                            } else {
+                              setConfirmModal(true);
+                            }
+                          }}
+                          className={isProposalDetailsPage ? "w-100" : ""}
+                        />
+                        <InsufficientBannerModal
+                          ActionButton={() => (
+                            <button
+                              className="btn btn-danger w-100 text-center"
+                              disabled={isTxnCreated || isVotingDisabled}
+                            >
+                              Reject
+                            </button>
+                          )}
+                          disabled={isTxnCreated || isVotingDisabled}
+                          checkForDeposit={false}
+                          treasuryDaoID={treasuryDaoID}
+                          callbackAction={(e) => {
+                            e.stopPropagation();
+                            setVote(actions.REJECT);
+                            setConfirmModal(true);
+                          }}
+                          className={isProposalDetailsPage ? "w-100" : ""}
+                        />
+                      </div>
+                    )}
+                  {/* currently showing delete btn only for proposal creator */}
+                  {hasDeletePermission && proposalCreator === accountId ? (
+                    <div style={{ width: "fit-content" }}>
+                      <InsufficientBannerModal
+                        ActionButton={() => (
+                          <div data-testid="delete-btn" disabled={isTxnCreated}>
+                            <i
+                              className="bi bi-trash text-red mb-0"
+                              style={{ fontSize: "1.3rem" }}
+                            ></i>
+                          </div>
+                        )}
+                        checkForDeposit={false}
+                        treasuryDaoID={treasuryDaoID}
+                        disabled={isTxnCreated}
+                        callbackAction={(e) => {
+                          e.stopPropagation();
+                          setVote(actions.REMOVE);
+                          setConfirmModal(true);
+                        }}
+                        className={isProposalDetailsPage ? "w-full" : ""}
+                      />
+                    </div>
+                  ) : hasOneDeleteIcon ? (
+                    <div style={{ minWidth: 20 }}></div>
+                  ) : null}
+                </div>
               </div>
-            )
-          )}
-          {/* currently showing delete btn only for proposal creator */}
-          {hasDeletePermission && proposalCreator === accountId ? (
-            <div style={{ width: "fit-content" }}>
-              <InsufficientBannerModal
-                ActionButton={() => (
-                  <div data-testid="delete-btn" disabled={isTxnCreated}>
-                    <i
-                      className="bi bi-trash text-red mb-0"
-                      style={{ fontSize: "1.3rem" }}
-                    ></i>
-                  </div>
-                )}
-                checkForDeposit={false}
-                treasuryDaoID={treasuryDaoID}
-                disabled={isTxnCreated}
-                callbackAction={(e) => {
-                  e.stopPropagation();
-                  setVote(actions.REMOVE);
-                  setConfirmModal(true);
-                }}
-                className={isProposalDetailsPage ? "w-full" : ""}
-              />
-            </div>
-          ) : hasOneDeleteIcon ? (
-            <div style={{ minWidth: 20 }}></div>
-          ) : null}
+            );
+          })()}
         </div>
       )}
     </div>

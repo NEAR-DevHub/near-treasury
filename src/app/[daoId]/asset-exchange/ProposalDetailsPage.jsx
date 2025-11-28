@@ -322,7 +322,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
           <div className="card card-body d-flex flex-column gap-2">
             <div className="d-flex flex-column gap-2">
               <label className="proposal-label">Source Wallet</label>
-              <div className="text-secondary">{proposalData?.sourceWallet}</div>
+              <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
             </div>
             <div className="d-flex flex-column gap-2 mt-1">
               <label className="border-top proposal-label">Send</label>
