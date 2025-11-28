@@ -40,14 +40,14 @@ const TokenAmount = ({
 }) => {
   // Handle NEAR Intents token format (e.g., "nep141:btc.omft.near")
   const cleanAddress = useMemo(() => {
-    if (address.startsWith("nep141:")) {
+    if (address?.startsWith("nep141:")) {
       return address.replace("nep141:", "");
     }
     return address;
   }, [address]);
 
   const isNEAR =
-    !symbol && (cleanAddress === "" || cleanAddress.toLowerCase() === "near");
+    !symbol && (cleanAddress === "" || cleanAddress?.toLowerCase() === "near");
   const isWrapNear = !symbol && cleanAddress === "wrap.near";
 
   const [ftMetadata, setFtMetadata] = useState(null);

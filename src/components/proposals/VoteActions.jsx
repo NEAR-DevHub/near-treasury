@@ -54,7 +54,7 @@ const VoteActions = ({
   const userVote = votes[accountId];
 
   const isNEAR =
-    currentContract === "" || currentContract.toLowerCase() === "near";
+    currentContract === "" || currentContract?.toLowerCase() === "near";
 
   const actions = {
     APPROVE: "VoteApprove",
@@ -121,7 +121,7 @@ const VoteActions = ({
   useEffect(() => {
     if (avoidCheckForBalance || !userBalance) return;
     setInsufficientBal(
-      Big(userBalance ?? "0").lt(Big(currentAmount).toFixed())
+      Big(userBalance ?? "0").lt(Big(currentAmount ?? "0").toFixed())
     );
   }, [
     userBalance,
