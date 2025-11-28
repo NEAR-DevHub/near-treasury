@@ -137,6 +137,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
           treasuryWallet,
           status,
           proposal: item,
+          isWithdrawRequest,
         });
       } catch (error) {
         console.error("Error processing proposal data:", error);
@@ -182,6 +183,9 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
             context="stake"
             avoidCheckForBalance={true}
             isProposalDetailsPage={true}
+            treasuryWallet={proposalData?.treasuryWallet}
+            isWithdrawRequest={proposalData?.isWithdrawRequest}
+            validatorAccount={proposalData?.validatorAccount}
           />
         ) : null
       }

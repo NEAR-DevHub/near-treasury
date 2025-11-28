@@ -561,7 +561,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
         <div className="card card-body d-flex flex-column gap-2">
           <div className="d-flex flex-column gap-2 mt-1">
             <label className="proposal-label">Source Wallet</label>
-            <div>{proposalData?.sourceWallet}</div>
+            <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
           </div>
           <h6 className="mb-0 flex-1 border-top pt-3">{proposalData?.title}</h6>
           {proposalData?.summary && (
