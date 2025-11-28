@@ -85,7 +85,7 @@ test.describe("Settings Feed Filters", () => {
     await page
       .getByRole("textbox", { name: "Search by account address" })
       .fill("megha");
-    await page.getByText("Megha", { exact: true }).first().click();
+    await page.getByText("@megha19.near", { exact: true }).first().click();
 
     await page.waitForTimeout(3000);
 
@@ -108,7 +108,7 @@ test.describe("Settings Feed Filters", () => {
     await page
       .getByRole("textbox", { name: "Search by account address" })
       .fill("fro");
-    await page.getByText("frol", { exact: true }).first().click();
+    await page.getByText("@frol.near", { exact: true }).first().click();
     await page.waitForTimeout(1000);
 
     const approversColumnIndex = await getColumnIndex(page, "Approver");
@@ -122,7 +122,7 @@ test.describe("Settings Feed Filters", () => {
     await checkColumnImages(page, approversColumnIndex, "frol.near", false);
   });
 
-// TODO: to be fixed by Megha, need to update indexer to show correct result
+  // TODO: to be fixed by Megha, need to update indexer to show correct result
   // test("should filter by Members Permissions proposal type", async ({
   //   page,
   // }) => {

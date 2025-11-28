@@ -153,14 +153,10 @@ const CreateWithdrawRequest = ({ onCloseCanvas = () => {} }) => {
       });
     });
 
-    console.log("Withdraw request calls:", calls);
-
     try {
       const result = await signAndSendTransactions({
         transactions: calls,
       });
-
-      console.log("Withdraw request result:", result);
 
       if (result && result.length > 0 && result[0]?.status?.SuccessValue) {
         // Toast context will automatically fetch proposal ID and invalidate cache
