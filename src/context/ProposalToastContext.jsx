@@ -14,7 +14,7 @@ const contextToCategoryMap = {
   payment: "payments",
   stake: "stake-delegation",
   exchange: "asset-exchange",
-  function: "function-call",
+  "function-call": "function-call",
   settings: "settings",
   request: "payments", // default
 };

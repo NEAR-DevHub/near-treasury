@@ -110,13 +110,15 @@ export const DaoProvider = ({ children }) => {
     });
   }
 
-  function getLockupBalances(lockupContract) {
+  function getLockupBalances(lockupAccountId) {
+    const contract = lockupAccountId || lockupContract;
     Promise.all([
-      getNearStakedBalances(lockupContract),
-      getNearBalances(lockupContract),
-      Near.view(lockupContract, "get_locked_amount"),
-      Near.view(lockupContract, "get_staking_pool_account_id"),
+      getNearStakedBalances(contract),
+      getNearBalances(contract),
+      Near.view(contract, "get_locked_amount"),
+      Near.view(contract, "get_staking_pool_account_id"),
     ]).then(([stakedPools, lockupBalances, contractLocked, stakingPoolId]) => {
+      console.log("stakingPoolId", stakingPoolId);
       setLockupStakedPoolId(stakingPoolId);
       setLockupStakedPools(stakedPools);
       const contractLockedParsed = formatNearAmount(contractLocked);
@@ -167,7 +169,7 @@ export const DaoProvider = ({ children }) => {
         lockedParsed: formatNearAmount(locked),
       });
     });
-    Near.viewState(lockupContract).then((res) => {
+    Near.viewState(contract).then((res) => {
       setLockupContractState(atob(res?.[0]?.value));
     });
   }

@@ -375,8 +375,8 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
 
         {/* Amount Input */}
         <div className="d-flex flex-column">
-          <div className="d-flex justify-content-between mb-1">
-            <label className="form-label fw-medium mb-1">
+          <div className="d-flex justify-content-between">
+            <label htmlFor="stake-amount" className="form-label fw-medium mb-1">
               Amount
               {errors.amount && <span className="text-danger ms-1">*</span>}
             </label>
@@ -393,6 +393,7 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
           <input
             type="number"
             step="any"
+            id="stake-amount"
             className="form-control"
             placeholder="Enter amount in NEAR"
             disabled={isTxnCreated}
@@ -421,8 +422,11 @@ const CreateStakeRequest = ({ onCloseCanvas = () => {} }) => {
 
         {/* Notes */}
         <div className="d-flex flex-column">
-          <label className="form-label fw-medium mb-1">Notes</label>
+          <label htmlFor="stake-notes" className="form-label fw-medium mb-1">
+            Notes
+          </label>
           <textarea
+            id="stake-notes"
             className="form-control"
             rows="3"
             placeholder="Enter your notes here..."

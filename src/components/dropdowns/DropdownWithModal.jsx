@@ -225,6 +225,9 @@ const DropdownWithModal = ({
                     className="dropdown-item cursor-pointer p-2 rounded"
                     onClick={() => handleSelect(option)}
                     style={{ cursor: "pointer" }}
+                    data-testid={
+                      option?.pool_id ? "validator-option" : undefined
+                    }
                   >
                     {renderOption
                       ? renderOption(option)

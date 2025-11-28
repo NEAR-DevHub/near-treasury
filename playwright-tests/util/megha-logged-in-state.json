@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "selected-wallet",
+          "value": "mynearwallet"
+        },
+        {
+          "name": "mynearwallet:signedAccountId",
+          "value": "megha19.near"
+        }
+      ]
+    }
+  ]
+}
