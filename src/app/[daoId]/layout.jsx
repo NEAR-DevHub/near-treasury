@@ -3,6 +3,8 @@
 import { Suspense } from "react";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { ProposalToastProvider } from "@/context/ProposalToastContext";
+import DaoTracker from "@/components/DaoTracker";
+import AnalyticsPageTracker from "@/components/AnalyticsPageTracker";
 
 function TransactionHandler() {
   useTransactionHandler();
@@ -14,7 +16,9 @@ export default function DaoLayout({ children }) {
     <ProposalToastProvider>
       <Suspense fallback={null}>
         <TransactionHandler />
+        <AnalyticsPageTracker />
       </Suspense>
+      <DaoTracker />
       {children}
     </ProposalToastProvider>
   );
