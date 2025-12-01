@@ -1,0 +1,71 @@
+name: Playwright - Sandbox
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        default: "20"
+        type: string
+      browser:
+        description: "Browser to test"
+        required: false
+        default: "chromium"
+        type: string
+
+jobs:
+  test-sandbox:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: deps-${{ hashFiles('package-lock.json') }}
+
+      - name: Restore build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .next
+          key: build-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', 'package-lock.json', 'next.config.mjs') }}
+
+      - name: Run Sandbox tests
+        run: npm run test:e2e -- --project=${{ inputs.browser }} playwright-tests/tests/sandbox/
+        env:
+          CI: true
+          HOME: /root
+          NEXT_PUBLIC_FASTNEAR_API_KEY: ${{ secrets.FASTNEAR_API_KEY }}
+
+      - name: Sanitize branch name
+        if: failure()
+        run: |
+          # Use head_ref for PRs, ref_name for direct pushes
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+          echo "SAFE_BRANCH_NAME=$SAFE_BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Upload test artifacts on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: sandbox-report-${{ inputs.browser }}-${{ env.SAFE_BRANCH_NAME }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 1
+          overwrite: true

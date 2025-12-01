@@ -184,8 +184,13 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
 
   test.afterAll(async () => {
     if (sandbox) {
-      await sandbox.stop();
-      console.log("\n✓ Sandbox stopped");
+      console.log("Stopping sandbox...");
+      try {
+        await sandbox.stop();
+        console.log("\n✓ Sandbox stopped");
+      } catch (error) {
+        console.error("Error stopping sandbox:", error);
+      }
     }
   });
 
@@ -493,8 +498,8 @@ test.describe("Vote on Payment Request with Insufficient Balance - Table View", 
     await page.goto(`http://localhost:3000/${daoAccountId}/payments`);
     await page.waitForTimeout(2000);
 
-    // Click on the second row (reject test proposal) to open overlay
-    const secondRow = page.locator("tbody tr").nth(1);
+    // Click on the first row (reject test proposal - most recent, sorted desc) to open overlay
+    const secondRow = page.locator("tbody tr").first();
     await expect(secondRow).toBeVisible({ timeout: 10000 });
     await secondRow.click();
     await page.waitForTimeout(1000);

@@ -38,9 +38,9 @@ test.describe("Asset Exchange Form Validation", () => {
     await createButton.click();
     await page.waitForTimeout(1500);
 
-    // Verify form modal opened
+    // Verify form modal opened - target the specific "Create" heading in the form
     await expect(
-      page.getByRole("heading", { name: /Asset Exchange Request/i })
+      page.getByRole("heading", { name: "Create Asset Exchange Request" })
     ).toBeVisible({ timeout: 10000 });
   });
 

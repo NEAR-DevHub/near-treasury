@@ -122,6 +122,7 @@ const ValidatorDropdown = ({
       isLoading={isLoading}
       emptyMessage="No validators available"
       modalSize="lg"
+      dataTestId="validator-dropdown"
     />
   );
 };

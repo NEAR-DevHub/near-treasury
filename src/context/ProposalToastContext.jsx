@@ -9,11 +9,12 @@ import { REFRESH_DELAY } from "@/constants/ui";
 const ProposalToastContext = createContext(null);
 
 // Map context to category name for query invalidation
+// Context values: "payment", "stake", "exchange", "function", "settings"
 const contextToCategoryMap = {
   payment: "payments",
   stake: "stake-delegation",
   exchange: "asset-exchange",
-  function: "function-call",
+  "function-call": "function-call",
   settings: "settings",
   request: "payments", // default
 };

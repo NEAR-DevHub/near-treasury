@@ -17,6 +17,7 @@ import { REFRESH_DELAY } from "@/constants/ui";
  * @param {string} options.sortDirection - Sort direction ("asc" or "desc")
  * @param {Object} options.filters - Filter object
  * @param {string} options.search - Search query
+ * @param {string} options.searchNot - Search exclusion query
  * @param {Object} options.amountValues - Amount filter values
  * @param {Array<string>} options.proposalType - Proposal types to filter
  * @param {boolean} options.enabled - Whether the query should run
@@ -31,6 +32,7 @@ export function useProposals({
   sortDirection = "desc",
   filters = {},
   search = "",
+  searchNot = "",
   amountValues = {},
   proposalType = [],
   enabled = true,
@@ -41,6 +43,7 @@ export function useProposals({
 
   // Debounced values using custom hook
   const debouncedSearch = useDebounce(search, 500);
+  const debouncedSearchNot = useDebounce(searchNot, 500);
   const debouncedAmountValues = useDebounce(amountValues, 1000);
 
   // Normalize filters to only include filters with actual values
@@ -83,6 +86,7 @@ export function useProposals({
     sortDirection,
     normalizedFilters,
     debouncedSearch?.trim() || "",
+    debouncedSearchNot?.trim() || "",
     normalizedAmountValues,
     accountId,
   ];
@@ -99,6 +103,7 @@ export function useProposals({
         sortDirection,
         filters,
         search: debouncedSearch,
+        searchNot: debouncedSearchNot,
         amountValues: debouncedAmountValues,
         proposalType,
         accountId,

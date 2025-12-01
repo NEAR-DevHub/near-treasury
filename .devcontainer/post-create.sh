@@ -9,3 +9,7 @@ npx playwright install
 
 # Install Claude Code
 npm install -g @anthropic-ai/claude-code
+
+# Install GitHub Copilot CLI
+
+npm install -g @github/copilot

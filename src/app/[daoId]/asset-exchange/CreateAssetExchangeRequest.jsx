@@ -82,7 +82,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
     reset,
     formState: { errors, isDirty },
   } = useForm({
-    mode: "onSubmit",
+    mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
       sendToken: null,
@@ -139,7 +139,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       }
     }
     const sum = nets.reduce((acc, n) => acc + (Number(n.amount || 0) || 0), 0);
-    return sum > 0 ? sum : null;
+    return sum > 0 ? sum : 0;
   }
 
   // Build aggregated token list from defuse + metadata; merge balances from intents
@@ -193,6 +193,11 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
   }
 
   async function fetchProposalQuote() {
+    // Check for validation errors
+    if (errors.slippagePct || errors.sendAmount) {
+      return;
+    }
+
     if (
       !sendToken ||
       !receiveToken ||
@@ -378,6 +383,13 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
       return;
     }
 
+    // Don't fetch if there are any form validation errors
+    if (errors.slippagePct || errors.sendAmount) {
+      setDryQuote(null);
+      setIsFetchingDryQuote(false);
+      return;
+    }
+
     if (
       !sendToken ||
       !sendNetwork ||
@@ -417,6 +429,8 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
     sendAmount,
     slippagePct,
     showPreview,
+    errors.slippagePct,
+    errors.sendAmount,
   ]);
 
   async function onSubmit() {
@@ -691,16 +705,26 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
             </div>
             <div className="text-end flex-2">
               {(() => {
-                const { ref, ...rest } = register("sendAmount");
+                const { ref, ...rest } = register("sendAmount", {
+                  required: "Amount is required",
+                  validate: {
+                    isNumber: (value) => {
+                      const num = parseFloat(value);
+                      return !isNaN(num) || "Please enter a valid amount";
+                    },
+                    isPositive: (value) => {
+                      const num = parseFloat(value);
+                      return num > 0 || "Amount must be greater than 0";
+                    },
+                  },
+                });
                 return (
                   <input
                     style={{ fontSize: 24 }}
                     type="number"
                     min="0"
                     step="any"
-                    className={`no-focus hide-bg form-control text-end border-0 p-0 fw-semibold  ${
-                      errors.sendAmount ? "is-invalid" : ""
-                    }`}
+                    className={`no-focus hide-bg form-control text-end border-0 p-0 fw-semibold`}
                     placeholder="00.00"
                     {...rest}
                     ref={(e) => {
@@ -832,42 +856,68 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
                 </div>
               )}
             </div>
-            {dryQuoteError ? (
-              <div className="text-danger flex-2 text-end">{dryQuoteError}</div>
-            ) : (
-              <div className="text-end flex-2">
-                <div className="fw-semibold border-0" style={{ fontSize: 24 }}>
-                  {dryQuote
-                    ? formatNumberWithCommas(dryQuote.receiveAmount)
-                    : "00.00"}
-                </div>
-                {dryQuote && (
-                  <div className="text-secondary" style={{ fontSize: 16 }}>
-                    ≈$
-                    {dryQuote
-                      ? formatNumberWithCommas(
-                          (dryQuote.receiveAmount || 0) *
-                            (receiveToken?.price || 0)
-                        )
-                      : "0.00"}
-                  </div>
-                )}
+            <div className="text-end flex-2">
+              <div className="fw-semibold border-0" style={{ fontSize: 24 }}>
+                {dryQuote
+                  ? formatNumberWithCommas(dryQuote.receiveAmount)
+                  : "00.00"}
               </div>
-            )}
+              {dryQuote && (
+                <div className="text-secondary" style={{ fontSize: 16 }}>
+                  ≈$
+                  {dryQuote
+                    ? formatNumberWithCommas(
+                        (dryQuote.receiveAmount || 0) *
+                          (receiveToken?.price || 0)
+                      )
+                    : "0.00"}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Rate line */}
-        <div className="mt-2 text-secondary text-end" style={{ fontSize: 14 }}>
-          {sendToken && receiveToken && dryQuote && (
-            <>
-              1 {sendToken.symbol} ($
-              {formatNumberWithCommas(sendToken?.price || 0)}) ≈{" "}
-              {formatNumberWithCommas(dryQuote?.rate || 0) || "-"}{" "}
-              {receiveToken.symbol}
-            </>
+        {sendToken && receiveToken && dryQuote && (
+          <div
+            className="mt-2 text-secondary text-end"
+            style={{ fontSize: 14 }}
+          >
+            1 {sendToken.symbol} ($
+            {formatNumberWithCommas(sendToken?.price || 0)}) ≈{" "}
+            {formatNumberWithCommas(dryQuote?.rate || 0) || "-"}{" "}
+            {receiveToken.symbol}
+          </div>
+        )}
+
+        {/* Error box for quote failures */}
+        {dryQuoteError && (
+          <div className="d-flex gap-3 align-items-center px-3 py-2 rounded-3 mt-3 error-box">
+            <i className="bi bi-exclamation-circle warning-icon h5 mb-0"></i>
+            <div className="text-red">
+              {dryQuoteError.toLowerCase().includes("failed") ||
+              dryQuoteError.toLowerCase().includes("unable to fetch")
+                ? "We couldn't find a swap for the selected tokens. Try a smaller amount or different token."
+                : dryQuoteError}
+            </div>
+          </div>
+        )}
+
+        {sendToken &&
+          sendNetwork &&
+          sendAmount &&
+          getTokenNetworkBalance(sendToken, sendNetwork) !== null &&
+          parseFloat(sendAmount) >
+            parseFloat(getTokenNetworkBalance(sendToken, sendNetwork)) && (
+            <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3 mt-3">
+              <i className="bi bi-exclamation-triangle h5"></i>
+              <div>
+                The treasury balance is insufficient to cover the exchange. You
+                can create the request, but it won't be approved until the
+                balance is topped up.
+              </div>
+            </div>
           )}
-        </div>
       </div>
 
       {/* Network selection modal (triggered after token selection) */}
@@ -951,11 +1001,35 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         <input
           type="number"
           step="0.1"
-          min="0"
-          className="form-control"
+          className={`form-control ${errors.slippagePct ? "is-invalid" : ""}`}
           defaultValue="1"
-          {...register("slippagePct")}
+          {...register("slippagePct", {
+            required: "Slippage tolerance is required",
+            min: {
+              value: 0.01,
+              message: "Minimum slippage is 0.01%",
+            },
+            max: {
+              value: 100,
+              message: "Maximum slippage is 100%",
+            },
+            validate: {
+              isNumber: (value) => {
+                const num = parseFloat(value);
+                return !isNaN(num) || "Please enter a valid number";
+              },
+              isPositive: (value) => {
+                const num = parseFloat(value);
+                return num > 0 || "Slippage must be greater than 0";
+              },
+            },
+          })}
         />
+        {errors.slippagePct && (
+          <div className="invalid-feedback d-block">
+            {errors.slippagePct.message}
+          </div>
+        )}
       </div>
 
       {/* Notes */}
@@ -964,21 +1038,6 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         <textarea className="form-control" rows={3} {...register("notes")} />
       </div>
 
-      {sendToken &&
-        sendNetwork &&
-        sendAmount &&
-        getTokenNetworkBalance(sendToken, sendNetwork) !== null &&
-        parseFloat(sendAmount) >
-          parseFloat(getTokenNetworkBalance(sendToken, sendNetwork)) && (
-          <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3">
-            <i className="bi bi-exclamation-triangle h5"></i>
-            <div>
-              The treasury balance is insufficient to cover the exchange. You
-              can create the request, but it won't be approved until the balance
-              is topped up.
-            </div>
-          </div>
-        )}
       <div className="d-flex mt-2 gap-3 justify-content-end">
         <button
           type="button"
@@ -992,7 +1051,17 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
           type="button"
           className="btn theme-btn"
           onClick={fetchProposalQuote}
-          disabled={isFetchingDryQuote || isFetchingProposalQuote}
+          disabled={
+            isFetchingDryQuote ||
+            isFetchingProposalQuote ||
+            !!errors.slippagePct ||
+            !!errors.sendAmount ||
+            !sendAmount ||
+            !sendToken ||
+            !sendNetwork ||
+            !receiveToken ||
+            !receiveNetwork
+          }
         >
           {isFetchingProposalQuote
             ? "Fetching Deposit Address..."

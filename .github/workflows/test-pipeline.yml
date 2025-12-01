@@ -1,0 +1,100 @@
+name: Test Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: "Browser to test"
+        required: false
+        default: "chromium"
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: test-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    name: Install Dependencies
+    uses: ./.github/workflows/install-dependencies.yml
+    with:
+      node-version: "20"
+
+  build-application:
+    name: Build Application
+    needs: install
+    uses: ./.github/workflows/build-application.yml
+    with:
+      node-version: "20"
+    secrets: inherit
+
+  playwright_components:
+    name: Components Tests
+    needs: [install]
+    uses: ./.github/workflows/playwright_components.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit
+
+  playwright_dashboard:
+    name: Dashboard Tests
+    needs: [install, build-application]
+    uses: ./.github/workflows/playwright_dashboard.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit
+
+  playwright_settings:
+    name: Settings Tests
+    needs: [install, build-application]
+    uses: ./.github/workflows/playwright_settings.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit
+
+  playwright_payments:
+    name: Payments Tests
+    needs: [install, build-application]
+    uses: ./.github/workflows/playwright_payments.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit
+
+  playwright_intents:
+    name: Intents Tests
+    needs: [install]
+    uses: ./.github/workflows/playwright_intents.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit
+
+  playwright_stake_delegation:
+    name: Stake Delegation Tests
+    needs: [install, build-application]
+    uses: ./.github/workflows/playwright_stake_delegation.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit
+
+  playwright_sandbox:
+    name: Sandbox Tests
+    needs: [install, build-application]
+    uses: ./.github/workflows/playwright_sandbox.yml
+    with:
+      node-version: "20"
+      browser: ${{ github.event.inputs.browser || 'chromium' }}
+    secrets: inherit

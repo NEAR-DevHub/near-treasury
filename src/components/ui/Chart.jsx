@@ -52,6 +52,7 @@ const Chart = ({
   const [selectedPeriod, setSelectedPeriod] = useState("1Y");
   const chartRef = useRef(null);
   const [chartKey, setChartKey] = useState(0);
+  const [selectedFromOther, setSelectedFromOther] = useState(null);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -146,8 +147,16 @@ const Chart = ({
   }, [allPeriodData, selectedPeriod, selectedToken, customTokens]);
 
   // Handle token change
-  const handleTokenChange = (token) => {
+  const handleTokenChange = (token, isFromOther = false) => {
     setSelectedToken(token);
+    if (isFromOther) {
+      // Find the token object from the "other" tokens
+      const tokenObj = tokens.find((t) => t.contract === token);
+      setSelectedFromOther(tokenObj);
+    } else {
+      // Selecting one of the main 5 tokens, clear the "other" selection
+      setSelectedFromOther(null);
+    }
     if (onTokenChange) {
       onTokenChange(token);
     }
@@ -161,10 +170,13 @@ const Chart = ({
     }
   };
 
-  // Get CSS variable helper
   const getCSSVariable = (variable) => {
-    if (typeof window !== "undefined") {
-      return getComputedStyle(document.documentElement)
+    if (
+      typeof window !== "undefined" &&
+      typeof window.getComputedStyle === "function"
+    ) {
+      return window
+        .getComputedStyle(document.documentElement)
         .getPropertyValue(variable)
         .trim();
     }
@@ -214,18 +226,10 @@ const Chart = ({
         },
         tooltip: {
           enabled: true,
-          backgroundColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--bg-page-color")
-            .trim(),
-          titleColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--text-color")
-            .trim(),
-          bodyColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--text-color")
-            .trim(),
-          borderColor: getComputedStyle(document.documentElement)
-            .getPropertyValue("--border-color")
-            .trim(),
+          backgroundColor: getCSSVariable("--bg-page-color"),
+          titleColor: getCSSVariable("--text-color"),
+          bodyColor: getCSSVariable("--text-color"),
+          borderColor: getCSSVariable("--border-color"),
           borderWidth: 1,
           displayColors: false,
           callbacks: {
@@ -337,6 +341,7 @@ const Chart = ({
 
       {tokenSelector && tokens && (
         <div className="d-flex gap-4 flex-wrap align-items-center">
+          {/* Show first 5 tokens */}
           {tokens.slice(0, 5).map((item, _index) => {
             const { contract, ft_meta } = item;
             const { symbol } = ft_meta;
@@ -351,7 +356,7 @@ const Chart = ({
                   className="form-check-input mt-0"
                   type="radio"
                   value={contract}
-                  onChange={() => handleTokenChange(contract)}
+                  onChange={() => handleTokenChange(contract, false)}
                   checked={contract === selectedToken}
                 />
                 <label
@@ -376,6 +381,91 @@ const Chart = ({
               </div>
             );
           })}
+
+          {/* Show selected token from "Other" if any */}
+          {selectedFromOther && (
+            <div
+              className="d-flex align-items-center"
+              key={`${accountId}-${selectedFromOther.contract}-selected`}
+            >
+              <input
+                id={`${accountId}-${selectedFromOther.contract}`}
+                className="form-check-input mt-0"
+                type="radio"
+                value={selectedFromOther.contract}
+                onChange={() =>
+                  handleTokenChange(selectedFromOther.contract, true)
+                }
+                checked={selectedFromOther.contract === selectedToken}
+              />
+              <label
+                htmlFor={`${accountId}-${selectedFromOther.contract}`}
+                role="button"
+                className="d-flex align-items-center gap-1"
+              >
+                <div className="radio-btn">
+                  <div
+                    className={
+                      selectedFromOther.contract === selectedToken
+                        ? "selected"
+                        : ""
+                    }
+                  />
+                </div>
+                <span
+                  style={{ maxWidth: 100 }}
+                  className={`text-truncate${
+                    selectedFromOther.contract === selectedToken
+                      ? " fw-bold"
+                      : ""
+                  }`}
+                >
+                  {selectedFromOther.ft_meta.symbol}
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* Show "Other" dropdown if there are more than 5 tokens */}
+          {tokens.length > 5 && (
+            <div className="btn-group">
+              <button
+                type="button"
+                className="btn dropdown-toggle bg-dropdown border-0"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <span className="text-truncate">Other</span>
+                <i className="bi bi-chevron-down ms-2"></i>
+              </button>
+              <ul
+                className="dropdown-menu"
+                style={{ maxHeight: "320px", overflowY: "auto" }}
+              >
+                {tokens.slice(5).map((item) => {
+                  const { contract, ft_meta } = item;
+                  const { symbol } = ft_meta;
+
+                  return (
+                    <li key={`${accountId}-${contract}-dropdown`}>
+                      <a
+                        className={`dropdown-item ${
+                          contract === selectedToken ? "active" : ""
+                        }`}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleTokenChange(contract, true);
+                        }}
+                      >
+                        {symbol}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
@@ -413,11 +503,7 @@ const Chart = ({
                   borderColor: getComputedStyle(document.documentElement)
                     .getPropertyValue("--text-color")
                     .trim(),
-                  pointBackgroundColor: getComputedStyle(
-                    document.documentElement
-                  )
-                    .getPropertyValue("--bg-page-color")
-                    .trim(),
+                  pointBackgroundColor: getCSSVariable("--bg-page-color"),
                   pointRadius: 0,
                   tension: 0.2,
                   borderWidth: 1.5,

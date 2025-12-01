@@ -197,20 +197,31 @@ export async function checkColumnAmounts(page, columnIndex, amount, operator) {
     const num = parseFloat(cellText.replace(/,/g, "")); // normalize
 
     if (!isNaN(num)) {
-      if (operator === ">") {
+      if (operator === ">=") {
         expect(num).toBeGreaterThanOrEqual(amount);
-      } else if (operator === "<") {
+      } else if (operator === "<=") {
         expect(num).toBeLessThanOrEqual(amount);
+      } else if (operator === ">") {
+        expect(num).toBeGreaterThan(amount);
+      } else if (operator === "<") {
+        expect(num).toBeLessThan(amount);
       } else if (operator === "=") {
         expect(num).toBe(amount);
       }
+    } else {
+      console.log(`  Row ${i}: "${cellText.trim()}" - not a number, skipping`);
     }
   }
 }
 
-// Helper function to add a specific filter
+function getFilterButton(page, filterName) {
+  return page
+    .locator(`button:not(.dropdown-item):has-text("${filterName}")`)
+    .first();
+}
+
 export async function addFilter(page, options) {
-  const { filterName, isMultiple = true } = options;
+  const { filterName } = options;
 
   await openFiltersPanel(page);
   await page.locator("text=Add Filter").click();
@@ -224,11 +235,15 @@ export async function addFilter(page, options) {
   // Now the filter appears in the active filters bar as a button
   // We need to find and click that button to expand its options
   // The button text will match the filterName (e.g., "Created by", "Recipient", etc.)
-  const activeFilterButton = page
-    .locator(`button:has-text("${filterName}")`)
-    .first();
+  const activeFilterButton = getFilterButton(page, filterName);
   await expect(activeFilterButton).toBeVisible({ timeout: 5000 });
+}
 
+// Helper function to add a specific filter
+export async function addFilterAndOpenPopup(page, options) {
+  await addFilter(page, options);
+
+  const activeFilterButton = getFilterButton(page, options.filterName);
   // Click the active filter button to expand its dropdown
   await activeFilterButton.click();
   await page.waitForTimeout(1000);

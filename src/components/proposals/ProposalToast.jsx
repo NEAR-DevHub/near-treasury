@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useDao } from "@/context/DaoContext";
 
 const ProposalToast = ({
   toastState,
   onClose,
-  context = "request", // payment, stake, asset-exchange, function-call, etc.
+  context, // payment, stake, asset-exchange, function-call, etc.
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { daoId } = useDao();
 
   if (!toastState?.show || !toastState?.status) return null;
 
@@ -19,8 +21,8 @@ const ProposalToast = ({
     const contextLabels = {
       payment: "payment request",
       stake: "request",
-      "asset-exchange": "asset exchange request",
-      "function-call": "function call request",
+      exchange: "asset exchange request",
+      function: "function call request",
       settings: "proposal",
     };
 
@@ -103,10 +105,28 @@ const ProposalToast = ({
     );
   };
 
+  const getPagePath = () => {
+    const contextToPageMap = {
+      payment: "payments",
+      stake: "stake-delegation",
+      exchange: "asset-exchange",
+      function: "function-call",
+      settings: "settings/feed",
+    };
+
+    return contextToPageMap[context] || "payments";
+  };
+
   const handleViewClick = () => {
-    const params = new URLSearchParams(searchParams);
-    params.set("id", proposalId);
-    router.push(`?${params.toString()}`);
+    const pagePath = getPagePath();
+    const newUrl = `/${daoId}/${pagePath}?id=${proposalId}`;
+    router.push(newUrl);
+  };
+
+  const handleViewHistoryClick = () => {
+    const pagePath = getPagePath();
+    const newUrl = `/${daoId}/${pagePath}?id=${proposalId}&tab=history`;
+    router.push(newUrl);
   };
 
   const getIcon = () => {
@@ -157,7 +177,7 @@ const ProposalToast = ({
               {showViewHistoryLink() && (
                 <a
                   className="text-underline cursor-pointer"
-                  onClick={handleViewClick}
+                  onClick={handleViewHistoryClick}
                 >
                   View in History
                 </a>
