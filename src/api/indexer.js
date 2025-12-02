@@ -189,27 +189,43 @@ export function generateFilteredProposalsQuery(
               break;
 
             case "votes":
-              if (values[0] === "Approved") {
-                queryParams.push(`voter_votes=${accountId}:approved`);
-              } else if (values[0] === "Rejected") {
-                queryParams.push(`voter_votes=${accountId}:rejected`);
-              } else if (
-                values[0] === "Awaiting Decision" ||
-                values[0] === "Not Voted"
-              ) {
-                const existingApproversNotIndex = queryParams.findIndex(
-                  (param) => param.startsWith("approvers_not=")
-                );
-                if (existingApproversNotIndex !== -1) {
-                  const existingParam = queryParams[existingApproversNotIndex];
-                  const existingValues = existingParam.split("=")[1].split(",");
-                  const allValues = [
-                    ...new Set([...existingValues, accountId]),
-                  ];
-                  queryParams[existingApproversNotIndex] =
-                    `approvers_not=${allValues.join(",")}`;
-                } else {
-                  queryParams.push(`approvers_not=${accountId}`);
+              if (include) {
+                if (values[0] === "Approved") {
+                  queryParams.push(`voter_votes=${accountId}:approved`);
+                } else if (values[0] === "Rejected") {
+                  queryParams.push(`voter_votes=${accountId}:rejected`);
+                } else if (
+                  values[0] === "Awaiting Decision" ||
+                  values[0] === "Not Voted"
+                ) {
+                  const existingApproversNotIndex = queryParams.findIndex(
+                    (param) => param.startsWith("approvers_not=")
+                  );
+                  if (existingApproversNotIndex !== -1) {
+                    const existingParam =
+                      queryParams[existingApproversNotIndex];
+                    const existingValues = existingParam
+                      .split("=")[1]
+                      .split(",");
+                    const allValues = [
+                      ...new Set([...existingValues, accountId]),
+                    ];
+                    queryParams[existingApproversNotIndex] =
+                      `approvers_not=${allValues.join(",")}`;
+                  } else {
+                    queryParams.push(`approvers_not=${accountId}`);
+                  }
+                }
+              } else {
+                if (values[0] === "Approved") {
+                  queryParams.push(`voter_votes=${accountId}:rejected`);
+                } else if (values[0] === "Rejected") {
+                  queryParams.push(`voter_votes=${accountId}:approved`);
+                } else if (
+                  values[0] === "Awaiting Decision" ||
+                  values[0] === "Not Voted"
+                ) {
+                  queryParams.push(`approvers=${accountId}`);
                 }
               }
               break;
