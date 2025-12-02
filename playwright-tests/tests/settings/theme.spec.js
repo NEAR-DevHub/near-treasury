@@ -125,7 +125,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
               default_vote_policy: {
                 weight_kind: "RoleWeight",
                 quorum: "0",
-                threshold: [1, 2],
+                threshold: [1, 10],
               },
               proposal_bond: "0",
               proposal_period: "604800000000000",
@@ -280,17 +280,24 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
       );
     });
 
-    test("should create ChangeConfig proposal after successful logo upload", async ({
+    test("should update DAO theme (logo and color) via proposal workflow", async ({
       page,
     }) => {
-      test.setTimeout(120000);
+      test.setTimeout(180000);
       await expectImageUploadLabelVisible(page);
+
+      // Upload Logo
       const logoInput = page.locator("input[type=file]");
+      await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
+
+      // Change Color
+      const newColor = "#000000";
+      await page.getByTestId("color-text-input").fill(newColor);
+
+      // Submit Request
       const submitBtn = page.getByRole("button", {
         name: "Submit Request",
       });
-
-      await logoInput.setInputFiles(path.join(ASSETS_PATH, "valid.jpg"));
       await submitBtn.click();
 
       await expect(
@@ -301,69 +308,38 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         page.getByText("Proposal has been successfully created")
       ).toBeVisible({ timeout: 20000 });
 
-      const lastProposalId = await sandbox.viewFunction(
-        daoAccountId,
-        "get_last_proposal_id",
-        {}
-      );
+      // Go to the proposal page
+      const viewRequestLink = page.getByText("View Request");
+      await expect(viewRequestLink).toBeVisible();
+      await viewRequestLink.click();
 
-      expect(lastProposalId).toBeGreaterThan(-1);
+      await page.waitForTimeout(2500); // Wait slightly longer than the 2s cache invalidation delay
 
-      const proposal = await sandbox.viewFunction(
-        daoAccountId,
-        "get_proposal",
-        {
-          id: lastProposalId - 1,
-        }
-      );
+      // Approve proposal
+      const approveButton = page.getByRole("button", { name: "Approve" });
+      await expect(approveButton).toBeVisible();
+      await approveButton.click();
 
-      // Verify it's a ChangeConfig proposal
-      expect(proposal.kind.ChangeConfig).toBeDefined();
-
-      const configMetadata = JSON.parse(
-        Buffer.from(
-          proposal.kind.ChangeConfig.config.metadata,
-          "base64"
-        ).toString()
-      );
-      expect(configMetadata.flagLogo).toBe(EXPECTED_IMAGE_URL);
-    });
-
-    test("should be able to change color", async ({ page }) => {
-      test.setTimeout(120000);
-      const newColor = "#000000";
-      await page.getByTestId("color-text-input").fill(newColor);
-      await page.getByRole("button", { name: "Submit Request" }).click();
-      await expect(
-        page.getByText("Awaiting transaction confirmation...")
-      ).toBeVisible();
+      // Handle confirmation modal
+      const confirmationButton = page.getByRole("button", { name: "Confirm" });
+      await expect(confirmationButton).toBeVisible();
+      await confirmationButton.click();
 
       await expect(
-        page.getByText("Proposal has been successfully created")
-      ).toBeVisible({ timeout: 20000 });
+        page.getByText("The proposal has been successfully approved.")
+      ).toBeVisible({ timeout: 30000 });
 
-      const lastProposalId = await sandbox.viewFunction(
-        daoAccountId,
-        "get_last_proposal_id",
-        {}
-      );
+      // Navigate back to Theme settings to verify changes
+      await navigateToThemePage({ page, daoId: daoAccountId });
 
-      expect(lastProposalId).toBeGreaterThan(-1);
-      const proposal = await sandbox.viewFunction(
-        daoAccountId,
-        "get_proposal",
-        {
-          id: lastProposalId - 1,
-        }
+      // Verify changes in UI
+      await expect(page.locator("img[alt='DAO Logo']")).toHaveAttribute(
+        "src",
+        EXPECTED_IMAGE_URL
       );
-      expect(proposal.kind.ChangeConfig).toBeDefined();
-      const configMetadata = JSON.parse(
-        Buffer.from(
-          proposal.kind.ChangeConfig.config.metadata,
-          "base64"
-        ).toString()
+      await expect(page.getByTestId("color-picker-input")).toHaveValue(
+        newColor
       );
-      expect(configMetadata.primaryColor).toBe(newColor);
     });
 
     test("should toggle action buttons based on form changes", async ({
