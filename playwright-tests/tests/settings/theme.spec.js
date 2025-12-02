@@ -1,8 +1,11 @@
 import path from "path";
 import { expect } from "@playwright/test";
-import { NearSandbox, parseNEAR } from "../../util/sandbox.js";
+import {
+  NearSandbox,
+  parseNEAR,
+  setupTestEnvironment,
+} from "../../util/sandbox.js";
 import { test } from "../../util/test.js";
-import { setupTestEnvironment } from "../stake-delegation/test-helpers.js";
 
 const DAO_ID = "devdao.sputnik-dao.near";
 const ASSETS_PATH = path.join(
