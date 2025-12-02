@@ -151,9 +151,11 @@ export async function setupTestEnvironment({
   sandbox,
   creatorAccountId,
 }) {
-  // Inject test wallet for automatic transaction signing
-  await injectTestWallet(page, sandbox, creatorAccountId);
-  console.log(`✓ Injected test wallet for: ${creatorAccountId}`);
+  if (creatorAccountId) {
+    // Inject test wallet for automatic transaction signing
+    await injectTestWallet(page, sandbox, creatorAccountId);
+    console.log(`✓ Injected test wallet for: ${creatorAccountId}`);
+  }
 
   // Get sandbox RPC URL
   const sandboxRpcUrl = sandbox.getRpcUrl();

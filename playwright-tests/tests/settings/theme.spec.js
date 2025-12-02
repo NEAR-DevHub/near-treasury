@@ -153,6 +153,7 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
   test.describe("Theme & Logo Permissions", () => {
     test("should disable config for unauthorized user", async ({ page }) => {
       test.setTimeout(120000);
+      await setupTestEnvironment({ page, sandbox });
       await navigateToThemePage({ page, daoId: daoAccountId });
 
       const colorInput = page.getByTestId("color-picker-input");
@@ -160,6 +161,14 @@ test.describe("Theme & Logo image uploads for logged-in user in sandbox", () => 
         name: "Submit Request",
       });
 
+      const logoImg = page.locator("img[alt='DAO Logo']");
+
+      await expect(logoImg).toBeVisible();
+      await expect(logoImg).toHaveAttribute(
+        "src",
+        "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20"
+      );
+      await expect(colorInput).toHaveValue("#01bf7a");
       await expect(colorInput).toBeDisabled();
       await expect(submitButton).not.toBeVisible();
     });

@@ -47,19 +47,17 @@ const Theme = () => {
   const hasCreatePermission = hasPermission?.("config", "AddProposal");
 
   useEffect(() => {
-    if (config) {
-      const metadata = config.metadata;
-      const defaultImage =
-        metadata?.flagLogo ||
-        "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
-      const defaultColor = metadata?.primaryColor || "#01BF7A";
+    const metadata = config?.metadata;
+    const defaultImage =
+      metadata?.flagLogo ||
+      "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
+    const defaultColor = metadata?.primaryColor || "#01BF7A";
 
-      reset({
-        image: defaultImage,
-        color: defaultColor,
-      });
-      setLoadingConfig(false);
-    }
+    reset({
+      image: defaultImage,
+      color: defaultColor,
+    });
+    setLoadingConfig(false);
   }, [config, reset]);
 
   const uploadImageToServer = async (file) => {
@@ -224,7 +222,7 @@ const Theme = () => {
       <TransactionLoader showInProgress={isTxnCreated} />
       <div className="card rounded-4 py-3">
         <div className="card-title px-3 pb-3">Theme & Logo</div>
-        {loadingConfig || !config ? (
+        {loadingConfig ? (
           <div className="d-flex flex-column gap-3 px-3 py-1">
             <Skeleton className="w-100 rounded-3" style={{ height: "100px" }} />
             <Skeleton className="w-100 rounded-3" style={{ height: "50px" }} />
