@@ -23,7 +23,8 @@ const VotingDurationPage = () => {
     watch,
     setValue,
     reset,
-    formState: { isDirty },
+    formState: { isDirty, errors },
+    register,
   } = useForm({
     mode: "onChange",
     defaultValues: {
@@ -47,12 +48,24 @@ const VotingDurationPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAffectedProposals, setLoadingAffectedProposals] =
     useState(false);
+  const [validationError, setValidationError] = useState("");
 
   const hasCreatePermission = hasPermission?.(
     "policy_update_parameters",
     "AddProposal"
   );
   const deposit = daoPolicy?.proposal_bond || 0;
+
+  // Validate voting duration
+  const validateDuration = (value) => {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || numValue <= 0) {
+      setValidationError("Voting duration must be greater than 0 days");
+      return false;
+    }
+    setValidationError("");
+    return true;
+  };
 
   // Initialize duration from daoPolicy
   useEffect(() => {
@@ -73,9 +86,11 @@ const VotingDurationPage = () => {
   }, [daoPolicy, reset]);
 
   const changeDurationDays = (newDurationDays) => {
-    setValue("durationDays", parseFloat(newDurationDays) || 0, {
+    const value = parseFloat(newDurationDays) || 0;
+    setValue("durationDays", value, {
       shouldDirty: true,
     });
+    validateDuration(value);
   };
 
   const cancelChangeRequest = () => {
@@ -253,6 +268,11 @@ const VotingDurationPage = () => {
   };
 
   const submitChangeRequest = () => {
+    // Validate before submitting
+    if (!validateDuration(durationDays)) {
+      return;
+    }
+
     findAffectedProposals((shouldShowAffectedProposalsModal) => {
       if (shouldShowAffectedProposalsModal) {
         setShowAffectedProposalsModal(true);
@@ -264,6 +284,11 @@ const VotingDurationPage = () => {
 
   const isInitialValues = () => {
     return durationDays === currentDurationDays;
+  };
+
+  const isInvalidDuration = () => {
+    const numValue = parseFloat(durationDays);
+    return isNaN(numValue) || numValue <= 0;
   };
 
   const showImpactedRequests =
@@ -394,12 +419,17 @@ const VotingDurationPage = () => {
             <input
               id="votingDuration"
               type="number"
-              className="form-control"
+              className={`form-control ${validationError ? "is-invalid" : ""}`}
               placeholder="Enter voting duration days"
               value={durationDays}
               onChange={(e) => changeDurationDays(e.target.value)}
               disabled={!hasCreatePermission}
+              min="0.01"
+              step="0.01"
             />
+            {validationError && (
+              <div className="invalid-feedback d-block">{validationError}</div>
+            )}
           </div>
 
           {hasCreatePermission && (
@@ -417,6 +447,7 @@ const VotingDurationPage = () => {
                     className="btn theme-btn"
                     disabled={
                       isInitialValues() ||
+                      isInvalidDuration() ||
                       loadingAffectedProposals ||
                       !hasCreatePermission ||
                       isTxnCreated
