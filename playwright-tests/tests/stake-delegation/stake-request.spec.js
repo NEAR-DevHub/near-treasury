@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { setupLockupAccount } from "../../util/lockup.js";
 import { StakingScenarios, mockStakingScenario } from "./staking-mocks.js";
+import { setupTestEnvironment } from "../../util/sandbox.js";
 import {
   setupTestDAO,
-  setupTestEnvironment,
   navigateToStakeDelegation,
   openCreateRequestForm,
   voteAndApproveProposal,

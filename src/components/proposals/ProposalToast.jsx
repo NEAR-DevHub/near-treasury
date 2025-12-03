@@ -111,7 +111,7 @@ const ProposalToast = ({
       stake: "stake-delegation",
       exchange: "asset-exchange",
       function: "function-call",
-      settings: "settings/feed",
+      settings: "settings",
     };
 
     return contextToPageMap[context] || "payments";

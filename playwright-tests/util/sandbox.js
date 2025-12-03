@@ -1039,3 +1039,44 @@ export async function interceptRPC(page, sandbox) {
     }
   });
 }
+
+/**
+ * Sets up test environment for a page (wallet injection, RPC routing, indexer interception)
+ *
+ * @param {Object} params
+ * @param {Page} params.page - Playwright page object
+ * @param {NearSandbox} params.sandbox - Sandbox instance
+ * @param {string} params.creatorAccountId - Creator account ID
+ */
+export async function setupTestEnvironment({
+  page,
+  sandbox,
+  creatorAccountId,
+}) {
+  if (creatorAccountId) {
+    // Inject test wallet for automatic transaction signing
+    await injectTestWallet(page, sandbox, creatorAccountId);
+    console.log(`✓ Injected test wallet for: ${creatorAccountId}`);
+  }
+
+  // Get sandbox RPC URL
+  const sandboxRpcUrl = sandbox.getRpcUrl();
+  console.log("sandboxRpcUrl here", sandboxRpcUrl);
+
+  // Route RPC requests to sandbox
+  await page.route("**/rpc.mainnet.fastnear.com/**", async (route) => {
+    const postData = route.request().postDataJSON();
+    const response = await route.fetch({
+      url: sandboxRpcUrl,
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      postData: JSON.stringify(postData),
+    });
+    await route.fulfill({ response });
+  });
+
+  // Intercept indexer API calls
+  await interceptIndexerAPI(page, sandbox);
+}
