@@ -184,6 +184,17 @@ export async function getPaymentListStatus(listId) {
   }
 }
 
+export async function getPaymentList(listId) {
+  try {
+    const response = await Near.view(BULK_PAYMENT_CONTRACT_ID, "view_list", {
+      list_id: listId,
+    });
+    return response;
+  } catch (error) {
+    console.error("Error fetching list:", error);
+    return null;
+  }
+}
 /**
  * Build the proposal transaction for bulk payment
  * @param {object} params - Build parameters

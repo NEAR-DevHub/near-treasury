@@ -7,10 +7,12 @@ import InsufficientBannerModal from "@/components/proposals/InsufficientBannerMo
 import ProposalStatus from "@/components/proposals/ProposalStatus";
 import TokenAmount from "@/components/proposals/TokenAmount";
 import Tooltip from "@/components/ui/Tooltip";
+import BulkPaymentProcessingToast from "@/components/proposals/BulkPaymentProcessingToast";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { Near } from "@/api/near";
+import { getPaymentList } from "@/api/bulk-payment";
 import Big from "big.js";
 import { formatDateTimeWithTimezone } from "@/components/ui/DateTimeDisplay";
 import { REFRESH_DELAY } from "@/constants/ui";
@@ -36,6 +38,7 @@ const VoteActions = ({
   quoteDeadline,
   context = "request", // Default context for toast messages
   linkedStorageProposal = null, // Linked buy_storage proposal for bulk payments
+  bulkPaymentListId = null, // List ID for bulk payment processing toast
 }) => {
   const { accountId, signAndSendTransactions } = useNearWallet();
   const {
@@ -72,6 +75,10 @@ const VoteActions = ({
   const [showBulkPaymentConfirmModal, setShowBulkPaymentConfirmModal] =
     useState(false);
   const [userBalance, setUserBalance] = useState("0");
+
+  // Bulk payment processing toast state
+  const [showBulkProcessingToast, setShowBulkProcessingToast] = useState(false);
+  const [bulkPaymentRecipients, setBulkPaymentRecipients] = useState([]);
 
   // Get user balance from DAO context
   useEffect(() => {
@@ -227,6 +234,24 @@ const VoteActions = ({
               }
             );
             showToast(proposalResult.status, proposalId, context);
+
+            // If this was a bulk payment approval, show the processing toast
+            if (
+              vote === actions.APPROVE &&
+              bulkPaymentListId &&
+              proposalResult.status === "Approved"
+            ) {
+              // Fetch the recipients list from the API
+              try {
+                const list = await getPaymentList(bulkPaymentListId);
+                if (list && list.payments) {
+                  setBulkPaymentRecipients(list.payments);
+                  setShowBulkProcessingToast(true);
+                }
+              } catch (err) {
+                console.error("Error fetching bulk payment list:", err);
+              }
+            }
           } catch {
             // deleted request (thus proposal won't exist)
             showToast("Removed", proposalId, context);
@@ -322,6 +347,19 @@ const VoteActions = ({
   return (
     <div>
       <TransactionLoader showInProgress={isTxnCreated} />
+
+      {/* Bulk Payment Processing Toast */}
+      {showBulkProcessingToast && bulkPaymentListId && (
+        <BulkPaymentProcessingToast
+          listId={bulkPaymentListId}
+          recipients={bulkPaymentRecipients}
+          onComplete={() => {
+            // Auto-close after completion
+            setTimeout(() => setShowBulkProcessingToast(false), 5000);
+          }}
+          onClose={() => setShowBulkProcessingToast(false)}
+        />
+      )}
 
       <InsufficientBalanceWarning />
 

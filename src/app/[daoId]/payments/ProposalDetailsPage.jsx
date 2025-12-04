@@ -14,7 +14,7 @@ import {
   isBulkPaymentApproveProposal,
   isBuyStorageProposal,
   calculateStorageCost,
-  getPaymentListStatus,
+  getPaymentList,
 } from "@/api/bulk-payment";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -107,11 +107,11 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
       if (!isCompactVersion && proposalData?.bulkPaymentInfo?.listId) {
         setIsLoadingPaymentList(true);
         try {
-          const result = await getPaymentListStatus(
+          const result = await getPaymentList(
             proposalData.bulkPaymentInfo.listId
           );
-          if (result?.success && result?.list?.payments) {
-            setPaymentList(result.list.payments);
+          if (result && result.payments) {
+            setPaymentList(result.payments);
           } else {
             setPaymentList(null);
           }
@@ -645,13 +645,14 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
               proposalData?.args?.amount
             }
             currentContract={
-              proposalData.bulkPaymentInfo.contract ||
+              proposalData?.bulkPaymentInfo?.contract ||
               proposalData?.args?.token_id
             }
             isProposalDetailsPage={true}
             proposal={proposalData?.proposal}
             context="payment"
             linkedStorageProposal={linkedStorageProposal}
+            bulkPaymentListId={proposalData?.bulkPaymentInfo?.listId}
           />
         ) : null
       }

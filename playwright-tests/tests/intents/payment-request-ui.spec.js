@@ -518,10 +518,11 @@ test.describe("Payment Request UI Flow", () => {
     await page.waitForTimeout(1000);
     console.log("✓ Navigated to Payments page");
 
-    // Click Create Request button
+    // Click Create Request dropdown and select Single Request
     const createRequestButton = await page.getByText("Create Request");
     await createRequestButton.click();
-    console.log("✓ Clicked 'Create Request' button");
+    await page.getByText("Single Request").click();
+    console.log("✓ Clicked 'Create Request' and selected 'Single Request'");
 
     // Verify payment request modal/page is visible
     await expect(page.getByText("Create Payment Request")).toBeVisible();
@@ -853,8 +854,9 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Payments" }).click();
     await page.waitForTimeout(1000);
 
-    // Click Create Request
+    // Click Create Request dropdown and select Single Request
     await page.getByText("Create Request").click();
+    await page.getByText("Single Request").click();
     await expect(page.getByText("Create Payment Request")).toBeVisible();
 
     // Select intents wallet
@@ -1072,8 +1074,9 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Payments" }).click();
     await page.waitForTimeout(1000);
 
-    // Click Create Request
+    // Click Create Request dropdown and select Single Request
     await page.getByText("Create Request").click();
+    await page.getByText("Single Request").click();
     await expect(page.getByText("Create Payment Request")).toBeVisible();
 
     // Select intents wallet

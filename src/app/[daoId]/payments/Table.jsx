@@ -261,6 +261,7 @@ const Table = ({
           let bulkPaymentRecipientCount = null;
           let bulkPaymentContract = null;
           let bulkPaymentAmount = null;
+          let bulkPaymentListId = null;
           if (isBulkPayment) {
             // Decode from markdown format: proposal_action: "bulk-payment", recipients, contract
             const recipients = decodeProposalDescription(
@@ -275,11 +276,16 @@ const Table = ({
               "amount",
               item.description
             );
+            const listId = decodeProposalDescription(
+              "list_id",
+              item.description
+            );
             bulkPaymentRecipientCount = recipients
               ? parseInt(recipients, 10)
               : null;
             bulkPaymentContract = contract || null;
             bulkPaymentAmount = amount || null;
+            bulkPaymentListId = listId || null;
           }
           const intentsToken =
             isIntentWithdraw &&
@@ -496,6 +502,7 @@ const Table = ({
                       proposal={item}
                       context="payment"
                       linkedStorageProposal={linkedStorageProposal}
+                      bulkPaymentListId={bulkPaymentListId}
                     />
                   </td>
                 )}

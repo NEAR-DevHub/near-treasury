@@ -189,13 +189,19 @@ test.describe("Create Payment Request", () => {
     });
     console.log("✓ Pending Requests tab visible");
 
-    // Click Create Request button
+    // Click Create Request dropdown button
     const createRequestButton = page.getByRole("button", {
       name: "Create Request",
     });
     await expect(createRequestButton).toBeVisible({ timeout: 20000 });
     await createRequestButton.click();
-    console.log("✓ Clicked Create Request button");
+    console.log("✓ Clicked Create Request dropdown");
+
+    // Click "Single Request" from the dropdown menu
+    const singleRequestOption = page.getByText("Single Request");
+    await expect(singleRequestOption).toBeVisible({ timeout: 5000 });
+    await singleRequestOption.click();
+    console.log("✓ Selected Single Request option");
 
     // Wait for the offcanvas (sidebar form) to open
     const offcanvas = page.locator(".offcanvas-body");
@@ -361,8 +367,9 @@ test.describe("Create Payment Request", () => {
       waitUntil: "networkidle",
     });
 
-    // Create payment request
+    // Create payment request - click dropdown then select Single Request
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Request").click();
     const offcanvas = page.locator(".offcanvas-body");
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 
@@ -632,8 +639,9 @@ test.describe("Create Payment Request", () => {
       waitUntil: "networkidle",
     });
 
-    // Create FT payment request
+    // Create FT payment request - click dropdown then select Single Request
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Request").click();
     const offcanvas = page.locator(".offcanvas-body");
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 

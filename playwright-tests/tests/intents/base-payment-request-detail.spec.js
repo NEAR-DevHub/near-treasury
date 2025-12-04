@@ -258,10 +258,11 @@ test.describe("Base Payment Request Detail", () => {
     await page.goto(`http://localhost:3000/${daoAccountId}/payments`);
     await page.waitForLoadState("networkidle");
 
-    // Click Create Request
+    // Click Create Request dropdown and select Single Request
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10000 });
     await createButton.click();
+    await page.getByText("Single Request").click();
 
     // Wait for form to open - the form is in an offcanvas
     await page.waitForTimeout(1000);
