@@ -136,10 +136,10 @@ const SettingsFeed = () => {
     searchNot,
   });
 
-  // Reset page when tab changes
+  // Reset page when tab or filters change
   useEffect(() => {
     setPage(0);
-  }, [tab]);
+  }, [tab, activeFilters, search]);
 
   // Clear filters when switching tabs
   const handleTabChange = (title) => {
