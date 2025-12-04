@@ -7,6 +7,8 @@ import { searchFTToken } from "@/api/backend";
 import { Near } from "@/api/near";
 import { isValidNearAccount } from "@/helpers/nearHelpers";
 import Modal from "@/components/ui/Modal";
+import WalletDropdown from "@/components/dropdowns/WalletDropdown";
+import TokensDropdown from "@/components/dropdowns/TokensDropdown";
 
 const NEAR_CONTRACT = "near";
 
@@ -17,7 +19,14 @@ const NEAR_CONTRACT = "near";
 const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   const { daoId: treasuryDaoID, daoNearBalances, daoFtBalances } = useDao();
 
+  // Step 1: Source wallet and token
+  const [selectedWallet, setSelectedWallet] = useState(null);
+  const [selectedToken, setSelectedToken] = useState(null); // Holds full token object with metadata
+
+  // Step 3: Data input
+  const [activeTab, setActiveTab] = useState("paste"); // "paste" or "upload"
   const [csvData, setCsvData] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null); // {name, size}
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [dataWarnings, setDataWarnings] = useState(null);
@@ -91,37 +100,26 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   }
 
   /**
-   * Get all treasury token balances from DaoContext
-   */
-  function getAllTreasuryBalances() {
-    const balances = {};
-
-    // Add NEAR balance
-    balances[NEAR_CONTRACT] = daoNearBalances?.available || "0";
-
-    // Add FT balances
-    if (daoFtBalances?.fts) {
-      daoFtBalances.fts.forEach((t) => {
-        balances[t.contract] = t.amount || "0";
-      });
-    }
-
-    return balances;
-  }
-
-  /**
    * Validate CSV input data
    */
   async function validateCsvInput() {
     const errors = [];
     const warnings = [];
-    const tokensSum = [];
+    let totalAmount = Big(0);
     const validData = [];
 
     const rows = parseCsv(csvData || "");
 
     if (rows.length === 0) {
       setDataErrors([{ row: 0, message: "No data provided" }]);
+      setIsValidating(false);
+      return;
+    }
+
+    // Use token metadata from selected token
+    const tokenMeta = selectedToken;
+    if (!tokenMeta) {
+      setDataErrors([{ row: 0, message: "Invalid token selected" }]);
       setIsValidating(false);
       return;
     }
@@ -133,30 +131,14 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
         (h || "").trim().toLowerCase().startsWith(name.toLowerCase())
       );
 
-    const titleIdx = colIdx("Title");
-    const summaryIdx = colIdx("Summary");
     const recipientIdx = colIdx("Recipient");
-    const requestedTokenIdx = colIdx("Requested Token");
-    const fundingAskIdx = colIdx("Funding Ask");
-    const notesIdx = colIdx("Notes");
+    const amountIdx = colIdx("Amount");
 
-    if (rows.length - 1 > 10) {
-      warnings.push({
-        message:
-          "You have added more than 10 requests. You can continue, but only the first 10 will be added to list.",
-      });
-    }
-
-    if (
-      titleIdx === -1 ||
-      recipientIdx === -1 ||
-      requestedTokenIdx === -1 ||
-      fundingAskIdx === -1
-    ) {
+    // Check for required columns (only Recipient and Amount)
+    if (recipientIdx === -1 || amountIdx === -1) {
       errors.push({
         row: 0,
-        message:
-          "Missing one or more required columns: Title, Recipient, Requested Token, Funding Ask",
+        message: "Missing one or more required columns: Recipient, Amount",
       });
       setDataErrors(errors);
       setIsValidating(false);
@@ -173,16 +155,7 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
         const rowErrors = [];
         const data = {};
 
-        const title = (row[titleIdx] || "")?.trim();
-        if (!title) {
-          rowErrors.push("Title is missing.");
-        } else {
-          data["Title"] = title;
-        }
-
-        const summary = (row[summaryIdx] || "")?.trim() || "";
-        data["Summary"] = summary;
-
+        // Validate recipient
         const recipient = (row[recipientIdx] || "")?.trim();
         let recipientCheckPromise;
 
@@ -208,57 +181,29 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
           }
         }
 
-        return recipientCheckPromise.then((recipientValid) => {
-          const token = (row[requestedTokenIdx] || "")?.trim();
+        return recipientCheckPromise.then(() => {
+          // Validate amount
+          const amountStr = (row[amountIdx] || "")?.trim();
+          if (!amountStr) {
+            rowErrors.push("Amount is missing.");
+          } else {
+            const value = parseFloat(amountStr.replace(/,/g, ""));
+            if (isNaN(value) || value <= 0) {
+              rowErrors.push("Amount should be a positive number.");
+            } else {
+              const adjustedAmount = Big(value)
+                .times(Big(10).pow(tokenMeta.decimals))
+                .toFixed();
 
-          if (!token) {
-            rowErrors.push("Requested Token is missing.");
-            return { rowErrors, data };
+              data["Requested Token"] = tokenMeta.contract;
+              data["Amount"] = adjustedAmount.toString();
+
+              // Add to total amount for balance check
+              totalAmount = totalAmount.plus(adjustedAmount);
+            }
           }
 
-          return searchFTToken(token).then((tokenMeta) => {
-            if (!tokenMeta) {
-              rowErrors.push("Invalid token address.");
-            }
-
-            const amountStr = (row[fundingAskIdx] || "")?.trim();
-            if (!amountStr) {
-              rowErrors.push("Funding Ask is missing.");
-            } else {
-              const value = parseFloat(amountStr.replace(/,/g, ""));
-              if (isNaN(value) || value < 0) {
-                rowErrors.push("Funding Ask should be a non-negative number.");
-              } else if (tokenMeta) {
-                const adjustedAmount = Big(value)
-                  .times(Big(10).pow(tokenMeta.decimals))
-                  .toFixed();
-
-                data["Requested Token"] = tokenMeta.contract;
-                data["Funding Ask"] = adjustedAmount.toString();
-
-                const existing = tokensSum.find(
-                  (t) => t.contract === tokenMeta.contract
-                );
-                if (existing) {
-                  existing.ask = Big(existing.ask)
-                    .plus(adjustedAmount)
-                    .toFixed();
-                } else {
-                  tokensSum.push({
-                    contract: tokenMeta.contract,
-                    symbol: tokenMeta.symbol || "",
-                    ask: adjustedAmount,
-                    balance: 0,
-                  });
-                }
-              }
-            }
-
-            const notes = (row[notesIdx] || "")?.trim() || "";
-            data["Notes"] = notes;
-
-            return { rowErrors, data };
-          });
+          return { rowErrors, data };
         });
       };
 
@@ -277,30 +222,27 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
 
     return Promise.all(rowPromises)
       .then(() => {
-        // Check treasury balances if no errors
-        if (errors.length === 0 && tokensSum.length > 0) {
-          const balancesMap = getAllTreasuryBalances();
+        // Check treasury balance for selected token if no errors
+        if (errors.length === 0 && totalAmount.gt(0)) {
+          // Use token balance from selected token
+          const availableBalance = selectedToken?.tokenBalance || "0";
 
-          const results = tokensSum.map(({ contract, ask, symbol }) => {
-            const balance = balancesMap[contract] || "0";
-            return { contract, symbol, ask, balance };
-          });
-
-          const insufficient = results.filter(({ ask, balance }) =>
-            Big(balance).lt(ask)
-          );
-
-          if (insufficient.length > 0) {
-            const tokens = insufficient.map(({ symbol }) => symbol).join(", ");
+          if (Big(availableBalance).lt(totalAmount)) {
             warnings.push({
-              message: `Treasury balance for ${tokens} is too low for the payments in this batch. Requests can be created but may not be approved until balances are refilled.`,
+              message: `Treasury balance for ${tokenMeta.symbol} is too low for the payments in this batch. Current balance: ${
+                availableBalance
+              } ${tokenMeta.symbol}. Required: ${totalAmount
+                .div(Big(10).pow(tokenMeta.decimals))
+                .toFixed()} ${
+                tokenMeta.symbol
+              }. Requests can be created but may not be approved until balances are refilled.`,
             });
           }
         }
 
         // Set final state
         if (!errors.length) {
-          setValidatedData(validData.slice(0, 10));
+          setValidatedData(validData);
         }
         setDataErrors(errors);
         setDataWarnings(warnings);
@@ -340,7 +282,7 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   }
 
   return (
-    <div className="d-flex flex-column gap-3">
+    <div className="d-flex flex-column gap-4 pb-4" style={{ fontSize: "14px" }}>
       <Modal
         isOpen={showCancelModal}
         heading="Are you sure you want to cancel?"
@@ -373,40 +315,246 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
         </p>
       </Modal>
 
+      {/* Header */}
       <div className="d-flex flex-column gap-2">
-        <h6 className="mb-0 fw-bold">Step 1</h6>
-        <div>Get the template and fill out the required payment details</div>
-        <a
-          target="_blank"
-          rel="noopener noreferrer"
-          href="https://docs.google.com/spreadsheets/d/1VGpYu7Nzuuf1mgdeYiMgB2I6rX3VYtvbKP3RY2HuIj4/"
-          className="btn btn-outline-secondary d-flex align-items-center gap-2"
-          style={{ width: "fit-content" }}
-        >
-          <i className="bi bi-download h6 mb-0"></i> Get the Template
-        </a>
+        <p className="mb-0 text-secondary">
+          Create multiple payment requests at once by adding data.{" "}
+          <a
+            href="https://docs.neartreasury.com/payments/bulk-import"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-decoration-underline"
+          >
+            View Step-by-Steps Instructions.
+          </a>
+        </p>
       </div>
 
-      <div className="d-flex flex-column gap-2">
-        <h6 className="mb-0 fw-bold">Step 2</h6>
-        <div>
-          Copy all the filled data from file and paste it into the field below
+      {/* Step 1: Select Source Wallet & Token */}
+      <div className="d-flex flex-column gap-3">
+        <div className="d-flex gap-2 align-items-start">
+          <div
+            className="rounded-circle d-flex align-items-center justify-content-center fw-550"
+            style={{
+              width: "32px",
+              height: "32px",
+              backgroundColor: "var(--grey-05)",
+            }}
+          >
+            1
+          </div>
+          <div className="d-flex flex-column gap-2 flex-grow-1">
+            <h6 className="mb-0 fw-550 my-1">Select Source Wallet & Token</h6>
+
+            <div className="d-flex flex-column gap-3 pl-3">
+              <WalletDropdown
+                hideLabel={true}
+                selectedValue={selectedWallet}
+                onUpdate={(wallet) => {
+                  setSelectedWallet(wallet);
+                  setSelectedToken(null);
+                }}
+                hideLockup={true}
+              />
+
+              <TokensDropdown
+                selectedWallet={selectedWallet?.value}
+                disabled={!selectedWallet}
+                selectedValue={selectedToken?.contract}
+                onChange={() => {}} // Not used, we use setTokenMetadata
+                setTokenMetadata={(tokenData) => setSelectedToken(tokenData)}
+              />
+            </div>
+          </div>
         </div>
-        <div className="text-sm">Paste Data Below</div>
-        <textarea
-          className="form-control"
-          rows={10}
-          value={csvData ?? ""}
-          onChange={(e) => {
-            setCsvData(e.target.value);
-            setValidatedData(null);
-            setDataWarnings(null);
-            setDataErrors(null);
-          }}
-          placeholder="Paste your CSV/TSV data here..."
-        />
       </div>
 
+      {/* Step 2: Get the template */}
+      <div className="d-flex flex-column gap-3">
+        <div className="d-flex gap-2 align-items-start">
+          <div
+            className="rounded-circle d-flex align-items-center justify-content-center fw-550"
+            style={{
+              width: "32px",
+              height: "32px",
+              backgroundColor: "var(--grey-05)",
+            }}
+          >
+            2
+          </div>
+          <div className="d-flex flex-column gap-2 flex-grow-1">
+            <h6 className="mb-0 fw-550 my-1">
+              Get the template and fill out the required payment details.
+            </h6>
+
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              href="https://docs.google.com/spreadsheets/d/14wVi5X3iQQi8qE2h135jwtY8rQi0aFAhDz3LHApZkuM"
+              className="btn btn-outline-secondary d-flex gap-2 align-items-center justify-content-center"
+              style={{ width: "100%" }}
+            >
+              <span className="w-100 text-start">Get the Template</span>
+              <i className="bi bi-download h6 mb-0"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Step 3: Provide payment data */}
+      <div className="d-flex flex-column gap-3">
+        <div className="d-flex gap-2 align-items-start">
+          <div
+            className="rounded-circle d-flex align-items-center justify-content-center fw-550"
+            style={{
+              width: "32px",
+              height: "32px",
+              backgroundColor: "var(--grey-05)",
+            }}
+          >
+            3
+          </div>
+          <div className="d-flex flex-column gap-2 flex-grow-1">
+            <h6 className="mb-0 fw-550 my-1">Provide payment data</h6>
+
+            {/* Tabs */}
+            <ul className="form-custom-tabs nav">
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "paste" ? "active" : ""}`}
+                  onClick={() => setActiveTab("paste")}
+                  type="button"
+                >
+                  Paste Data
+                </button>
+              </li>
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "upload" ? "active" : ""}`}
+                  onClick={() => setActiveTab("upload")}
+                  type="button"
+                >
+                  Upload File
+                </button>
+              </li>
+            </ul>
+
+            {/* Tab content */}
+            <div className="tab-content">
+              {activeTab === "paste" && (
+                <div className="d-flex flex-column gap-2">
+                  <textarea
+                    className="form-control"
+                    rows={10}
+                    value={csvData ?? ""}
+                    onChange={(e) => {
+                      setCsvData(e.target.value);
+                      setValidatedData(null);
+                      setDataWarnings(null);
+                      setDataErrors(null);
+                    }}
+                    placeholder="Copy all the filled data from file and past it here"
+                  />
+                </div>
+              )}
+
+              {activeTab === "upload" && (
+                <div className="d-flex flex-column gap-2">
+                  {uploadedFile ? (
+                    // Show uploaded file info
+                    <div
+                      className="border rounded-3 p-3 d-flex align-items-center justify-content-between"
+                      style={{ backgroundColor: "var(--grey-05)" }}
+                    >
+                      <div className="d-flex align-items-center gap-3">
+                        <i className="bi bi-file-earmark-text text-secondary h4 mb-0"></i>
+                        <div>
+                          <div className="fw-550">{uploadedFile.name}</div>
+                          <div className="text-secondary text-sm">
+                            {(uploadedFile.size / 1024).toFixed(0)}KB
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-secondary"
+                        onClick={() => {
+                          setUploadedFile(null);
+                          setCsvData(null);
+                          setValidatedData(null);
+                          setDataWarnings(null);
+                          setDataErrors(null);
+                        }}
+                      >
+                        <i className="bi bi-x h4 mb-0"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    // Show upload dropzone
+                    <div
+                      className="border rounded-3 p-4 text-center"
+                      style={{
+                        borderStyle: "dashed",
+                        backgroundColor: "var(--grey-05)",
+                      }}
+                    >
+                      <input
+                        type="file"
+                        id="file-upload"
+                        accept=".csv,.tsv,.txt"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            // Store file info
+                            setUploadedFile({
+                              name: file.name,
+                              size: file.size,
+                            });
+
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setCsvData(event.target.result);
+                              setValidatedData(null);
+                              setDataWarnings(null);
+                              setDataErrors(null);
+                            };
+                            reader.onerror = (error) => {
+                              console.error("Error reading file:", error);
+                              setUploadedFile(null);
+                              setDataErrors([
+                                { row: 0, message: "Failed to read file" },
+                              ]);
+                            };
+                            reader.readAsText(file);
+                          }
+                          // Reset input so same file can be selected again
+                          e.target.value = "";
+                        }}
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="d-flex flex-column align-items-center cursor-pointer"
+                        style={{ cursor: "pointer" }}
+                      >
+                        <i className="bi bi-upload text-secondary h4"></i>
+                        <div className="fw-550">
+                          Click to upload or drag and drop a file
+                        </div>
+                        <div className="text-secondary text-sm">
+                          max 1 file up to 1.5 MB, CSV file only
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Errors */}
       {dataErrors?.length > 0 && (
         <div className="error-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start">
           <i className="bi bi-exclamation-octagon h5 mb-0"></i>
@@ -414,6 +562,7 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
         </div>
       )}
 
+      {/* Warnings */}
       {dataWarnings?.length > 0 && (
         <div className="d-flex flex-column gap-2">
           {dataWarnings.map((w, i) => (
@@ -428,6 +577,7 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
         </div>
       )}
 
+      {/* Footer Buttons */}
       <div className="d-flex mt-2 gap-3 justify-content-end">
         <button
           type="button"
@@ -443,16 +593,23 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
             type="button"
             className="btn theme-btn"
             onClick={() => {
-              showPreviewTable(validatedData);
+              showPreviewTable(validatedData, selectedWallet, selectedToken);
             }}
           >
-            Show {validatedData.length} Preview
+            Show {validatedData.length} Request
+            {validatedData.length !== 1 ? "s" : ""}
           </button>
         ) : (
           <button
             type="button"
             className="btn theme-btn"
-            disabled={!csvData || isValidating || dataErrors?.length}
+            disabled={
+              !csvData ||
+              !selectedWallet ||
+              !selectedToken ||
+              isValidating ||
+              dataErrors?.length
+            }
             onClick={() => {
               setIsValidating(true);
               validateCsvInput();

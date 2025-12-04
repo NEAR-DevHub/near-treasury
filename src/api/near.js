@@ -5,8 +5,12 @@ import {
   query,
 } from "@near-js/jsonrpc-client";
 
+// RPC endpoint - can be overridden with env var for sandbox/testnet
+const RPC_ENDPOINT =
+  process.env.NEXT_PUBLIC_NEAR_RPC_URL || "https://rpc.mainnet.fastnear.com";
+
 export const client = new NearRpcClient({
-  endpoint: "https://rpc.mainnet.fastnear.com",
+  endpoint: RPC_ENDPOINT,
   headers: { Authorization: process.env.NEXT_PUBLIC_FASTNEAR_API_KEY || "" },
 });
 

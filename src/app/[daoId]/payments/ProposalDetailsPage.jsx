@@ -10,12 +10,19 @@ import {
   fetchTokenMetadataByDefuseAssetId,
 } from "@/api/backend";
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
+import {
+  isBulkPaymentApproveProposal,
+  isBuyStorageProposal,
+  calculateStorageCost,
+  getPaymentListStatus,
+} from "@/api/bulk-payment";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
 import VoteActions from "@/components/proposals/VoteActions";
 import Profile from "@/components/ui/Profile";
 import Copy from "@/components/ui/Copy";
 import TokenAmount from "@/components/proposals/TokenAmount";
+import TableSkeleton from "@/components/ui/TableSkeleton";
 
 const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const { accountId } = useNearWallet();
@@ -27,7 +34,20 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
+  // Check if this is a bulk payment proposal to conditionally fetch storage proposal
+  const isBulkPayment = rawProposal
+    ? isBulkPaymentApproveProposal(rawProposal)
+    : false;
+
+  // Only fetch potential linked storage proposal if this is a bulk payment
+  const { proposal: potentialStorageProposal } = useProposal(
+    isBulkPayment && id > 0 ? id - 1 : null
+  );
+
   const [proposalData, setProposalData] = useState(null);
+  const [linkedStorageProposal, setLinkedStorageProposal] = useState(null);
+  const [paymentList, setPaymentList] = useState(null);
+  const [isLoadingPaymentList, setIsLoadingPaymentList] = useState(false);
   const [networkInfo, setNetworkInfo] = useState({
     blockchain: null,
     blockchainIcon: null,
@@ -55,6 +75,8 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   // Clear proposal data when ID changes to show loader
   useEffect(() => {
     setProposalData(null);
+    setLinkedStorageProposal(null);
+    setPaymentList(null);
     setNetworkInfo({
       blockchain: null,
       blockchainIcon: null,
@@ -65,6 +87,45 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
     });
     setEstimatedFee(null);
   }, [id]);
+
+  // Check if there's a linked storage proposal for bulk payments
+  useEffect(() => {
+    if (
+      isBulkPayment &&
+      potentialStorageProposal &&
+      isBuyStorageProposal(potentialStorageProposal)
+    ) {
+      setLinkedStorageProposal(potentialStorageProposal);
+    } else {
+      setLinkedStorageProposal(null);
+    }
+  }, [isBulkPayment, potentialStorageProposal]);
+
+  // Fetch payment list for bulk payments in expanded view
+  useEffect(() => {
+    const fetchPaymentList = async () => {
+      if (!isCompactVersion && proposalData?.bulkPaymentInfo?.listId) {
+        setIsLoadingPaymentList(true);
+        try {
+          const result = await getPaymentListStatus(
+            proposalData.bulkPaymentInfo.listId
+          );
+          if (result?.success && result?.list?.payments) {
+            setPaymentList(result.list.payments);
+          } else {
+            setPaymentList(null);
+          }
+        } catch (error) {
+          console.error("Error fetching payment list:", error);
+          setPaymentList(null);
+        } finally {
+          setIsLoadingPaymentList(false);
+        }
+      }
+    };
+
+    fetchPaymentList();
+  }, [isCompactVersion, proposalData?.bulkPaymentInfo?.listId]);
 
   // Process raw proposal data when it changes
   useEffect(() => {
@@ -175,6 +236,35 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
             ? "Lockup"
             : "SputnikDAO";
 
+        // Check if this is a bulk payment proposal and extract info
+        let bulkPaymentInfo = null;
+
+        if (isBulkPaymentApproveProposal(item)) {
+          // Extract bulk payment info from description
+          const recipients = decodeProposalDescription(
+            "recipients",
+            item.description
+          );
+          const contract = decodeProposalDescription(
+            "contract",
+            item.description
+          );
+          const amount = decodeProposalDescription("amount", item.description);
+          const listId = decodeProposalDescription("list_id", item.description);
+
+          // Calculate storage fee based on recipient count
+          const recipientCount = recipients ? parseInt(recipients, 10) : 0;
+          const storageFee = calculateStorageCost(recipientCount);
+
+          bulkPaymentInfo = {
+            recipientCount,
+            contract: contract || "",
+            totalAmount: amount || "0",
+            storageFee,
+            listId: listId || null,
+          };
+        }
+
         setProposalData({
           id: item.id,
           proposer: item.proposer,
@@ -194,6 +284,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
           proposalUrl,
           proposal: item,
           sourceWallet,
+          bulkPaymentInfo,
         });
       } catch (e) {
         console.error("Error processing proposal data:", e);
@@ -549,149 +640,258 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
             hasVotingPermission={hasVotingPermission}
             proposalCreator={proposalData?.proposer}
             isIntentsRequest={proposalData?.isIntentsPayment}
-            currentAmount={proposalData?.args?.amount}
-            currentContract={proposalData?.args?.token_id}
+            currentAmount={
+              proposalData?.bulkPaymentInfo?.totalAmount ||
+              proposalData?.args?.amount
+            }
+            currentContract={
+              proposalData.bulkPaymentInfo.contract ||
+              proposalData?.args?.token_id
+            }
             isProposalDetailsPage={true}
             proposal={proposalData?.proposal}
             context="payment"
+            linkedStorageProposal={linkedStorageProposal}
           />
         ) : null
       }
       ProposalContent={
-        <div className="card card-body d-flex flex-column gap-2">
-          <div className="d-flex flex-column gap-2 mt-1">
-            <label className="proposal-label">Source Wallet</label>
-            <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
-          </div>
-          <h6 className="mb-0 flex-1 border-top pt-3">{proposalData?.title}</h6>
-          {proposalData?.summary && (
-            <div className="text-secondary">{proposalData?.summary}</div>
-          )}
-          {proposalData?.proposalId && (
-            <div>
-              <a
-                target="_blank"
-                rel="noopener noreferrer"
-                href={proposalData?.proposalUrl}
-              >
-                <button
-                  className="btn p-0 d-flex align-items-center gap-2 h-auto text-color"
-                  style={{ fontSize: 14 }}
-                >
-                  Open Proposal <i className="bi bi-box-arrow-up-right"></i>
-                </button>
-              </a>
+        proposalData?.bulkPaymentInfo ? (
+          // Bulk Payment Content
+          <div className="card card-body d-flex flex-column gap-2">
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="proposal-label">Source Wallet</label>
+              <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
             </div>
-          )}
-          <div className="d-flex flex-column gap-2 mt-1">
-            <label className="border-top proposal-label">Recipient</label>
-            <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
-              <Profile
-                accountId={proposalData?.args?.receiver_id}
-                displayImage={true}
-                displayName={true}
-                profileClass="text-secondary text-sm"
-              />
-              <Copy
-                label="Copy Address"
-                clipboardText={proposalData?.args?.receiver_id}
-                showLogo={true}
-                className="btn btn-outline-secondary d-flex gap-1 align-items-center"
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="border-top proposal-label">Total Amount</label>
+              <TokenAmount
+                amountWithoutDecimals={
+                  proposalData?.bulkPaymentInfo?.totalAmount
+                }
+                showUSDValue={true}
+                address={proposalData?.bulkPaymentInfo?.contract}
+                isProposalDetails={true}
               />
             </div>
-          </div>
-          <div className="d-flex flex-column gap-2 mt-1">
-            <label className="border-top proposal-label">Funding Ask</label>
-            <TokenAmount
-              amountWithoutDecimals={proposalData?.args?.amount}
-              showUSDValue={false}
-              address={
-                proposalData?.isIntentsPayment
-                  ? proposalData?.intentsTokenInfo?.tokenContract
-                  : proposalData?.args?.token_id
-              }
-              isProposalDetails={true}
-            />
-            {proposalData?.isIntentsPayment && networkInfo.blockchain && (
-              <div className="d-flex flex-column gap-2 mt-3">
-                <label className="border-top proposal-label">Network</label>
-                <div className="d-flex gap-1 align-items-center">
-                  {networkInfo.blockchainIcon && (
-                    <img
-                      src={networkInfo.blockchainIcon}
-                      width="25"
-                      height="25"
-                      alt={networkInfo.blockchain}
-                      className="rounded-circle object-fit-cover"
-                    />
-                  )}
-                  <span
-                    style={{ fontSize: "18px" }}
-                    className="text-capitalize fw-semi-bold"
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="border-top proposal-label">Storage Fee</label>
+              <TokenAmount
+                amountWithoutDecimals={
+                  proposalData?.bulkPaymentInfo?.storageFee
+                }
+                showUSDValue={true}
+                address=""
+                isProposalDetails={true}
+              />
+            </div>
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="border-top proposal-label">
+                Total Recipients
+              </label>
+              <div className="h6 mb-0">
+                {proposalData?.bulkPaymentInfo?.recipientCount} Recipients
+              </div>
+            </div>
+            {/* Recipients Table - only in expanded view */}
+            {!isCompactVersion && (
+              <div className="d-flex flex-column gap-2 mt-2">
+                {isLoadingPaymentList ? (
+                  <table
+                    className="table table-sm mb-0"
+                    style={{ fontSize: 14 }}
                   >
-                    {networkInfo.name ?? networkInfo.blockchain}
-                  </span>
-                </div>
+                    <thead>
+                      <tr className="text-secondary">
+                        <td style={{ width: 40 }}>№</td>
+                        <td>Recipient</td>
+                        <td className="text-right">Funding Ask</td>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <TableSkeleton numberOfCols={3} numberOfRows={3} />
+                    </tbody>
+                  </table>
+                ) : paymentList && paymentList.length > 0 ? (
+                  <table
+                    className="table table-sm mb-0"
+                    style={{ fontSize: 14 }}
+                  >
+                    <thead>
+                      <tr className="text-secondary">
+                        <td style={{ width: 40 }}>№</td>
+                        <td>Recipient</td>
+                        <td className="text-right">Funding Ask</td>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentList.map((payment, index) => (
+                        <tr key={index}>
+                          <td className="text-secondary">{index + 1}</td>
+                          <td>
+                            <Profile
+                              accountId={payment.recipient}
+                              displayImage={true}
+                              displayName={true}
+                              profileClass="text-secondary text-sm"
+                            />
+                          </td>
+                          <td className="text-right">
+                            <TokenAmount
+                              amountWithoutDecimals={payment.amount}
+                              address={proposalData?.bulkPaymentInfo?.contract}
+                              showUSDValue={true}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : null}
               </div>
             )}
-            {proposalData?.isIntentsPayment &&
-              estimatedFee &&
-              !estimatedFee.isZero && (
+          </div>
+        ) : (
+          // Regular Payment Content
+          <div className="card card-body d-flex flex-column gap-2">
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="proposal-label">Source Wallet</label>
+              <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
+            </div>
+            <h6 className="mb-0 flex-1 border-top pt-3">
+              {proposalData?.title}
+            </h6>
+            {proposalData?.summary && (
+              <div className="text-secondary">{proposalData?.summary}</div>
+            )}
+            {proposalData?.proposalId && (
+              <div>
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={proposalData?.proposalUrl}
+                >
+                  <button
+                    className="btn p-0 d-flex align-items-center gap-2 h-auto text-color"
+                    style={{ fontSize: 14 }}
+                  >
+                    Open Proposal <i className="bi bi-box-arrow-up-right"></i>
+                  </button>
+                </a>
+              </div>
+            )}
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="border-top proposal-label">Recipient</label>
+              <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
+                <Profile
+                  accountId={proposalData?.args?.receiver_id}
+                  displayImage={true}
+                  displayName={true}
+                  profileClass="text-secondary text-sm"
+                />
+                <Copy
+                  label="Copy Address"
+                  clipboardText={proposalData?.args?.receiver_id}
+                  showLogo={true}
+                  className="btn btn-outline-secondary d-flex gap-1 align-items-center"
+                />
+              </div>
+            </div>
+            <div className="d-flex flex-column gap-2 mt-1">
+              <label className="border-top proposal-label">Funding Ask</label>
+              <TokenAmount
+                amountWithoutDecimals={proposalData?.args?.amount}
+                showUSDValue={false}
+                address={
+                  proposalData?.isIntentsPayment
+                    ? proposalData?.intentsTokenInfo?.tokenContract
+                    : proposalData?.args?.token_id
+                }
+                isProposalDetails={true}
+              />
+              {proposalData?.isIntentsPayment && networkInfo.blockchain && (
                 <div className="d-flex flex-column gap-2 mt-3">
-                  <label className="border-top proposal-label">
-                    Estimated Fee
-                  </label>
-                  <div className="d-flex flex-column gap-2">
-                    <span style={{ fontSize: "16px" }}>
-                      {estimatedFee.amount} {estimatedFee.symbol}
-                    </span>
-                    <small
-                      className="text-secondary"
-                      style={{ fontSize: "12px" }}
+                  <label className="border-top proposal-label">Network</label>
+                  <div className="d-flex gap-1 align-items-center">
+                    {networkInfo.blockchainIcon && (
+                      <img
+                        src={networkInfo.blockchainIcon}
+                        width="25"
+                        height="25"
+                        alt={networkInfo.blockchain}
+                        className="rounded-circle object-fit-cover"
+                      />
+                    )}
+                    <span
+                      style={{ fontSize: "18px" }}
+                      className="text-capitalize fw-semi-bold"
                     >
-                      This is an estimated fee. Check the transaction links
-                      below for the actual fee charged.
-                    </small>
+                      {networkInfo.name ?? networkInfo.blockchain}
+                    </span>
                   </div>
                 </div>
               )}
-            {(proposalData?.status === "Approved" ||
-              proposalData?.status === "Failed") &&
-              transactionInfo.nearTxHash && (
-                <div className="d-flex flex-column gap-2 mt-1">
-                  <label className="border-top proposal-label">
-                    Transaction Links
-                  </label>
-                  <div className="d-flex flex-column gap-2">
-                    <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
-                      <a
-                        href={transactionInfo.nearTxHash}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="d-flex align-items-center gap-2 text-color text-underline"
+              {proposalData?.isIntentsPayment &&
+                estimatedFee &&
+                !estimatedFee.isZero && (
+                  <div className="d-flex flex-column gap-2 mt-3">
+                    <label className="border-top proposal-label">
+                      Estimated Fee
+                    </label>
+                    <div className="d-flex flex-column gap-2">
+                      <span style={{ fontSize: "16px" }}>
+                        {estimatedFee.amount} {estimatedFee.symbol}
+                      </span>
+                      <small
+                        className="text-secondary"
+                        style={{ fontSize: "12px" }}
                       >
-                        View execution on nearblocks.io{" "}
-                        <i className="bi bi-box-arrow-up-right"></i>
-                      </a>
+                        This is an estimated fee. Check the transaction links
+                        below for the actual fee charged.
+                      </small>
                     </div>
-                    {transactionInfo.targetTxHash && (
+                  </div>
+                )}
+              {(proposalData?.status === "Approved" ||
+                proposalData?.status === "Failed") &&
+                transactionInfo.nearTxHash && (
+                  <div className="d-flex flex-column gap-2 mt-1">
+                    <label className="border-top proposal-label">
+                      Transaction Links
+                    </label>
+                    <div className="d-flex flex-column gap-2">
                       <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
                         <a
-                          href={transactionInfo.targetTxHash}
+                          href={transactionInfo.nearTxHash}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="d-flex align-items-center gap-2 text-color text-underline"
                         >
-                          {getExplorerButtonText(transactionInfo.targetTxHash)}{" "}
+                          View execution on nearblocks.io{" "}
                           <i className="bi bi-box-arrow-up-right"></i>
                         </a>
                       </div>
-                    )}
+                      {transactionInfo.targetTxHash && (
+                        <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
+                          <a
+                            href={transactionInfo.targetTxHash}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="d-flex align-items-center gap-2 text-color text-underline"
+                          >
+                            {getExplorerButtonText(
+                              transactionInfo.targetTxHash
+                            )}{" "}
+                            <i className="bi bi-box-arrow-up-right"></i>
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+            </div>
           </div>
-        </div>
+        )
       }
     />
   );

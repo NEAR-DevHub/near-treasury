@@ -1432,3 +1432,44 @@ input.hide-bg:active {
 input.hide-bg:focus-visible {
   background-color: transparent !important;
 }
+
+.form-custom-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+}
+
+.form-custom-tabs .nav-item {
+  list-style: none;
+}
+
+.form-custom-tabs .nav-link {
+  padding: 0.5rem;
+  color: var(--text-secondary-color);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+  bottom: -1px;
+}
+
+.form-custom-tabs .nav-link:hover {
+  color: var(--text-color);
+  background: transparent;
+}
+
+.form-custom-tabs .nav-link.active {
+  color: var(--text-color);
+  background: transparent;
+  border-bottom: 2px solid var(--text-color);
+  font-weight: 600;
+}
+
+.fw-550 {
+  font-weight: 550;
+}

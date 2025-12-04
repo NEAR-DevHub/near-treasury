@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
@@ -11,6 +11,11 @@ import {
   formatSubmissionTimeStamp,
 } from "@/helpers/daoHelpers";
 import { fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
+import {
+  isBuyStorageProposal,
+  isBulkPaymentApproveProposal,
+  getLinkedStorageProposalId,
+} from "@/api/bulk-payment";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import HistoryStatus from "@/components/proposals/HistoryStatus";
 import Profile from "@/components/ui/Profile";
@@ -150,6 +155,12 @@ const Table = ({
     }
   }, [proposals]);
 
+  // Filter out buy_storage proposals (they're linked to approve_list proposals)
+  const filteredProposals = useMemo(() => {
+    if (!proposals) return [];
+    return proposals.filter((proposal) => !isBuyStorageProposal(proposal));
+  }, [proposals]);
+
   const TooltipContent = ({ title, summary }) => {
     return (
       <div className="p-1 text-color">
@@ -168,7 +179,18 @@ const Table = ({
   const ProposalsComponent = () => {
     return (
       <tbody style={{ overflowX: "auto" }}>
-        {proposals?.map((item, index) => {
+        {filteredProposals?.map((item, index) => {
+          // Check if this is a bulk payment approve_list proposal with a linked buy_storage
+          const isBulkPayment = isBulkPaymentApproveProposal(item);
+          // Pass original proposals array to check if previous proposal is buy_storage
+          const linkedStorageProposalId = isBulkPayment
+            ? getLinkedStorageProposalId(item, proposals)
+            : null;
+          // Get the linked storage proposal object for passing to VoteActions
+          const linkedStorageProposal =
+            linkedStorageProposalId !== null
+              ? proposals?.find((p) => p.id === linkedStorageProposalId)
+              : null;
           const notes = decodeProposalDescription("notes", item.description);
           const title = decodeProposalDescription("title", item.description);
           const summary = decodeProposalDescription(
@@ -234,6 +256,31 @@ const Table = ({
                 item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
               ? "Lockup"
               : "SputnikDAO";
+
+          // Extract bulk payment info from encoded description
+          let bulkPaymentRecipientCount = null;
+          let bulkPaymentContract = null;
+          let bulkPaymentAmount = null;
+          if (isBulkPayment) {
+            // Decode from markdown format: proposal_action: "bulk-payment", recipients, contract
+            const recipients = decodeProposalDescription(
+              "recipients",
+              item.description
+            );
+            const contract = decodeProposalDescription(
+              "contract",
+              item.description
+            );
+            const amount = decodeProposalDescription(
+              "amount",
+              item.description
+            );
+            bulkPaymentRecipientCount = recipients
+              ? parseInt(recipients, 10)
+              : null;
+            bulkPaymentContract = contract || null;
+            bulkPaymentAmount = amount || null;
+          }
           const intentsToken =
             isIntentWithdraw &&
             (intentsTokensData || []).find(
@@ -333,15 +380,38 @@ const Table = ({
                 </Tooltip>
               </td>
               <td className={"fw-semi-bold " + isVisible("Recipient")}>
-                <Profile accountId={args.receiver_id} />
+                {isBulkPayment ? (
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="d-flex align-items-center justify-content-center rounded-circle"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        backgroundColor: "var(--grey-04)",
+                      }}
+                    >
+                      <i className="bi bi-people-fill text-secondary"></i>
+                    </div>
+                    <div>
+                      <div className="fw-semi-bold">Bulk Payment</div>
+                      {bulkPaymentRecipientCount && (
+                        <div className="text-secondary small">
+                          {bulkPaymentRecipientCount} Recipients
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <Profile accountId={args.receiver_id} />
+                )}
               </td>
               <td className={isVisible("Requested Token") + " text-center"}>
                 <TokenIcon address={args.token_id} />
               </td>
               <td className={isVisible("Funding Ask") + " text-right"}>
                 <TokenAmount
-                  amountWithoutDecimals={args.amount}
-                  address={args.token_id}
+                  amountWithoutDecimals={bulkPaymentAmount || args.amount}
+                  address={bulkPaymentContract || args.token_id}
                   price={oneClickPrices[args.token_id] || undefined}
                   showUSDValue={false}
                 />
@@ -421,10 +491,11 @@ const Table = ({
                       proposalCreator={item.proposer}
                       hasOneDeleteIcon={hasOneDeleteIcon}
                       isIntentsRequest={isIntentWithdraw}
-                      currentAmount={args.amount}
-                      currentContract={args.token_id}
+                      currentAmount={bulkPaymentAmount || args.amount}
+                      currentContract={bulkPaymentContract || args.token_id}
                       proposal={item}
                       context="payment"
+                      linkedStorageProposal={linkedStorageProposal}
                     />
                   </td>
                 )}
