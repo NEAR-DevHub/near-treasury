@@ -225,6 +225,8 @@ const FiltersDropdown = ({
                     type="number"
                     className="form-control form-control-sm"
                     placeholder="0"
+                    min="0"
+                    max={amountValues.max || undefined}
                     value={amountValues.min}
                     onChange={(e) =>
                       handleAmountValueChange("min", e.target.value)
@@ -241,6 +243,7 @@ const FiltersDropdown = ({
                     type="number"
                     className="form-control form-control-sm"
                     placeholder="0"
+                    min={amountValues.min || "0"}
                     value={amountValues.max}
                     onChange={(e) =>
                       handleAmountValueChange("max", e.target.value)
@@ -434,7 +437,7 @@ const FiltersDropdown = ({
                   type="date"
                   className="form-control form-control-sm"
                   value={selected[0] || ""}
-                  max={selected[1] || undefined}
+                  max={selected[1] || new Date().toISOString().split("T")[0]}
                   onChange={(e) => handleDateChange(0, e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -450,6 +453,7 @@ const FiltersDropdown = ({
                   type="date"
                   className="form-control form-control-sm"
                   min={selected[0] || undefined}
+                  max={new Date().toISOString().split("T")[0]}
                   value={selected[1] || ""}
                   onChange={(e) => handleDateChange(1, e.target.value)}
                   onClick={(e) => e.stopPropagation()}
@@ -586,13 +590,20 @@ const FiltersDropdown = ({
       }
       return <TokenIcon address={selected[0]} />;
     } else if (type === "date") {
+      // Format date using user's locale settings (numeric format to match date picker)
+      const formatDate = (dateStr) => {
+        if (!dateStr) return "";
+        const date = new Date(dateStr + "T00:00:00");
+        return date.toLocaleDateString();
+      };
+
       if (selected[0] || selected[1]) {
         if (selected[0] && selected[1]) {
-          return `${selected[0]} to ${selected[1]}`;
+          return `${formatDate(selected[0])} - ${formatDate(selected[1])}`;
         } else if (selected[0]) {
-          return `From ${selected[0]}`;
+          return `From ${formatDate(selected[0])}`;
         } else if (selected[1]) {
-          return `Until ${selected[1]}`;
+          return `Until ${formatDate(selected[1])}`;
         }
       }
       return "";

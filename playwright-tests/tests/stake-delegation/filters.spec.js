@@ -699,11 +699,12 @@ test.describe("Stake Delegation Filters", () => {
     console.log("✓ All rows have dates within range");
 
     // Check export URL contains date range
+    // Note: toDate is adjusted by +1 day to include the entire end date
     await checkExportUrlWithFilters(
       page,
       {
         created_date_from: "2024-01-01",
-        created_date_to: "2024-12-31",
+        created_date_to: "2025-01-01",
       },
       "stake-delegation"
     );
