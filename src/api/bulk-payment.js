@@ -25,28 +25,6 @@ export function calculateStorageCost(numRecords) {
 }
 
 /**
- * Calculate cost per record in yoctoNEAR
- * @returns {string} Cost per record in yoctoNEAR
- */
-export function getCostPerRecord() {
-  const costPerRecord =
-    (BYTES_PER_RECORD * STORAGE_COST_PER_BYTE * STORAGE_MARKUP_PERCENT) / 100n;
-  return costPerRecord.toString();
-}
-
-/**
- * Calculate number of records that can be covered by given credits
- * @param {string} creditsYocto - Credits in yoctoNEAR
- * @returns {number} Number of records
- */
-export function calculateRecordsFromCredits(creditsYocto) {
-  const costPerRecord =
-    (BYTES_PER_RECORD * STORAGE_COST_PER_BYTE * STORAGE_MARKUP_PERCENT) / 100n;
-  const records = BigInt(creditsYocto) / costPerRecord;
-  return Number(records);
-}
-
-/**
  * Generate a deterministic list_id (SHA-256 hash of canonical JSON)
  * Must match the backend's hash calculation
  * @param {string} submitterId - DAO account ID
@@ -91,11 +69,6 @@ export function generateListId(submitterId, tokenId, payments) {
  * @param {string} daoAccountId - DAO account ID
  * @returns {Promise<number>} Number of available storage records
  */
-/**
- * View storage credits for a DAO in the bulk payment contract
- * @param {string} daoAccountId - DAO account ID
- * @returns {Promise<string>} Available storage credits in yoctoNEAR
- */
 export async function viewStorageCredits(daoAccountId) {
   try {
     const result = await Near.view(
@@ -103,11 +76,10 @@ export async function viewStorageCredits(daoAccountId) {
       "view_storage_credits",
       { account_id: daoAccountId }
     );
-    // Contract returns credits in yoctoNEAR as a string
-    return result?.toString() || "0";
+    return typeof result === "number" ? result : parseInt(result || "0", 10);
   } catch (error) {
     console.warn("Error fetching storage credits:", error);
-    return "0";
+    return 0;
   }
 }
 
@@ -206,7 +178,7 @@ export async function getPaymentList(listId) {
  * @param {string} params.proposalBond - Proposal bond amount
  * @returns {object} Transaction object for signAndSendTransactions
  */
-export function buildApproveListProposal({
+export async function buildApproveListProposal({
   daoAccountId,
   listId,
   tokenId,
@@ -246,37 +218,56 @@ export function buildApproveListProposal({
       deposit: proposalBond,
     };
   } else {
-    // For FT: FunctionCall proposal with ft_transfer_call
-    return {
-      contractName: daoAccountId,
-      methodName: "add_proposal",
-      args: {
-        proposal: {
-          description,
-          kind: {
-            FunctionCall: {
-              receiver_id: tokenId, // Call the token contract
-              actions: [
-                {
-                  method_name: "ft_transfer_call",
-                  args: Buffer.from(
-                    JSON.stringify({
-                      receiver_id: BULK_PAYMENT_CONTRACT_ID,
-                      amount: totalAmount,
-                      msg: listId, // list_id as the message
-                    })
-                  ).toString("base64"),
-                  deposit: "1", // 1 yoctoNEAR for ft_transfer_call
-                  gas: "100000000000000", // 100 TGas
-                },
-              ],
+    const actions = [
+      {
+        method_name: "ft_transfer_call",
+        args: Buffer.from(
+          JSON.stringify({
+            receiver_id: BULK_PAYMENT_CONTRACT_ID,
+            amount: totalAmount,
+            msg: listId, // list_id as the message
+          })
+        ).toString("base64"),
+        deposit: "1", // 1 yoctoNEAR for ft_transfer_call
+        gas: "100000000000000", // 100 TGas
+      },
+    ];
+    if (!isNEAR) {
+      const ftStorageDeposit = await Near.view(tokenId, "storage_balance_of", {
+        account_id: BULK_PAYMENT_CONTRACT_ID,
+      });
+      if (!ftStorageDeposit || !ftStorageDeposit?.total) {
+        actions.unshift({
+          method_name: "storage_deposit",
+          args: Buffer.from(
+            JSON.stringify({
+              account_id: BULK_PAYMENT_CONTRACT_ID,
+            })
+          ).toString("base64"),
+          deposit: Big(0.125).mul(Big(10).pow(24)).toFixed(),
+          gas: "150000000000000",
+        });
+      }
+
+      // For FT: FunctionCall proposal with ft_transfer_call
+      return {
+        contractName: daoAccountId,
+        methodName: "add_proposal",
+        args: {
+          proposal: {
+            description,
+            kind: {
+              FunctionCall: {
+                receiver_id: tokenId, // Call the token contract
+                actions: actions,
+              },
             },
           },
         },
-      },
-      gas,
-      deposit: proposalBond,
-    };
+        gas,
+        deposit: proposalBond,
+      };
+    }
   }
 }
 
@@ -347,11 +338,35 @@ export function isBulkPaymentApproveProposal(proposal) {
   const receiverId = functionCall.receiver_id;
   const actions = functionCall.actions || [];
 
-  // Check if it's calling the bulk payment contract with approve_list
-  return (
+  // Check for NEAR bulk payment: approve_list to bulk payment contract
+  if (
     receiverId === BULK_PAYMENT_CONTRACT_ID &&
     actions.some((action) => action.method_name === "approve_list")
-  );
+  ) {
+    return true;
+  }
+
+  // Check for FT bulk payment: ft_transfer_call where args.receiver_id is bulk payment contract
+  // Need to check ALL actions, not just the first one (proposals may have storage_deposit as first action)
+  for (const action of actions) {
+    if (action.method_name === "ft_transfer_call") {
+      try {
+        const argsBase64 = action.args;
+        if (argsBase64) {
+          const decodedArgs = JSON.parse(
+            Buffer.from(argsBase64, "base64").toString("utf-8")
+          );
+          if (decodedArgs.receiver_id === BULK_PAYMENT_CONTRACT_ID) {
+            return true;
+          }
+        }
+      } catch (error) {
+        console.error("Error decoding ft_transfer_call args:", error);
+      }
+    }
+  }
+
+  return false;
 }
 
 /**

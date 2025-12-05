@@ -438,16 +438,18 @@ const VoteActions = ({
         <div className="text-color text-left">
           <p>By approving this request, you agree to sign two transactions:</p>
           <ul className="mb-0">
-            <li className="d-flex align-items-center gap-2">
-              One for purchasing the required storage
-              <TokenAmount
-                amountWithoutDecimals={
-                  linkedStorageProposal?.kind?.FunctionCall?.actions?.[0]
-                    ?.deposit || "0"
-                }
-                address=""
-                showUSDValue={false}
-              />
+            <li>
+              <div className="d-flex align-items-center gap-2">
+                One for purchasing the required storage
+                <TokenAmount
+                  amountWithoutDecimals={
+                    linkedStorageProposal?.kind?.FunctionCall?.actions?.[0]
+                      ?.deposit || "0"
+                  }
+                  address=""
+                  showUSDValue={false}
+                />
+              </div>
             </li>
             <li>One for confirming the payment for recipients</li>
           </ul>

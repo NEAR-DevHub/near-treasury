@@ -35,7 +35,22 @@ export const ProposalToastProvider = ({ children }) => {
 
     if (!daoId) return;
 
-    // Wait for indexer to process the transaction
+    // Check if this is an error status - if so, show toast immediately without waiting or cache invalidation
+    const isErrorStatus =
+      status && (status.startsWith("Error") || status === "Failed");
+
+    if (isErrorStatus) {
+      // For errors, show toast immediately without indexer wait or cache refresh
+      setToastState({
+        show: true,
+        status,
+        proposalId,
+        context,
+      });
+      return;
+    }
+
+    // Wait for indexer to process the transaction (only for successful operations)
     setTimeout(async () => {
       let actualProposalId = proposalId;
 

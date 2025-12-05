@@ -358,7 +358,9 @@ const Table = ({
               )}
 
               <td className={isVisible("Title")} style={{ minWidth: 200 }}>
-                {description ? (
+                {isBulkPayment ? (
+                  <div className="fw-semi-bold">Bulk Payment</div>
+                ) : description ? (
                   description
                 ) : (
                   <Tooltip
@@ -412,7 +414,7 @@ const Table = ({
                 )}
               </td>
               <td className={isVisible("Requested Token") + " text-center"}>
-                <TokenIcon address={args.token_id} />
+                <TokenIcon address={bulkPaymentContract || args.token_id} />
               </td>
               <td className={isVisible("Funding Ask") + " text-right"}>
                 <TokenAmount

@@ -28,13 +28,7 @@ import { encodeToMarkdown } from "@/helpers/daoHelpers";
 /**
  * Memoized table row component to prevent unnecessary re-renders
  */
-const PaymentRow = memo(function PaymentRow({
-  item,
-  index,
-  usdValue,
-  onEdit,
-  onDelete,
-}) {
+const PaymentRow = memo(function PaymentRow({ item, index, onEdit, onDelete }) {
   return (
     <tr>
       <td>{index + 1}</td>
@@ -42,15 +36,11 @@ const PaymentRow = memo(function PaymentRow({
         <Profile accountId={item["Recipient"]} showKYC={false} />
       </td>
       <td className="text-end">
-        <div className="d-flex flex-column align-items-end">
-          <TokenAmount
-            amountWithoutDecimals={item["Amount"]}
-            address={item["Requested Token"]}
-          />
-          {usdValue && (
-            <div className="text-secondary small">~ {usdValue} USD</div>
-          )}
-        </div>
+        <TokenAmount
+          amountWithoutDecimals={item["Amount"]}
+          address={item["Requested Token"]}
+          showUSDValue={true}
+        />
       </td>
       <td>
         <div className="d-flex gap-2 justify-content-end">
@@ -99,7 +89,7 @@ const BulkImportPreviewTable = ({
   const [validationErrors, setValidationErrors] = useState({});
 
   // Bulk payment state
-  const [storageCredits, setStorageCredits] = useState("0"); // Credits in yoctoNEAR
+  const [storageCredits, setStorageCredits] = useState(0); // Number of available storage records
   const [isLoadingCredits, setIsLoadingCredits] = useState(true);
   const [needsStoragePurchase, setNeedsStoragePurchase] = useState(false);
   const [showStorageConfirmModal, setShowStorageConfirmModal] = useState(false);
@@ -112,18 +102,6 @@ const BulkImportPreviewTable = ({
   }, [proposalList]);
 
   const totalRecipients = proposalList.length;
-
-  // Pre-calculate USD values for each row to avoid calculations in render loop
-  const usdValues = useMemo(() => {
-    if (!selectedToken?.price || !selectedToken?.decimals) return {};
-    return proposalList.reduce((acc, item, index) => {
-      acc[index] = Big(item["Amount"] || 0)
-        .div(Big(10).pow(selectedToken.decimals))
-        .times(selectedToken.price)
-        .toFixed(2);
-      return acc;
-    }, {});
-  }, [proposalList, selectedToken?.price, selectedToken?.decimals]);
 
   // Storage fee calculation based on bulk payment contract
   const storageFee = useMemo(() => {
@@ -157,35 +135,30 @@ const BulkImportPreviewTable = ({
     computeListId();
   }, [proposalList, selectedToken, treasuryDaoID]);
 
-  // Calculate required storage cost in yoctoNEAR
-  const requiredStorageCost = useMemo(() => {
-    return calculateStorageCost(totalRecipients);
-  }, [totalRecipients]);
-
   // Check storage credits on mount
   useEffect(() => {
     async function checkStorageCredits() {
       setIsLoadingCredits(true);
       try {
         const credits = await viewStorageCredits(treasuryDaoID);
-        setStorageCredits(credits); // Credits in yoctoNEAR
+        setStorageCredits(credits); // Number of available storage records
 
-        // Compare credits (yoctoNEAR) with required storage cost (yoctoNEAR)
-        const hasEnoughCredits = Big(credits).gte(Big(requiredStorageCost));
+        // Compare available records with required records
+        const hasEnoughCredits = credits >= totalRecipients;
         setNeedsStoragePurchase(!hasEnoughCredits);
       } catch (error) {
         console.error("Error checking storage credits:", error);
-        setStorageCredits("0");
+        setStorageCredits(0);
         setNeedsStoragePurchase(true);
       } finally {
         setIsLoadingCredits(false);
       }
     }
 
-    if (treasuryDaoID) {
+    if (treasuryDaoID && totalRecipients > 0) {
       checkStorageCredits();
     }
-  }, [treasuryDaoID, requiredStorageCost]);
+  }, [treasuryDaoID, totalRecipients]);
 
   /**
    * Open edit modal with pre-filled data
@@ -195,7 +168,8 @@ const BulkImportPreviewTable = ({
       const proposal = proposalList[index];
       setEditingIndex(index);
       setEditingData({
-        Amount: proposal["Amount"]
+        // Convert from smallest units to human-readable for editing
+        Amount: Big(proposal["Amount"])
           .div(Big(10).pow(selectedToken?.decimals || 24))
           .toFixed(),
         Recipient: proposal.Recipient,
@@ -336,20 +310,8 @@ const BulkImportPreviewTable = ({
       // Step 1: If insufficient storage credits, add buy_storage proposal
       if (needsStoragePurchase) {
         // Calculate how many additional records we need storage for
-        // Credits are in yoctoNEAR, so we calculate the deficit and convert to records
-        const currentCredits = Big(storageCredits || "0");
-        const requiredCost = Big(requiredStorageCost);
-        const deficit = requiredCost.minus(currentCredits);
-
-        // Calculate records needed (round up to ensure we have enough)
-        const costPerRecord = Big(calculateStorageCost(1));
-        const additionalRecords = deficit.gt(0)
-          ? Math.ceil(Number(deficit.div(costPerRecord)))
-          : 0;
-
-        // Buy storage for all records if we have no credits, or just the additional needed
-        const recordsNeeded =
-          additionalRecords > 0 ? additionalRecords : totalRecipients;
+        // storageCredits is the number of available records
+        const recordsNeeded = Math.max(0, totalRecipients - storageCredits);
 
         const buyStorageProposal = buildBuyStorageProposal({
           daoAccountId: treasuryDaoID,
@@ -370,16 +332,16 @@ const BulkImportPreviewTable = ({
               params: {
                 methodName: buyStorageProposal.methodName,
                 args: buyStorageProposal.args,
+                gas: buyStorageProposal.gas,
+                deposit: buyStorageProposal.deposit,
               },
-              gas: buyStorageProposal.gas,
-              deposit: buyStorageProposal.deposit,
             },
           ],
         });
       }
 
       // Step 2: Create approve_list proposal
-      const approveListProposal = buildApproveListProposal({
+      const approveListProposal = await buildApproveListProposal({
         daoAccountId: treasuryDaoID,
         listId,
         tokenId: isNEAR ? "near" : tokenId,
@@ -397,14 +359,14 @@ const BulkImportPreviewTable = ({
             params: {
               methodName: approveListProposal.methodName,
               args: approveListProposal.args,
+              gas: approveListProposal.gas,
+              deposit: approveListProposal.deposit,
             },
-            gas: approveListProposal.gas,
-            deposit: approveListProposal.deposit,
           },
         ],
       });
 
-      console.log("Submitting", transactions.length, "proposal(s) to wallet");
+      console.log("Submitting", transactions, "proposal(s) to wallet");
       setIsCreatingRequest(false);
       setTxnCreated(true);
 
@@ -716,6 +678,7 @@ const BulkImportPreviewTable = ({
                 amountWithoutDecimals={totalAmount.toFixed()}
                 address={selectedToken?.contract}
                 displayAllDecimals={true}
+                showUSDValue={true}
               />
             </div>
           </div>
@@ -759,7 +722,6 @@ const BulkImportPreviewTable = ({
                   key={index}
                   item={item}
                   index={index}
-                  usdValue={usdValues[index]}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />

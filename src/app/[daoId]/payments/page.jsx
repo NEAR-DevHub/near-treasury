@@ -110,7 +110,7 @@ const PaymentsIndex = () => {
 
   if (bulkPreviewData) {
     return (
-      <div className="container-lg mt-3">
+      <div className="container-md mt-3">
         <BulkImportPreviewTable
           proposals={bulkPreviewData}
           sourceWallet={bulkSourceWallet?.label || "SputnikDAO"}

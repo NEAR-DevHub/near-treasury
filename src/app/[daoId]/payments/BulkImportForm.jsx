@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Big from "big.js";
 import { useDao } from "@/context/DaoContext";
 import { searchFTToken } from "@/api/backend";
@@ -33,7 +33,13 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   const [dataErrors, setDataErrors] = useState(null);
   const [validatedData, setValidatedData] = useState(null);
 
-  // CSV Parsing Utilities (kept local to this component)
+  // Reset validation when wallet, token, or CSV data changes
+  useEffect(() => {
+    setValidatedData(null);
+    setDataErrors(null);
+    setDataWarnings(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWallet, selectedToken, csvData]);
 
   /**
    * Parse CSV/TSV data with auto-delimiter detection
@@ -224,18 +230,16 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
       .then(() => {
         // Check treasury balance for selected token if no errors
         if (errors.length === 0 && totalAmount.gt(0)) {
-          // Use token balance from selected token
+          // Use token balance from selected token (in human-readable format)
           const availableBalance = selectedToken?.tokenBalance || "0";
+          // Convert totalAmount from smallest units to human-readable for comparison
+          const totalAmountReadable = totalAmount.div(
+            Big(10).pow(tokenMeta.decimals)
+          );
 
-          if (Big(availableBalance).lt(totalAmount)) {
+          if (Big(availableBalance).lt(totalAmountReadable)) {
             warnings.push({
-              message: `Treasury balance for ${tokenMeta.symbol} is too low for the payments in this batch. Current balance: ${
-                availableBalance
-              } ${tokenMeta.symbol}. Required: ${totalAmount
-                .div(Big(10).pow(tokenMeta.decimals))
-                .toFixed()} ${
-                tokenMeta.symbol
-              }. Requests can be created but may not be approved until balances are refilled.`,
+              message: `Treasury balance for ${tokenMeta.symbol} is too low for the payments in this batch. Current balance: ${availableBalance} ${tokenMeta.symbol}. Required: ${totalAmountReadable.toFixed()} ${tokenMeta.symbol}. Requests can be created but may not be approved until balances are refilled.`,
             });
           }
         }

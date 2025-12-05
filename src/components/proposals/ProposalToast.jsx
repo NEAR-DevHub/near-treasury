@@ -49,9 +49,7 @@ const ProposalToast = ({
   const getContent = () => {
     // Handle bulk import special case
     if (status?.startsWith("BulkProposalAdded")) {
-      return `Successfully imported ${status.split(":")[1]} ${
-        context === "payment" ? "payment requests" : "requests"
-      }.`;
+      return `Successfully created bulk payment requests for ${status.split(":")[1]} recipients.`;
     }
 
     // Handle InProgress special case

@@ -696,10 +696,10 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
             </div>
             {/* Recipients Table - only in expanded view */}
             {!isCompactVersion && (
-              <div className="d-flex flex-column gap-2 mt-2">
+              <div className="d-flex flex-column gap-2 mt-2 border-top">
                 {isLoadingPaymentList ? (
                   <table
-                    className="table table-sm mb-0"
+                    className="table table-sm mb-0 no-padding"
                     style={{ fontSize: 14 }}
                   >
                     <thead>
@@ -715,7 +715,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                   </table>
                 ) : paymentList && paymentList.length > 0 ? (
                   <table
-                    className="table table-sm mb-0"
+                    className="table table-sm mb-0 no-padding"
                     style={{ fontSize: 14 }}
                   >
                     <thead>
@@ -728,7 +728,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                     <tbody>
                       {paymentList.map((payment, index) => (
                         <tr key={index}>
-                          <td className="text-secondary">{index + 1}</td>
+                          <td className="fw-semibold">{index + 1}</td>
                           <td>
                             <Profile
                               accountId={payment.recipient}

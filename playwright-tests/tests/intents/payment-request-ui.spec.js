@@ -1112,6 +1112,10 @@ test.describe("Payment Request UI Flow", () => {
       .getByRole("textbox", { name: "Summary" })
       .fill("Withdrawal of wNEAR tokens from intents contract");
 
+    // Fill amount first (new order - amount before recipient)
+    await page.getByRole("spinbutton", { name: /Amount/i }).fill("50");
+    await page.waitForTimeout(500);
+
     // Fill recipient with keypress simulation to trigger validation
     const recipientInput = page.getByPlaceholder(
       /treasury.near|Enter NEAR Account/
@@ -1120,8 +1124,6 @@ test.describe("Payment Request UI Flow", () => {
     await recipientInput.clear();
     await recipientInput.pressSequentially(recipientAccountId, { delay: 50 });
     await page.waitForTimeout(500); // Wait for validation to complete
-
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("50");
     console.log("✓ Filled form with wNEAR payment details");
 
     // Submit
