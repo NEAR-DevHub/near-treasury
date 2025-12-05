@@ -58,6 +58,7 @@ test.describe("TokenAmount component in payment requests", () => {
 
     // Click to open the create request form
     await createButton.click();
+    await page.getByText("Single Request").click();
     await page.waitForTimeout(1000);
 
     // Hard expectation: Modal/form should open

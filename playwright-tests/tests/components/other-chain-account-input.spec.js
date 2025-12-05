@@ -98,6 +98,7 @@ test.describe("OtherChainAccountInput validation", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
+    await page.getByText("Single Request").click();
 
     // Wait for the form to load
     await expect(page.getByText("Create Payment Request")).toBeVisible({

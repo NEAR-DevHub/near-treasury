@@ -353,10 +353,6 @@ const VoteActions = ({
         <BulkPaymentProcessingToast
           listId={bulkPaymentListId}
           recipients={bulkPaymentRecipients}
-          onComplete={() => {
-            // Auto-close after completion
-            setTimeout(() => setShowBulkProcessingToast(false), 5000);
-          }}
           onClose={() => setShowBulkProcessingToast(false)}
         />
       )}

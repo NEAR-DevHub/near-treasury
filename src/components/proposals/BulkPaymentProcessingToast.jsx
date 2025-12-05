@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getPaymentListStatus } from "@/api/bulk-payment";
+import Profile from "../ui/Profile";
 
 /**
  * Toast component that shows bulk payment processing progress
@@ -10,7 +11,6 @@ import { getPaymentListStatus } from "@/api/bulk-payment";
 const BulkPaymentProcessingToast = ({
   listId,
   recipients = [], // Array of { recipient, amount } objects
-  onComplete,
   onClose,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
@@ -38,7 +38,6 @@ const BulkPaymentProcessingToast = ({
         // Check if all payments are processed (no pending)
         if (pending_payments === 0) {
           setIsComplete(true);
-          onComplete?.();
         }
       } else if (result?.error) {
         setError(result.error);
@@ -47,7 +46,7 @@ const BulkPaymentProcessingToast = ({
       console.error("Error polling payment status:", err);
       setError(err.message);
     }
-  }, [listId, isComplete, onComplete]);
+  }, [listId, isComplete]);
 
   // Start polling when component mounts
   useEffect(() => {
@@ -77,12 +76,6 @@ const BulkPaymentProcessingToast = ({
     return "pending";
   };
 
-  const truncateAddress = (address) => {
-    if (!address) return "";
-    if (address.length <= 24) return address;
-    return `${address.slice(0, 20)}...`;
-  };
-
   return (
     <div
       className="toast-container position-fixed bottom-0 end-0 p-3"
@@ -97,7 +90,19 @@ const BulkPaymentProcessingToast = ({
           ></i>
         </div>
         <div className="toast-body px-3 py-3">
-          <div className="fw-bold mb-3">Bulk Payment Processing</div>
+          <div className="fw-bold mb-3">
+            {isComplete && !error ? (
+              <div
+                className="d-flex align-items-center gap-2"
+                style={{ color: "var(--other-green)" }}
+              >
+                <i className="bi bi-check-circle-fill"></i>
+                <span>All payments completed!</span>
+              </div>
+            ) : (
+              "Bulk Payment Processing"
+            )}
+          </div>
 
           {error ? (
             <div className="text-danger small">
@@ -117,7 +122,7 @@ const BulkPaymentProcessingToast = ({
                     className="d-flex align-items-center justify-content-between"
                   >
                     <div className="d-flex align-items-center gap-2">
-                      <span className="text-secondary small">
+                      <span className="fw-semibold">
                         {index + 1}/{totalCount}
                       </span>
                       <span
@@ -125,20 +130,29 @@ const BulkPaymentProcessingToast = ({
                         style={{ maxWidth: 180 }}
                         title={payment.recipient}
                       >
-                        @{truncateAddress(payment.recipient)}
+                        <Profile
+                          accountId={payment.recipient}
+                          showKYC={false}
+                        />
                       </span>
                     </div>
                     <div>
                       {status === "paid" && (
                         <i
                           className="bi bi-check-circle-fill"
-                          style={{ color: "#28a745", fontSize: "1.1rem" }}
+                          style={{
+                            color: "var(--other-green)",
+                            fontSize: "1.1rem",
+                          }}
                         ></i>
                       )}
                       {status === "failed" && (
                         <i
                           className="bi bi-x-circle-fill"
-                          style={{ color: "#dc3545", fontSize: "1.1rem" }}
+                          style={{
+                            color: "var(--other-red)",
+                            fontSize: "1.1rem",
+                          }}
                         ></i>
                       )}
                       {status === "pending" && (
@@ -154,15 +168,6 @@ const BulkPaymentProcessingToast = ({
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {isComplete && !error && (
-            <div className="mt-3 pt-2 border-top">
-              <div className="d-flex align-items-center gap-2 text-success">
-                <i className="bi bi-check-circle-fill"></i>
-                <span>All payments completed!</span>
-              </div>
             </div>
           )}
         </div>

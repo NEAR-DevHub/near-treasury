@@ -201,6 +201,7 @@ test.describe("Vote on Payment Request - Table View", () => {
 
     // Create a payment request
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Request").click();
     await page.waitForTimeout(1000);
 
     // Wait for the offcanvas (sidebar form) to open
@@ -307,6 +308,7 @@ test.describe("Vote on Payment Request - Table View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Request").click();
     await page.waitForTimeout(1000);
 
     // Wait for offcanvas and select wallet
@@ -460,6 +462,7 @@ test.describe("Vote on Payment Request - Table View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Request").click();
     await page.waitForTimeout(1000);
 
     const offcanvas = page.locator(".offcanvas-body");
@@ -564,6 +567,7 @@ test.describe("Vote on Payment Request - Table View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Request").click();
     await page.waitForTimeout(1000);
 
     const offcanvas = page.locator(".offcanvas-body");
