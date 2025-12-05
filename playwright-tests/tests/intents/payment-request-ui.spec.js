@@ -585,8 +585,8 @@ test.describe("Payment Request UI Flow", () => {
     console.log("✓ Filled BTC recipient address");
 
     // Fill in amount
-    await page.getByRole("spinbutton", { name: "Total Amount" }).click();
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2");
+    await page.getByRole("spinbutton", { name: "Amount" }).click();
+    await page.getByRole("spinbutton", { name: "Amount" }).fill("2");
     console.log("✓ Filled amount: 2 BTC");
 
     // Verify no validation errors and submit button is enabled
@@ -891,7 +891,7 @@ test.describe("Payment Request UI Flow", () => {
     await page
       .getByPlaceholder(/Enter .* Address \(0x/)
       .fill("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2500");
+    await page.getByRole("spinbutton", { name: "Amount" }).fill("2500");
     console.log("✓ Filled form with USDC payment details");
 
     // Submit

@@ -318,8 +318,8 @@ test.describe("Base Payment Request Detail", () => {
     console.log("✓ Entered summary");
 
     // Fill in amount
-    await page.getByRole("spinbutton", { name: "Total Amount" }).click();
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("50");
+    await page.getByRole("spinbutton", { name: "Amount" }).click();
+    await page.getByRole("spinbutton", { name: "Amount" }).fill("50");
     console.log("✓ Entered amount: 50 USDC");
 
     // Fill in recipient address (Base address)

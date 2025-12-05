@@ -218,6 +218,7 @@ test.describe("TokenAmount component in payment requests", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10000 });
     await createButton.click();
+    await page.getByText("Single Request").click();
     await page.waitForTimeout(1000);
 
     // Select NEAR Intents wallet
