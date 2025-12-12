@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { useProposal } from "@/hooks/useProposal";
@@ -12,8 +13,6 @@ import {
 import { fetchWithdrawalStatus } from "@/api/chaindefuser";
 import {
   isBulkPaymentApproveProposal,
-  isBuyStorageProposal,
-  calculateStorageCost,
   getPaymentList,
 } from "@/api/bulk-payment";
 import Big from "big.js";
@@ -25,6 +24,7 @@ import TokenAmount from "@/components/proposals/TokenAmount";
 import TableSkeleton from "@/components/ui/TableSkeleton";
 
 const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
+  const router = useRouter();
   const { accountId } = useNearWallet();
   const {
     daoId: treasuryDaoID,
@@ -87,19 +87,6 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
     });
     setEstimatedFee(null);
   }, [id]);
-
-  // Check if there's a linked storage proposal for bulk payments
-  useEffect(() => {
-    if (
-      isBulkPayment &&
-      potentialStorageProposal &&
-      isBuyStorageProposal(potentialStorageProposal)
-    ) {
-      setLinkedStorageProposal(potentialStorageProposal);
-    } else {
-      setLinkedStorageProposal(null);
-    }
-  }, [isBulkPayment, potentialStorageProposal]);
 
   // Fetch payment list for bulk payments in expanded view
   useEffect(() => {
@@ -251,17 +238,19 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
           );
           const amount = decodeProposalDescription("amount", item.description);
           const listId = decodeProposalDescription("list_id", item.description);
+          const bulkTitle = decodeProposalDescription(
+            "title",
+            item.description
+          );
 
-          // Calculate storage fee based on recipient count
           const recipientCount = recipients ? parseInt(recipients, 10) : 0;
-          const storageFee = calculateStorageCost(recipientCount);
 
           bulkPaymentInfo = {
             recipientCount,
             contract: contract || "",
             totalAmount: amount || "0",
-            storageFee,
             listId: listId || null,
+            title: bulkTitle || "",
           };
         }
 
@@ -664,6 +653,11 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
               <label className="proposal-label">Source Wallet</label>
               <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
             </div>
+            {proposalData?.bulkPaymentInfo?.title && (
+              <h6 className="mb-0 flex-1 border-top pt-3">
+                {proposalData.bulkPaymentInfo.title}
+              </h6>
+            )}
             <div className="d-flex flex-column gap-2 mt-1">
               <label className="border-top proposal-label">Total Amount</label>
               <TokenAmount
@@ -676,22 +670,32 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
               />
             </div>
             <div className="d-flex flex-column gap-2 mt-1">
-              <label className="border-top proposal-label">Storage Fee</label>
-              <TokenAmount
-                amountWithoutDecimals={
-                  proposalData?.bulkPaymentInfo?.storageFee
-                }
-                showUSDValue={true}
-                address=""
-                isProposalDetails={true}
-              />
-            </div>
-            <div className="d-flex flex-column gap-2 mt-1">
               <label className="border-top proposal-label">
                 Total Recipients
               </label>
-              <div className="h6 mb-0">
-                {proposalData?.bulkPaymentInfo?.recipientCount} Recipients
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="h6 mb-0">
+                  {proposalData?.bulkPaymentInfo?.recipientCount} Recipient
+                  {proposalData?.bulkPaymentInfo?.recipientCount !== 1
+                    ? "s"
+                    : ""}
+                </div>
+                {isCompactVersion && (
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => {
+                      // Close compact view and navigate to expanded view
+                      if (onClose) onClose();
+                      const tabParam =
+                        currentTab?.title === "History" ? "history" : "pending";
+                      router.push(
+                        `/${treasuryDaoID}/payments?tab=${tabParam}&id=${id}`
+                      );
+                    }}
+                  >
+                    View Details
+                  </button>
+                )}
               </div>
             </div>
             {/* Recipients Table - only in expanded view */}
@@ -737,12 +741,17 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                               profileClass="text-secondary text-sm"
                             />
                           </td>
-                          <td className="text-right">
-                            <TokenAmount
-                              amountWithoutDecimals={payment.amount}
-                              address={proposalData?.bulkPaymentInfo?.contract}
-                              showUSDValue={true}
-                            />
+                          <td className="text-end">
+                            <div className="d-flex flex-column align-items-end">
+                              <TokenAmount
+                                amountWithoutDecimals={payment.amount}
+                                address={
+                                  proposalData?.bulkPaymentInfo?.contract
+                                }
+                                showUSDValue={true}
+                                isProposalDetails={true}
+                              />
+                            </div>
                           </td>
                         </tr>
                       ))}

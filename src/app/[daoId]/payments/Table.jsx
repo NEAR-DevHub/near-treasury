@@ -11,11 +11,7 @@ import {
   formatSubmissionTimeStamp,
 } from "@/helpers/daoHelpers";
 import { fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
-import {
-  isBuyStorageProposal,
-  isBulkPaymentApproveProposal,
-  getLinkedStorageProposalId,
-} from "@/api/bulk-payment";
+import { isBulkPaymentApproveProposal } from "@/api/bulk-payment";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import HistoryStatus from "@/components/proposals/HistoryStatus";
 import Profile from "@/components/ui/Profile";
@@ -155,12 +151,6 @@ const Table = ({
     }
   }, [proposals]);
 
-  // Filter out buy_storage proposals (they're linked to approve_list proposals)
-  const filteredProposals = useMemo(() => {
-    if (!proposals) return [];
-    return proposals.filter((proposal) => !isBuyStorageProposal(proposal));
-  }, [proposals]);
-
   const TooltipContent = ({ title, summary }) => {
     return (
       <div className="p-1 text-color">
@@ -179,18 +169,9 @@ const Table = ({
   const ProposalsComponent = () => {
     return (
       <tbody style={{ overflowX: "auto" }}>
-        {filteredProposals?.map((item, index) => {
+        {proposals?.map((item, index) => {
           // Check if this is a bulk payment approve_list proposal with a linked buy_storage
           const isBulkPayment = isBulkPaymentApproveProposal(item);
-          // Pass original proposals array to check if previous proposal is buy_storage
-          const linkedStorageProposalId = isBulkPayment
-            ? getLinkedStorageProposalId(item, proposals)
-            : null;
-          // Get the linked storage proposal object for passing to VoteActions
-          const linkedStorageProposal =
-            linkedStorageProposalId !== null
-              ? proposals?.find((p) => p.id === linkedStorageProposalId)
-              : null;
           const notes = decodeProposalDescription("notes", item.description);
           const title = decodeProposalDescription("title", item.description);
           const summary = decodeProposalDescription(
@@ -262,6 +243,7 @@ const Table = ({
           let bulkPaymentContract = null;
           let bulkPaymentAmount = null;
           let bulkPaymentListId = null;
+          let bulkPaymentTitle = null;
           if (isBulkPayment) {
             // Decode from markdown format: proposal_action: "bulk-payment", recipients, contract
             const recipients = decodeProposalDescription(
@@ -280,12 +262,17 @@ const Table = ({
               "list_id",
               item.description
             );
+            const bulkTitle = decodeProposalDescription(
+              "title",
+              item.description
+            );
             bulkPaymentRecipientCount = recipients
               ? parseInt(recipients, 10)
               : null;
             bulkPaymentContract = contract || null;
             bulkPaymentAmount = amount || null;
             bulkPaymentListId = listId || null;
+            bulkPaymentTitle = bulkTitle || null;
           }
           const intentsToken =
             isIntentWithdraw &&
@@ -359,7 +346,11 @@ const Table = ({
 
               <td className={isVisible("Title")} style={{ minWidth: 200 }}>
                 {isBulkPayment ? (
-                  <div className="fw-semi-bold">Bulk Payment</div>
+                  bulkPaymentTitle ? (
+                    <div className="fw-semi-bold">{bulkPaymentTitle}</div>
+                  ) : (
+                    <div className="fw-semi-bold">Bulk Payment</div>
+                  )
                 ) : description ? (
                   description
                 ) : (
@@ -401,12 +392,10 @@ const Table = ({
                       <i className="bi bi-people-fill text-secondary"></i>
                     </div>
                     <div>
-                      <div className="fw-semi-bold">Bulk Payment</div>
-                      {bulkPaymentRecipientCount && (
-                        <div className="text-secondary small">
-                          {bulkPaymentRecipientCount} Recipients
-                        </div>
-                      )}
+                      <div className="fw-semi-bold">
+                        {bulkPaymentRecipientCount} Recipient
+                        {bulkPaymentRecipientCount !== 1 ? "s" : ""}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -486,28 +475,35 @@ const Table = ({
                 </td>
               )}
               {isPendingRequests &&
-                (hasVotingPermission || hasDeletePermission) && (
-                  <td
-                    className="text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <VoteActions
-                      votes={item.votes}
-                      proposalId={item.id}
-                      hasDeletePermission={hasDeletePermission}
-                      hasVotingPermission={hasVotingPermission}
-                      proposalCreator={item.proposer}
-                      hasOneDeleteIcon={hasOneDeleteIcon}
-                      isIntentsRequest={isIntentWithdraw}
-                      currentAmount={bulkPaymentAmount || args.amount}
-                      currentContract={bulkPaymentContract || args.token_id}
-                      proposal={item}
-                      context="payment"
-                      linkedStorageProposal={linkedStorageProposal}
-                      bulkPaymentListId={bulkPaymentListId}
-                    />
+                (isBulkPayment ? (
+                  <td className="text-right">
+                    <button className="btn btn-sm btn-outline-secondary">
+                      View Details
+                    </button>
                   </td>
-                )}
+                ) : (
+                  (hasVotingPermission || hasDeletePermission) && (
+                    <td
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <VoteActions
+                        votes={item.votes}
+                        proposalId={item.id}
+                        hasDeletePermission={hasDeletePermission}
+                        hasVotingPermission={hasVotingPermission}
+                        proposalCreator={item.proposer}
+                        hasOneDeleteIcon={hasOneDeleteIcon}
+                        isIntentsRequest={isIntentWithdraw}
+                        currentAmount={bulkPaymentAmount || args.amount}
+                        currentContract={bulkPaymentContract || args.token_id}
+                        proposal={item}
+                        context="payment"
+                        bulkPaymentListId={bulkPaymentListId}
+                      />
+                    </td>
+                  )
+                ))}
             </tr>
           );
         })}

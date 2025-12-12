@@ -26,6 +26,9 @@
   --grey-045: #f4f4f4;
   --grey-05: #f7f7f7;
 
+  /* Muted/Disabled Colors */
+  --general-muted-foreground: rgba(115, 115, 115, 1);
+
   --secondary-foreground-bg-color: rgba(245, 245, 245, 1);
   --secondary-foreground-color: rgba(23, 23, 23, 1) /* Status Colors */
     --other-primary: #2775c9;
@@ -67,6 +70,37 @@
   color: var(--text-secondary-color) !important;
 }
 
+/* Form Disabled State */
+.form-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.form-disabled * {
+  color: var(--general-muted-foreground) !important;
+  cursor: not-allowed !important;
+}
+
+.form-disabled input,
+.form-disabled textarea,
+.form-disabled button:not(.theme-btn),
+.form-disabled select,
+.form-disabled .btn:not(.theme-btn),
+.form-disabled a.btn:not(.theme-btn),
+.form-disabled .dropdown button {
+  color: var(--general-muted-foreground) !important;
+  border-color: rgba(115, 115, 115, 0.3) !important;
+}
+
+.form-disabled a {
+  color: var(--general-muted-foreground) !important;
+  pointer-events: none;
+}
+
+.form-disabled i {
+  color: var(--general-muted-foreground) !important;
+}
+
 /* Dark Theme */
 [data-theme="dark"] {
   /* Theme Colors (same primary) */
@@ -94,6 +128,9 @@
   --grey-04: #323232;
   --grey-045: #1d1d1d;
   --grey-05: #1b1b18;
+
+  /* Muted/Disabled Colors */
+  --general-muted-foreground: rgba(140, 140, 140, 1);
 
   --secondary-foreground-bg-color: rgba(38, 38, 38, 1);
   --secondary-foreground-color-dark: rgba(245, 245, 245, 1);

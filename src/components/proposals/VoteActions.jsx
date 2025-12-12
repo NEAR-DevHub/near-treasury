@@ -37,7 +37,6 @@ const VoteActions = ({
   isQuoteExpired = false,
   quoteDeadline,
   context = "request", // Default context for toast messages
-  linkedStorageProposal = null, // Linked buy_storage proposal for bulk payments
   bulkPaymentListId = null, // List ID for bulk payment processing toast
 }) => {
   const { accountId, signAndSendTransactions } = useNearWallet();
@@ -72,8 +71,6 @@ const VoteActions = ({
   const [showWarning, setShowWarning] = useState(false);
   const [isReadyToBeWithdrawn, setIsReadyToBeWithdrawn] = useState(true);
   const [showConfirmModal, setConfirmModal] = useState(false);
-  const [showBulkPaymentConfirmModal, setShowBulkPaymentConfirmModal] =
-    useState(false);
   const [userBalance, setUserBalance] = useState("0");
 
   // Bulk payment processing toast state
@@ -170,29 +167,6 @@ const VoteActions = ({
     try {
       // Build transactions array
       const transactions = [];
-
-      // If there's a linked storage proposal, apply the action to it first
-      if (linkedStorageProposal) {
-        transactions.push({
-          signerId: accountId,
-          receiverId: treasuryDaoID,
-          actions: [
-            {
-              type: "FunctionCall",
-              params: {
-                methodName: "act_proposal",
-                args: {
-                  id: linkedStorageProposal.id,
-                  action: vote,
-                  proposal: linkedStorageProposal?.kind,
-                },
-                gas: "150000000000000",
-                deposit: "0",
-              },
-            },
-          ],
-        });
-      }
 
       // Add the main proposal action
       transactions.push({
@@ -399,58 +373,6 @@ const VoteActions = ({
         </div>
       </Modal>
 
-      {/* Bulk Payment Confirmation Modal - shown when approving with linked storage */}
-      <Modal
-        isOpen={showBulkPaymentConfirmModal}
-        heading="Approve This Request"
-        onClose={(e) => {
-          e?.stopPropagation();
-          setShowBulkPaymentConfirmModal(false);
-        }}
-        footer={
-          <div className="d-flex gap-2">
-            <button
-              className="btn btn-outline-secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowBulkPaymentConfirmModal(false);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn theme-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                actProposal();
-                setShowBulkPaymentConfirmModal(false);
-              }}
-            >
-              Confirm
-            </button>
-          </div>
-        }
-      >
-        <div className="text-color text-left">
-          <p>By approving this request, you agree to sign two transactions:</p>
-          <ul className="mb-0">
-            <li>
-              <div className="d-flex align-items-center gap-2">
-                One for purchasing the required storage
-                <TokenAmount
-                  amountWithoutDecimals={
-                    linkedStorageProposal?.kind?.FunctionCall?.actions?.[0]
-                      ?.deposit || "0"
-                  }
-                  address=""
-                  showUSDValue={false}
-                />
-              </div>
-            </li>
-            <li>One for confirming the payment for recipients</li>
-          </ul>
-        </div>
-      </Modal>
       {alreadyVoted ? (
         <div className={containerClass}>
           <ProposalStatus
@@ -579,9 +501,6 @@ const VoteActions = ({
                             setVote(actions.APPROVE);
                             if (isInsufficientBalance) {
                               setShowWarning(true);
-                            } else if (linkedStorageProposal) {
-                              // Show bulk payment confirmation modal for dual transactions
-                              setShowBulkPaymentConfirmModal(true);
                             } else {
                               setConfirmModal(true);
                             }

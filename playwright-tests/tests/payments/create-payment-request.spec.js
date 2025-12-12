@@ -197,11 +197,11 @@ test.describe("Create Payment Request", () => {
     await createRequestButton.click();
     console.log("✓ Clicked Create Request dropdown");
 
-    // Click "Single Request" from the dropdown menu
-    const singleRequestOption = page.getByText("Single Request");
-    await expect(singleRequestOption).toBeVisible({ timeout: 5000 });
-    await singleRequestOption.click();
-    console.log("✓ Selected Single Request option");
+    // Click "Single Payment" from the dropdown menu
+    const singlePaymentOption = page.getByText("Single Payment");
+    await expect(singlePaymentOption).toBeVisible({ timeout: 5000 });
+    await singlePaymentOption.click();
+    console.log("✓ Selected Single Payment option");
 
     // Wait for the offcanvas (sidebar form) to open
     const offcanvas = page.locator(".offcanvas-body");
@@ -366,7 +366,7 @@ test.describe("Create Payment Request", () => {
 
     // Create payment request - click dropdown then select Single Request
     await page.getByRole("button", { name: "Create Request" }).click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     const offcanvas = page.locator(".offcanvas-body");
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 
@@ -637,7 +637,7 @@ test.describe("Create Payment Request", () => {
 
     // Create FT payment request - click dropdown then select Single Request
     await page.getByRole("button", { name: "Create Request" }).click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     const offcanvas = page.locator(".offcanvas-body");
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 

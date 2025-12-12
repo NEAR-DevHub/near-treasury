@@ -7,23 +7,6 @@ const BULK_PAYMENT_CONTRACT_ID =
   process.env.NEXT_PUBLIC_BULK_PAYMENT_CONTRACT_ID;
 const BULK_PAYMENT_API_URL = process.env.NEXT_PUBLIC_BULK_PAYMENT_API_URL;
 
-// Storage cost calculation constants (matching bulk payment contract)
-const BYTES_PER_RECORD = 216n; // AccountId (100) + amount (16) + status (~50) + overhead (~50)
-const STORAGE_COST_PER_BYTE = 10n ** 19n; // yoctoNEAR per byte
-const STORAGE_MARKUP_PERCENT = 110n; // 10% markup (110/100)
-
-/**
- * Calculate storage cost for a given number of payment records
- * @param {number} numRecords - Number of payment records
- * @returns {string} Storage cost in yoctoNEAR
- */
-export function calculateStorageCost(numRecords) {
-  const storageBytes = BYTES_PER_RECORD * BigInt(numRecords);
-  const storageCost = storageBytes * STORAGE_COST_PER_BYTE;
-  const totalCost = (storageCost * STORAGE_MARKUP_PERCENT) / 100n;
-  return totalCost.toString();
-}
-
 /**
  * Generate a deterministic list_id (SHA-256 hash of canonical JSON)
  * Must match the backend's hash calculation
@@ -80,23 +63,6 @@ export async function viewStorageCredits(daoAccountId) {
   } catch (error) {
     console.warn("Error fetching storage credits:", error);
     return 0;
-  }
-}
-
-/**
- * View payment list status from the contract
- * @param {string} listId - Payment list ID
- * @returns {Promise<object|null>} Payment list details
- */
-export async function viewPaymentList(listId) {
-  try {
-    const result = await Near.view(BULK_PAYMENT_CONTRACT_ID, "view_list", {
-      list_id: listId,
-    });
-    return result;
-  } catch (error) {
-    console.warn("Error fetching payment list:", error);
-    return null;
   }
 }
 
@@ -272,61 +238,6 @@ export async function buildApproveListProposal({
 }
 
 /**
- * Build the buy_storage proposal transaction
- * @param {object} params - Build parameters
- * @param {string} params.daoAccountId - DAO contract ID
- * @param {number} params.numRecords - Number of storage records to buy
- * @param {string} params.description - Proposal description
- * @param {string} params.proposalBond - Proposal bond amount
- * @returns {object} Transaction object for signAndSendTransactions
- */
-export function buildBuyStorageProposal({
-  daoAccountId,
-  numRecords,
-  description,
-  proposalBond,
-}) {
-  const storageCost = calculateStorageCost(numRecords);
-  const gas = "300000000000000"; // 300 TGas
-
-  return {
-    contractName: daoAccountId,
-    methodName: "add_proposal",
-    args: {
-      proposal: {
-        description,
-        kind: {
-          FunctionCall: {
-            receiver_id: BULK_PAYMENT_CONTRACT_ID,
-            actions: [
-              {
-                method_name: "buy_storage",
-                args: Buffer.from(
-                  JSON.stringify({ num_records: numRecords })
-                ).toString("base64"),
-                deposit: storageCost,
-                gas: "50000000000000", // 50 TGas
-              },
-            ],
-          },
-        },
-      },
-    },
-    gas,
-    deposit: proposalBond,
-  };
-}
-
-/**
- * Format storage cost to NEAR
- * @param {string} yoctoNear - Amount in yoctoNEAR
- * @returns {string} Formatted NEAR amount
- */
-export function formatStorageCost(yoctoNear) {
-  return Big(yoctoNear).div(Big(10).pow(24)).toFixed(4);
-}
-
-/**
  * Check if a proposal is a bulk payment approve_list proposal
  * @param {object} proposal - The proposal object
  * @returns {boolean} True if it's an approve_list proposal
@@ -370,52 +281,6 @@ export function isBulkPaymentApproveProposal(proposal) {
 }
 
 /**
- * Check if a proposal is a bulk payment buy_storage proposal
- * @param {object} proposal - The proposal object
- * @returns {boolean} True if it's a buy_storage proposal
- */
-export function isBuyStorageProposal(proposal) {
-  const functionCall = proposal?.kind?.FunctionCall;
-  if (!functionCall) return false;
-
-  const receiverId = functionCall.receiver_id;
-  const actions = functionCall.actions || [];
-
-  // Check if it's calling the bulk payment contract with buy_storage
-  return (
-    receiverId === BULK_PAYMENT_CONTRACT_ID &&
-    actions.some((action) => action.method_name === "buy_storage")
-  );
-}
-
-/**
- * Check if a proposal has a linked buy_storage proposal
- * When bulk payments need storage, buy_storage is created first (id: N),
- * then approve_list is created (id: N+1)
- * @param {object} approveListProposal - The approve_list proposal
- * @param {Array} allProposals - All proposals to check against
- * @returns {number|null} The linked buy_storage proposal ID, or null if none
- */
-export function getLinkedStorageProposalId(approveListProposal, allProposals) {
-  if (!isBulkPaymentApproveProposal(approveListProposal)) return null;
-
-  const potentialStorageId = approveListProposal.id - 1;
-  const potentialStorageProposal = allProposals?.find(
-    (p) => p.id === potentialStorageId
-  );
-
-  // Only return the ID if the previous proposal is actually a buy_storage proposal
-  if (
-    potentialStorageProposal &&
-    isBuyStorageProposal(potentialStorageProposal)
-  ) {
-    return potentialStorageId;
-  }
-
-  return null;
-}
-
-/**
  * Get the bulk payment contract ID
  * @returns {string} The bulk payment contract ID
  */
@@ -426,18 +291,12 @@ export function getBulkPaymentContractId() {
 export const BulkPaymentContract = {
   contractId: BULK_PAYMENT_CONTRACT_ID,
   apiUrl: BULK_PAYMENT_API_URL,
-  calculateStorageCost,
   generateListId,
   viewStorageCredits,
-  viewPaymentList,
   submitPaymentList,
   getPaymentListStatus,
   buildApproveListProposal,
-  buildBuyStorageProposal,
-  formatStorageCost,
   isBulkPaymentApproveProposal,
-  isBuyStorageProposal,
-  getLinkedStorageProposalId,
   getBulkPaymentContractId,
 };
 

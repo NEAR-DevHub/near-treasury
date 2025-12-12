@@ -51,9 +51,7 @@ const PaymentsIndex = () => {
     title: tab === "history" ? "History" : "Pending Requests",
   };
   const [isBulkImport, setIsBulkImport] = useState(false);
-  const [bulkPreviewData, setBulkPreviewData] = useState(null);
-  const [bulkSourceWallet, setBulkSourceWallet] = useState(null);
-  const [bulkSelectedToken, setBulkSelectedToken] = useState(null); // Full token object
+  const [bulkPreview, setBulkPreview] = useState(null); // { data, sourceWallet, selectedToken, title }
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
@@ -108,17 +106,16 @@ const PaymentsIndex = () => {
     setSortDirection(newDirection);
   };
 
-  if (bulkPreviewData) {
+  if (bulkPreview) {
     return (
-      <div className="container-md mt-3">
+      <div className="container-md mt-3" style={{ maxWidth: "1000px" }}>
         <BulkImportPreviewTable
-          proposals={bulkPreviewData}
-          sourceWallet={bulkSourceWallet?.label || "SputnikDAO"}
-          selectedToken={bulkSelectedToken}
+          proposals={bulkPreview.data}
+          sourceWallet={bulkPreview.sourceWallet?.label || "SputnikDAO"}
+          selectedToken={bulkPreview.selectedToken}
+          title={bulkPreview.title}
           closePreviewTable={() => {
-            setBulkPreviewData(null);
-            setBulkSourceWallet(null);
-            setBulkSelectedToken(null);
+            setBulkPreview(null);
           }}
         />
       </div>
@@ -140,17 +137,25 @@ const PaymentsIndex = () => {
             onClose={toggleCreatePage}
             title={
               isBulkImport
-                ? "Create Bulk Import Request"
+                ? "Create Bulk Payment Request"
                 : "Create Payment Request"
             }
           >
             {isBulkImport ? (
               <BulkImportForm
                 onCloseCanvas={toggleCreatePage}
-                showPreviewTable={(data, sourceWallet, selectedToken) => {
-                  setBulkPreviewData(data);
-                  setBulkSourceWallet(sourceWallet);
-                  setBulkSelectedToken(selectedToken);
+                showPreviewTable={(
+                  data,
+                  sourceWallet,
+                  selectedToken,
+                  title
+                ) => {
+                  setBulkPreview({
+                    data,
+                    sourceWallet,
+                    selectedToken,
+                    title: title || "",
+                  });
                   toggleCreatePage();
                   setIsBulkImport(false);
                 }}
@@ -300,7 +305,7 @@ const PaymentsIndex = () => {
                                 }}
                               >
                                 <i className="bi bi-arrow-right h5 mb-0"></i>
-                                <span>Single Request</span>
+                                <span>Single Payment</span>
                               </button>
                             </li>
                             <li>
@@ -312,7 +317,7 @@ const PaymentsIndex = () => {
                                 }}
                               >
                                 {exportMultipleIcon}
-                                <span>Bulk Requests</span>
+                                <span>Bulk Payment</span>
                               </button>
                             </li>
                           </ul>

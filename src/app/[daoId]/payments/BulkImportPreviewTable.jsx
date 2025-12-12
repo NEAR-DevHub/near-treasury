@@ -9,16 +9,16 @@ import {
   generateListId,
   submitPaymentList,
   buildApproveListProposal,
-  buildBuyStorageProposal,
-  calculateStorageCost,
-  formatStorageCost,
 } from "@/api/bulk-payment";
+import { Near } from "@/api/near";
+import { isValidNearAccount } from "@/helpers/nearHelpers";
 import Modal from "@/components/ui/Modal";
 import OffCanvas from "@/components/ui/OffCanvas";
 import TransactionLoader from "@/components/proposals/TransactionLoader";
 import Profile from "@/components/ui/Profile";
 import TokenAmount from "@/components/proposals/TokenAmount";
 import Tooltip from "@/components/ui/Tooltip";
+import TableSkeleton from "@/components/ui/TableSkeleton";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { REFRESH_DELAY } from "@/constants/ui";
 import Edit from "@/components/icons/Edit";
@@ -28,21 +28,40 @@ import { encodeToMarkdown } from "@/helpers/daoHelpers";
 /**
  * Memoized table row component to prevent unnecessary re-renders
  */
-const PaymentRow = memo(function PaymentRow({ item, index, onEdit, onDelete }) {
+const PaymentRow = memo(function PaymentRow({
+  item,
+  index,
+  onEdit,
+  onDelete,
+  error,
+  selectedToken,
+}) {
+  const hasError = error && error.length > 0;
+  const isRecipientError =
+    hasError &&
+    (error.toLowerCase().includes("recipient") ||
+      error.toLowerCase().includes("invalid") ||
+      error.toLowerCase().includes("does not exist"));
+
   return (
     <tr>
-      <td>{index + 1}</td>
+      <td style={{ width: "50px" }}>{index + 1}</td>
       <td>
-        <Profile accountId={item["Recipient"]} showKYC={false} />
+        {isRecipientError ? (
+          <span className="small">{item["Recipient"] || ""}</span>
+        ) : (
+          <Profile accountId={item["Recipient"]} showKYC={false} />
+        )}
       </td>
+      <td>{hasError && <span className="text-danger small">{error}</span>}</td>
       <td className="text-end">
         <TokenAmount
-          amountWithoutDecimals={item["Amount"]}
-          address={item["Requested Token"]}
+          amountWithDecimals={item["Amount"]}
+          address={selectedToken?.contract}
           showUSDValue={true}
         />
       </td>
-      <td>
+      <td style={{ width: "100px" }}>
         <div className="d-flex gap-2 justify-content-end">
           <button
             className="btn btn-sm btn-link p-0 text-decoration-none"
@@ -73,9 +92,16 @@ const BulkImportPreviewTable = ({
   closePreviewTable,
   sourceWallet,
   selectedToken, // Full token object with metadata
+  title = "", // User-provided title for the bulk payment
 }) => {
   const { showToast } = useProposalToastContext();
-  const { daoId: treasuryDaoID, daoPolicy } = useDao();
+  const {
+    daoId: treasuryDaoID,
+    daoPolicy,
+    lastProposalId,
+    daoNearBalances,
+    daoFtBalances,
+  } = useDao();
   const { signAndSendTransactions, accountId } = useNearWallet();
 
   const [proposalList, setProposalList] = useState(proposals);
@@ -88,11 +114,21 @@ const BulkImportPreviewTable = ({
   const [isRecipientValid, setIsRecipientValid] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Row validation state
+  const [rowErrors, setRowErrors] = useState({}); // { index: "error message" }
+  const [isValidating, setIsValidating] = useState(true);
+
+  // Unregistered accounts (need storage deposit)
+  const [unregisteredAccounts, setUnregisteredAccounts] = useState([]); // Array of indices
+  const [selectedUnregistered, setSelectedUnregistered] = useState(new Set());
+  const [isPayingStorage, setIsPayingStorage] = useState(false);
+
   // Bulk payment state
   const [storageCredits, setStorageCredits] = useState(0); // Number of available storage records
   const [isLoadingCredits, setIsLoadingCredits] = useState(true);
-  const [needsStoragePurchase, setNeedsStoragePurchase] = useState(false);
-  const [showStorageConfirmModal, setShowStorageConfirmModal] = useState(false);
+  const [showUnregisteredWarningModal, setShowUnregisteredWarningModal] =
+    useState(false);
+  const [showGasFeePaymentModal, setShowGasFeePaymentModal] = useState(false);
 
   // Calculate totals
   const totalAmount = useMemo(() => {
@@ -103,11 +139,59 @@ const BulkImportPreviewTable = ({
 
   const totalRecipients = proposalList.length;
 
-  // Storage fee calculation based on bulk payment contract
-  const storageFee = useMemo(() => {
-    const cost = calculateStorageCost(totalRecipients);
-    return formatStorageCost(cost);
-  }, [totalRecipients]);
+  // Check if treasury has sufficient balance
+  const isBalanceSufficient = useMemo(() => {
+    if (!selectedToken || !totalAmount) return true;
+
+    const isNEAR =
+      selectedToken.contract.toLowerCase() === "near" ||
+      selectedToken.contract === "";
+
+    let availableBalance = "0";
+
+    if (isNEAR) {
+      // Get NEAR balance from DAO wallet
+      availableBalance = daoNearBalances?.availableParsed || "0";
+    } else {
+      // Get FT token balance from DAO wallet
+      if (daoFtBalances?.fts) {
+        const tokenBalance = daoFtBalances.fts.find(
+          (ft) => ft.contract === selectedToken.contract
+        );
+        if (tokenBalance) {
+          // Convert from smallest units to human-readable
+          const decimals = selectedToken.decimals || 18;
+          availableBalance = Big(tokenBalance.amount || "0")
+            .div(Big(10).pow(decimals))
+            .toFixed();
+        }
+      }
+    }
+
+    return Big(availableBalance).gte(Big(totalAmount));
+  }, [selectedToken, totalAmount, daoNearBalances, daoFtBalances]);
+
+  // Sorted proposal list with errors at the top (excluding unregistered accounts)
+  const sortedProposalList = useMemo(() => {
+    return proposalList
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .filter(
+        ({ originalIndex }) => !unregisteredAccounts.includes(originalIndex)
+      )
+      .sort((a, b) => {
+        const aHasError = rowErrors[a.originalIndex] ? 1 : 0;
+        const bHasError = rowErrors[b.originalIndex] ? 1 : 0;
+        // Errors first (descending), then by original order
+        return bHasError - aHasError || a.originalIndex - b.originalIndex;
+      });
+  }, [proposalList, rowErrors, unregisteredAccounts]);
+
+  // Count of rows with errors
+  const errorCount = Object.keys(rowErrors).length;
+
+  // Check if user has exceeded their recipient quota
+  const hasExceededQuota =
+    !isLoadingCredits && totalRecipients > storageCredits;
 
   // Pre-compute listId for display (deterministic hash)
   const [listId, setListId] = useState(null);
@@ -119,9 +203,12 @@ const BulkImportPreviewTable = ({
       const isNEAR =
         tokenId.toLowerCase() === "near" || tokenId === "" || !tokenId;
 
+      // Convert amounts to smallest units for contract
       const payments = proposalList.map((proposal) => ({
         recipient: proposal.Recipient,
-        amount: Big(proposal["Amount"]).toFixed(),
+        amount: Big(proposal["Amount"] || "0")
+          .times(Big(10).pow(selectedToken?.decimals || 24))
+          .toFixed(),
       }));
 
       const id = await generateListId(
@@ -135,6 +222,91 @@ const BulkImportPreviewTable = ({
     computeListId();
   }, [proposalList, selectedToken, treasuryDaoID]);
 
+  // Validate all rows on mount
+  useEffect(() => {
+    async function validateAllRows() {
+      setIsValidating(true);
+      const errors = {};
+      const unregistered = [];
+      const tokenMeta = selectedToken;
+
+      if (!tokenMeta) {
+        setIsValidating(false);
+        return;
+      }
+
+      const isNEAR = tokenMeta.contract.toLowerCase() === "near";
+
+      const validationPromises = proposalList.map(async (proposal, index) => {
+        const rowErrors = [];
+
+        // Validate recipient
+        const recipient = proposal.Recipient?.trim();
+        if (!recipient) {
+          rowErrors.push("Recipient account does not exist.");
+        } else if (!isValidNearAccount(recipient)) {
+          rowErrors.push(
+            "Invalid recipient address. Must be a .near or .aurora or 0x address."
+          );
+        } else {
+          // Check if account exists on chain
+          try {
+            const accountData = await Near.viewAccount(recipient);
+            if (accountData) {
+              // For FT tokens, check storage balance
+              if (!isNEAR) {
+                try {
+                  const storage = await Near.view(
+                    tokenMeta.contract,
+                    "storage_balance_of",
+                    {
+                      account_id: recipient,
+                    }
+                  );
+
+                  if (!storage) {
+                    // Account exists but not registered for this token
+                    unregistered.push(index);
+                  }
+                } catch (error) {
+                  console.error("Error checking storage balance:", error);
+                  // If we can't check storage, assume not registered
+                  unregistered.push(index);
+                }
+              }
+            } else {
+              rowErrors.push("Recipient account does not exist.");
+            }
+          } catch (error) {
+            rowErrors.push("Recipient account does not exist.");
+          }
+        }
+
+        // Validate amount
+        const amountStr = proposal.Amount?.trim();
+        if (!amountStr) {
+          rowErrors.push("Amount is missing.");
+        } else {
+          const value = parseFloat(amountStr.replace(/,/g, ""));
+          if (isNaN(value) || value <= 0) {
+            rowErrors.push("Amount must be a positive number.");
+          }
+        }
+
+        if (rowErrors.length > 0) {
+          errors[index] = rowErrors.join(" ");
+        }
+      });
+
+      await Promise.all(validationPromises);
+      setRowErrors(errors);
+      setUnregisteredAccounts(unregistered);
+      setIsValidating(false);
+    }
+
+    validateAllRows();
+  }, [proposalList, selectedToken]);
+
   // Check storage credits on mount
   useEffect(() => {
     async function checkStorageCredits() {
@@ -142,14 +314,9 @@ const BulkImportPreviewTable = ({
       try {
         const credits = await viewStorageCredits(treasuryDaoID);
         setStorageCredits(credits); // Number of available storage records
-
-        // Compare available records with required records
-        const hasEnoughCredits = credits >= totalRecipients;
-        setNeedsStoragePurchase(!hasEnoughCredits);
       } catch (error) {
         console.error("Error checking storage credits:", error);
         setStorageCredits(0);
-        setNeedsStoragePurchase(true);
       } finally {
         setIsLoadingCredits(false);
       }
@@ -168,10 +335,8 @@ const BulkImportPreviewTable = ({
       const proposal = proposalList[index];
       setEditingIndex(index);
       setEditingData({
-        // Convert from smallest units to human-readable for editing
-        Amount: Big(proposal["Amount"])
-          .div(Big(10).pow(selectedToken?.decimals || 24))
-          .toFixed(),
+        // Amount is already human-readable
+        Amount: proposal["Amount"],
         Recipient: proposal.Recipient,
       });
       setIsRecipientValid(true); // Assume valid since it was already validated
@@ -219,6 +384,72 @@ const BulkImportPreviewTable = ({
   }, [editingData, isRecipientValid]);
 
   /**
+   * Re-validate a single row after edit
+   */
+  const revalidateRow = useCallback(
+    async (index, recipient) => {
+      const tokenMeta = selectedToken;
+      if (!tokenMeta) return;
+
+      const isNEAR = tokenMeta.contract.toLowerCase() === "near";
+      let hasError = false;
+      let isUnregistered = false;
+
+      // Step 1: Check if account is valid
+      if (!recipient || !recipient.trim()) {
+        hasError = true;
+      } else if (!isValidNearAccount(recipient)) {
+        hasError = true;
+      } else {
+        // Step 2: Check if account exists on chain
+        try {
+          const accountData = await Near.viewAccount(recipient);
+          if (accountData) {
+            // Step 3: For FT tokens, check storage registration
+            if (!isNEAR) {
+              try {
+                const storage = await Near.view(
+                  tokenMeta.contract,
+                  "storage_balance_of",
+                  { account_id: recipient }
+                );
+                if (!storage) {
+                  isUnregistered = true;
+                }
+              } catch (error) {
+                console.error("Error checking storage balance:", error);
+                isUnregistered = true;
+              }
+            }
+          } else {
+            hasError = true;
+          }
+        } catch (error) {
+          hasError = true;
+        }
+      }
+
+      // Update states based on validation
+      if (hasError) {
+        // Remove from unregistered if it has an error
+        setUnregisteredAccounts((prev) => prev.filter((i) => i !== index));
+      } else if (isUnregistered) {
+        // Add to unregistered list
+        setUnregisteredAccounts((prev) => {
+          if (!prev.includes(index)) {
+            return [...prev, index];
+          }
+          return prev;
+        });
+      } else {
+        // Valid and registered - remove from unregistered
+        setUnregisteredAccounts((prev) => prev.filter((i) => i !== index));
+      }
+    },
+    [selectedToken]
+  );
+
+  /**
    * Save edited proposal
    */
   const handleSaveEdit = useCallback(() => {
@@ -231,17 +462,20 @@ const BulkImportPreviewTable = ({
     const updatedList = [...proposalList];
     updatedList[editingIndex] = {
       ...updatedList[editingIndex],
-      Amount: Big(editingData.Amount)
-        .times(Big(10).pow(selectedToken?.decimals || 24))
-        .toFixed(),
+      Amount: editingData.Amount, // Keep human-readable
       Recipient: editingData.Recipient,
     };
 
     setProposalList(updatedList);
+
+    // Re-validate the edited row for storage registration
+    revalidateRow(editingIndex, editingData.Recipient);
+
     handleCloseEdit();
   }, [
     editingIndex,
     editingData,
+    revalidateRow,
     validateFields,
     proposalList,
     handleCloseEdit,
@@ -266,6 +500,82 @@ const BulkImportPreviewTable = ({
   }, [deletingIndex, proposalList]);
 
   /**
+   * Pay storage deposit for unregistered accounts
+   */
+  async function payStorageForRecipients() {
+    if (selectedUnregistered.size === 0) return;
+
+    setIsPayingStorage(true);
+    const tokenId = selectedToken?.contract;
+
+    try {
+      const selectedIndices = Array.from(selectedUnregistered);
+      const recipients = selectedIndices.map(
+        (index) => proposalList[index].Recipient
+      );
+
+      // Create storage deposit transactions for each recipient
+      const transactions = recipients.map((recipient) => ({
+        receiverId: tokenId,
+        signerId: accountId,
+        actions: [
+          {
+            type: "FunctionCall",
+            params: {
+              methodName: "storage_deposit",
+              args: {
+                account_id: recipient,
+                registration_only: true,
+              },
+              gas: "30000000000000", // 30 TGas
+              deposit: "12500000000000000000000", // 0.0125 NEAR
+            },
+          },
+        ],
+      }));
+
+      // Execute transactions
+      const result = await signAndSendTransactions({ transactions });
+
+      // Check if transaction was successful
+      if (
+        result &&
+        result.length > 0 &&
+        result[0]?.status?.SuccessValue !== undefined
+      ) {
+        // Show success message (without refresh or view request button)
+        showToast({
+          type: "success",
+          title: "Storage Payment Successful",
+          description: `Storage deposit paid for ${recipients.length} recipient${recipients.length !== 1 ? "s" : ""}. These accounts can now receive payments.`,
+        });
+
+        // Remove paid accounts from unregistered list
+        const updatedUnregistered = unregisteredAccounts.filter(
+          (index) => !selectedIndices.includes(index)
+        );
+        setUnregisteredAccounts(updatedUnregistered);
+
+        // Clear selection
+        setSelectedUnregistered(new Set());
+      } else {
+        // Transaction failed
+        throw new Error("Transaction failed or was rejected");
+      }
+    } catch (error) {
+      console.error("Error paying storage:", error);
+      showToast({
+        type: "error",
+        title: "Storage Payment Failed",
+        description: error.message || "Failed to pay storage deposit",
+      });
+    } finally {
+      setIsPayingStorage(false);
+      setShowGasFeePaymentModal(false);
+    }
+  }
+
+  /**
    * Create bulk payment proposal using the bulk payment contract flow:
    * 1. Generate list_id from payments
    * 2. If insufficient storage credits, create buy_storage proposal first
@@ -281,10 +591,12 @@ const BulkImportPreviewTable = ({
       tokenId.toLowerCase() === "near" || tokenId === "" || !tokenId;
 
     try {
-      // Build payments array for bulk payment API
+      // Build payments array for bulk payment API - convert to smallest units
       const payments = proposalList.map((proposal) => ({
         recipient: proposal.Recipient,
-        amount: Big(proposal["Amount"]).toFixed(),
+        amount: Big(proposal["Amount"] || "0")
+          .times(Big(10).pow(selectedToken?.decimals || 24))
+          .toFixed(),
       }));
 
       // Generate list_id (deterministic hash of payments)
@@ -299,6 +611,7 @@ const BulkImportPreviewTable = ({
       // Build proposal description with recipient count, total amount, token contract, and list_id
       const description = encodeToMarkdown({
         proposal_action: "bulk-payment",
+        title: title || undefined,
         recipients: totalRecipients,
         contract: selectedToken?.contract || "",
         amount: totalAmount.toFixed(),
@@ -307,45 +620,16 @@ const BulkImportPreviewTable = ({
 
       const transactions = [];
 
-      // Step 1: If insufficient storage credits, add buy_storage proposal
-      if (needsStoragePurchase) {
-        // Calculate how many additional records we need storage for
-        // storageCredits is the number of available records
-        const recordsNeeded = Math.max(0, totalRecipients - storageCredits);
+      // Create approve_list proposal - convert totalAmount to smallest units
+      const totalAmountInSmallestUnits = Big(totalAmount)
+        .times(Big(10).pow(selectedToken?.decimals || 24))
+        .toFixed();
 
-        const buyStorageProposal = buildBuyStorageProposal({
-          daoAccountId: treasuryDaoID,
-          numRecords: recordsNeeded,
-          description: encodeToMarkdown({
-            proposal_action: "buy-storage",
-            recipients: totalRecipients,
-          }),
-          proposalBond,
-        });
-
-        transactions.push({
-          receiverId: buyStorageProposal.contractName,
-          signerId: accountId,
-          actions: [
-            {
-              type: "FunctionCall",
-              params: {
-                methodName: buyStorageProposal.methodName,
-                args: buyStorageProposal.args,
-                gas: buyStorageProposal.gas,
-                deposit: buyStorageProposal.deposit,
-              },
-            },
-          ],
-        });
-      }
-
-      // Step 2: Create approve_list proposal
       const approveListProposal = await buildApproveListProposal({
         daoAccountId: treasuryDaoID,
         listId,
         tokenId: isNEAR ? "near" : tokenId,
-        totalAmount: totalAmount.toFixed(),
+        totalAmount: totalAmountInSmallestUnits,
         description,
         proposalBond,
       });
@@ -492,17 +776,18 @@ const BulkImportPreviewTable = ({
         </div>
       </Modal>
 
-      {/* Storage Purchase Confirmation Modal */}
+      {/* Storage Deposit Payment Confirmation Modal */}
       <Modal
-        isOpen={showStorageConfirmModal}
-        heading="Confirm Request Creation"
-        onClose={() => setShowStorageConfirmModal(false)}
+        isOpen={showGasFeePaymentModal}
+        heading="Confirm Storage Deposit Payment"
+        onClose={() => setShowGasFeePaymentModal(false)}
         footer={
           <>
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={() => setShowStorageConfirmModal(false)}
+              onClick={() => setShowGasFeePaymentModal(false)}
+              disabled={isPayingStorage}
             >
               Cancel
             </button>
@@ -510,7 +795,73 @@ const BulkImportPreviewTable = ({
               type="button"
               className="btn theme-btn"
               onClick={() => {
-                setShowStorageConfirmModal(false);
+                setShowGasFeePaymentModal(false);
+                payStorageForRecipients();
+              }}
+              disabled={isPayingStorage}
+            >
+              {isPayingStorage ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    role="status"
+                  ></span>
+                  Processing...
+                </>
+              ) : (
+                "Confirm"
+              )}
+            </button>
+          </>
+        }
+      >
+        <div className="text-color">
+          <p className="mb-2">
+            You selected to pay the storage deposit for{" "}
+            {selectedUnregistered.size} recipient
+            {selectedUnregistered.size !== 1 ? "s" : ""}:{" "}
+            <strong>
+              {Array.from(selectedUnregistered)
+                .map((index) => proposalList[index].Recipient)
+                .join(", ")}
+            </strong>
+            . The total one-time storage deposit is{" "}
+            <strong>
+              {Big(selectedUnregistered.size).mul(0.0125).toFixed(4)} NEAR
+            </strong>
+            .
+          </p>
+          <p className="mb-0">
+            Once the payment is complete, you'll be able to create a payment
+            request for these recipients.
+          </p>
+        </div>
+      </Modal>
+
+      {/* Unregistered Accounts Warning Modal */}
+      <Modal
+        isOpen={showUnregisteredWarningModal}
+        heading="Confirm Request Creation"
+        onClose={() => setShowUnregisteredWarningModal(false)}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => setShowUnregisteredWarningModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn theme-btn"
+              onClick={() => {
+                setShowUnregisteredWarningModal(false);
+                // Filter out unregistered accounts and proceed
+                const filteredList = proposalList.filter(
+                  (_, index) => !unregisteredAccounts.includes(index)
+                );
+                setProposalList(filteredList);
                 setIsCreatingRequest(true);
                 createPaymentTx();
               }}
@@ -522,18 +873,31 @@ const BulkImportPreviewTable = ({
       >
         <div className="text-color">
           <p>
-            You are about to create bulk payment request. To complete the
-            approval, will need to confirm two separate transactions:
+            You are about to create a payment request for{" "}
+            <strong>
+              {proposalList.length - unregisteredAccounts.length} recipients
+            </strong>
+            .
           </p>
-          <ul className="mb-0">
-            <li>
-              One to purchase storage{" "}
-              <strong>
-                {storageFee} <span style={{ fontFamily: "sans-serif" }}>Ⓝ</span>
-              </strong>
-            </li>
-            <li>One to confirm the payment for recipients</li>
-          </ul>
+          {unregisteredAccounts.length > 0 && (
+            <>
+              <p className="mt-3 mb-2">
+                For the following recipients, the payment will fail:
+              </p>
+              <p className="mb-2">
+                <strong>
+                  {unregisteredAccounts
+                    .map((index) => proposalList[index].Recipient)
+                    .join(", ")}
+                  .
+                </strong>
+              </p>
+              <p className="mb-0">
+                To enable their payment contract, you need to pay a one-time
+                storage deposit of <strong>0.0125 NEAR</strong> per recipient.
+              </p>
+            </>
+          )}
         </div>
       </Modal>
 
@@ -643,7 +1007,6 @@ const BulkImportPreviewTable = ({
           </div>
         )}
       </OffCanvas>
-
       {/* Header with Back Button and Centered Title */}
       <div className="d-flex align-items-center justify-content-center position-relative mb-4">
         <button
@@ -653,7 +1016,7 @@ const BulkImportPreviewTable = ({
           <i className="bi bi-arrow-left h5 mb-0"></i>
           <span className="h6 mb-0">Back</span>
         </button>
-        <h4 className="mb-0 fw-bold">Review Your Payments</h4>
+        <h4 className="mb-0 fw-bold">Review Your Payment Requests</h4>
       </div>
 
       <div className="card card-body">
@@ -664,7 +1027,7 @@ const BulkImportPreviewTable = ({
           <div className="d-flex flex-column gap-1">
             <div className="text-secondary small">Request ID</div>
             <div className="fw-550" title={listId}>
-              {listId ? `${listId.slice(0, 8)}...${listId.slice(-6)}` : ""}
+              {lastProposalId}
             </div>
           </div>
           <div className="d-flex flex-column gap-1">
@@ -675,10 +1038,11 @@ const BulkImportPreviewTable = ({
             <div className="text-secondary small">Total Amount</div>
             <div className="fw-550 d-flex align-items-center gap-1">
               <TokenAmount
-                amountWithoutDecimals={totalAmount.toFixed()}
+                amountWithDecimals={totalAmount}
                 address={selectedToken?.contract}
                 displayAllDecimals={true}
                 showUSDValue={true}
+                isProposalDetails={true}
               />
             </div>
           </div>
@@ -688,28 +1052,186 @@ const BulkImportPreviewTable = ({
               {totalRecipients} Recipient{totalRecipients !== 1 ? "s" : ""}
             </div>
           </div>
-          <div className="d-flex flex-column gap-1">
-            <div className="text-secondary small d-flex align-items-center gap-1">
-              Storage Fee
-              <Tooltip
-                tooltip={`This is the storage fee that covers storage for your ${totalRecipients} recipients. You can continue creating requests until your storage limit is reached. Once it’s fully used, an additional storage fee will be required to create more requests. Learn more`}
-              >
-                <i className="bi bi-info-circle"></i>
-              </Tooltip>
-            </div>
-            <div className="fw-550">{storageFee} NEAR</div>
-          </div>
         </div>
 
+        {/* Recipient Limit Reached Banner */}
+        {hasExceededQuota && (
+          <div className="warning-box d-flex align-items-center gap-3 my-2 p-3 rounded-3">
+            <i className="bi bi-exclamation-triangle h5 mb-0"></i>
+            <div>
+              <strong>Recipient limit reached</strong>
+              <p className="mb-0">
+                You can add up to {storageCredits} recipients on your current
+                plan. Please remove some recipients or{" "}
+                <a
+                  href="https://docs.neartreasury.com/support"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-decoration-underline"
+                >
+                  contact us
+                </a>{" "}
+                to increase your limit.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Unregistered Accounts Banner */}
+        {!isValidating &&
+          !hasExceededQuota &&
+          unregisteredAccounts.length > 0 && (
+            <div className="d-flex flex-column gap-3">
+              <div className="warning-box d-flex gap-3 mt-2 p-3 rounded-3 align-items-center">
+                <i className="bi bi-exclamation-triangle h5 mb-0"></i>
+                <div className="flex-grow-1">
+                  <strong>
+                    The payment will fail for these recipients if you don't pay
+                    the storage deposit.
+                  </strong>
+                  <div>
+                    To enable their payment contract, you need to pay a one-time
+                    storage deposit of <strong>0.0125 NEAR</strong> per
+                    recipient. Once it's paid, you'll be able to create a
+                    payment request for them.
+                  </div>
+                </div>
+              </div>
+
+              {/* List of unregistered accounts with checkboxes */}
+              <div className="mt-3" style={{ overflowX: "auto" }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th
+                        className="text-secondary small fw-normal"
+                        style={{ width: "50px" }}
+                      >
+                        <input
+                          style={{ width: "15px", height: "15px" }}
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={
+                            selectedUnregistered.size ===
+                              unregisteredAccounts.length &&
+                            unregisteredAccounts.length > 0
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUnregistered(
+                                new Set(unregisteredAccounts)
+                              );
+                            } else {
+                              setSelectedUnregistered(new Set());
+                            }
+                          }}
+                        />
+                      </th>
+                      <th className="text-secondary small fw-normal">
+                        Recipient
+                      </th>
+                      <th className="text-secondary small fw-normal text-end">
+                        Funding Ask
+                      </th>
+                      <th className="text-secondary small fw-normal text-end">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unregisteredAccounts.map((index) => {
+                      const item = proposalList[index];
+                      return (
+                        <tr key={index}>
+                          <td>
+                            <input
+                              style={{ width: "15px", height: "15px" }}
+                              type="checkbox"
+                              className="form-check-input"
+                              checked={selectedUnregistered.has(index)}
+                              onChange={(e) => {
+                                const newSelected = new Set(
+                                  selectedUnregistered
+                                );
+                                if (e.target.checked) {
+                                  newSelected.add(index);
+                                } else {
+                                  newSelected.delete(index);
+                                }
+                                setSelectedUnregistered(newSelected);
+                              }}
+                            />
+                          </td>
+                          <td>
+                            <Profile
+                              accountId={item.Recipient}
+                              showKYC={false}
+                            />
+                          </td>
+                          <td className="text-end">
+                            <TokenAmount
+                              amountWithDecimals={item["Amount"]}
+                              address={selectedToken?.contract}
+                              showUSDValue={true}
+                            />
+                          </td>
+                          <td style={{ width: "100px" }}>
+                            <div className="d-flex gap-2 justify-content-end">
+                              <button
+                                className="btn btn-sm btn-link p-0 text-decoration-none"
+                                onClick={() => handleEdit(index)}
+                                title="Edit"
+                              >
+                                <Edit width={24} height={24} />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-link p-0 text-decoration-none"
+                                onClick={() => handleDelete(index)}
+                                title="Delete"
+                              >
+                                <i className="bi bi-trash text-danger h5 mb-0"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {/* Pay Storage Button */}
+                <div className="d-flex justify-content-end mb-2">
+                  <button
+                    type="button"
+                    className="btn theme-btn"
+                    disabled={
+                      selectedUnregistered.size === 0 || isPayingStorage
+                    }
+                    onClick={() => {
+                      setShowGasFeePaymentModal(true);
+                    }}
+                  >
+                    Pay {Big(selectedUnregistered.size).mul(0.0125).toFixed(4)}{" "}
+                    NEAR
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
+          {title && (
+            <div className="my-3 px-2">
+              <h5 className="fw-bold mb-0">{title}</h5>
+            </div>
+          )}
           <table className="table" data-testid="preview-table">
             <thead>
               <tr>
                 <th className="text-secondary small fw-normal">№</th>
                 <th className="text-secondary small fw-normal">Recipient</th>
+                <th className="text-secondary small fw-normal"></th>
                 <th className="text-secondary small fw-normal text-end">
-                  Amount
+                  Funding Ask
                 </th>
                 <th className="text-secondary small fw-normal text-end">
                   Actions
@@ -717,18 +1239,42 @@ const BulkImportPreviewTable = ({
               </tr>
             </thead>
             <tbody>
-              {proposalList.map((item, index) => (
-                <PaymentRow
-                  key={index}
-                  item={item}
-                  index={index}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
+              {isValidating ? (
+                <TableSkeleton
+                  numberOfCols={5}
+                  numberOfRows={Math.min(proposalList.length, 5)}
                 />
-              ))}
+              ) : (
+                // Actual rows
+                sortedProposalList.map(
+                  ({ item, originalIndex }, displayIndex) => (
+                    <PaymentRow
+                      key={originalIndex}
+                      item={item}
+                      index={displayIndex}
+                      onEdit={() => handleEdit(originalIndex)}
+                      onDelete={() => handleDelete(originalIndex)}
+                      error={rowErrors[originalIndex]}
+                      selectedToken={selectedToken}
+                    />
+                  )
+                )
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Insufficient Balance Warning */}
+        {!isBalanceSufficient && (
+          <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3 my-3">
+            <i className="bi bi-exclamation-triangle h5 mb-0"></i>
+            <div>
+              The treasury balance is insufficient to cover the payment. You can
+              create the request, but it won't be approved until the balance is
+              topped up.
+            </div>
+          </div>
+        )}
 
         {/* Footer Buttons */}
         <div className="d-flex justify-content-end gap-3">
@@ -747,14 +1293,17 @@ const BulkImportPreviewTable = ({
               proposalList.length === 0 ||
               isCreatingRequest ||
               isTxnCreated ||
-              isLoadingCredits
+              isLoadingCredits ||
+              isValidating ||
+              errorCount > 0 ||
+              hasExceededQuota
             }
             onClick={() => {
-              // If storage purchase is needed, show confirmation modal
-              if (needsStoragePurchase) {
-                setShowStorageConfirmModal(true);
+              // Check if there are unregistered accounts
+              if (unregisteredAccounts.length > 0) {
+                setShowUnregisteredWarningModal(true);
               } else {
-                // Otherwise, proceed directly
+                // Proceed directly
                 setIsCreatingRequest(true);
                 createPaymentTx();
               }
@@ -762,9 +1311,7 @@ const BulkImportPreviewTable = ({
           >
             {isCreatingRequest || isTxnCreated
               ? "Submitting..."
-              : `Submit ${proposalList.length} Request${
-                  proposalList.length !== 1 ? "s" : ""
-                }`}
+              : `Submit Request`}
           </button>
         </div>
       </div>

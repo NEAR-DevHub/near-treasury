@@ -21,6 +21,7 @@ const WalletDropdown = ({
   showIntents = false,
   isStakingDelegationPage = false,
   hideLockup = false,
+  disabled = false,
 }) => {
   const {
     daoId: treasuryDaoID,
@@ -90,6 +91,7 @@ const WalletDropdown = ({
     <div className="d-flex flex-column gap-1">
       {!hideLabel && <label>Treasury Wallet</label>}
       <DropDown
+        disabled={disabled}
         options={walletOptions}
         selectedValue={selectedValue}
         onUpdate={onUpdate}

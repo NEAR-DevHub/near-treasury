@@ -181,7 +181,7 @@ test.describe("Vote on Payment Request - Full Page View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     // Wait for offcanvas and select wallet
@@ -319,7 +319,7 @@ test.describe("Vote on Payment Request - Full Page View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     // Wait for offcanvas and select wallet
@@ -462,7 +462,7 @@ test.describe("Vote on Payment Request - Full Page View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     // Wait for offcanvas and select wallet

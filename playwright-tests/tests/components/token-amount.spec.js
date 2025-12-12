@@ -58,7 +58,7 @@ test.describe("TokenAmount component in payment requests", () => {
 
     // Click to open the create request form
     await createButton.click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     // Hard expectation: Modal/form should open
@@ -218,7 +218,7 @@ test.describe("TokenAmount component in payment requests", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10000 });
     await createButton.click();
-    await page.getByText("Single Request").click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     // Select NEAR Intents wallet
