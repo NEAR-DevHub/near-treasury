@@ -47,18 +47,21 @@ export const useTransactionHandler = () => {
     // Skip if no transaction, not logged in, not in a DAO, or unknown route
     if (!transactionHashes || !accountId || !treasuryDaoID || !context) return;
 
-    fetch("https://rpc.mainnet.near.org", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "dontcare",
-        method: "tx",
-        params: [transactionHashes, accountId],
-      }),
-    })
+    fetch(
+      process.env.NEXT_PUBLIC_NEAR_RPC_URL || "https://rpc.mainnet.near.org",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "dontcare",
+          method: "tx",
+          params: [transactionHashes, accountId],
+        }),
+      }
+    )
       .then((response) => response.json())
       .then(async (transaction) => {
         if (transaction !== null) {

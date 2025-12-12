@@ -98,6 +98,7 @@ test.describe("OtherChainAccountInput validation", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
+    await page.getByText("Single Payment").click();
 
     // Wait for the form to load
     await expect(page.getByText("Create Payment Request")).toBeVisible({
@@ -183,6 +184,7 @@ test.describe("OtherChainAccountInput validation", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
+    await page.getByText("Single Payment").click();
 
     await expect(page.getByText("Create Payment Request")).toBeVisible({
       timeout: 10000,
@@ -260,6 +262,7 @@ test.describe("OtherChainAccountInput validation", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
+    await page.getByText("Single Payment").click();
 
     await expect(page.getByText("Create Payment Request")).toBeVisible({
       timeout: 10000,
@@ -340,6 +343,7 @@ test.describe("OtherChainAccountInput validation", () => {
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10_000 });
     await createButton.click();
+    await page.getByText("Single Payment").click();
 
     await expect(page.getByText("Create Payment Request")).toBeVisible({
       timeout: 10000,

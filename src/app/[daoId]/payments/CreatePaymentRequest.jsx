@@ -31,10 +31,7 @@ const tokenMapping = {
   USDC: "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
 };
 
-const CreatePaymentRequest = ({
-  onCloseCanvas = () => {},
-  setIsBulkImport,
-}) => {
+const CreatePaymentRequest = ({ onCloseCanvas = () => {} }) => {
   const { showToast } = useProposalToastContext();
   const {
     daoId: treasuryDaoID,
@@ -562,18 +559,6 @@ const CreatePaymentRequest = ({
         />
         {selectedWallet && (
           <div className="d-flex flex-column gap-3">
-            {selectedWallet.value === treasuryDaoID && (
-              <div className="text-secondary">
-                You can send a payment request to only one recipient at a time.
-                Need to send many?{" "}
-                <span
-                  className="text-primary text-decoration-underline cursor-pointer"
-                  onClick={() => setIsBulkImport && setIsBulkImport(true)}
-                >
-                  Import Multiple Payment Requests
-                </span>
-              </div>
-            )}
             {intentsBalances &&
               !intentsBalances?.length &&
               selectedWallet.value === "intents.near" && (
@@ -744,7 +729,6 @@ const CreatePaymentRequest = ({
                     })}
                   />
                   <TokensDropdown
-                    daoAccount={selectedWallet.value}
                     selectedValue={tokenId}
                     onChange={(v) => setValueWithDefaults("tokenId", v)}
                     setSelectedTokenBlockchain={(blockchain) => {
@@ -763,13 +747,72 @@ const CreatePaymentRequest = ({
                     setSelectedTokenIsIntent={(v) =>
                       setValue("selectedTokenIsIntent", v)
                     }
-                    lockupNearBalances={lockupNearBalances}
-                    lockupContract={lockupContract}
                     selectedWallet={selectedWallet.value}
                   />
                   {errors.tokenId && (
                     <div className="invalid-feedback d-block">
                       {errors.tokenId.message}
+                    </div>
+                  )}
+                </div>
+
+                <div className="d-flex flex-column gap-1">
+                  <label htmlFor="amount">
+                    Amount
+                    {errors.amount && (
+                      <span className="text-danger ms-1">*</span>
+                    )}
+                  </label>
+                  <input
+                    id="amount"
+                    type="number"
+                    min="0"
+                    step="any"
+                    className={`form-control ${
+                      errors.amount ? "is-invalid" : ""
+                    }`}
+                    placeholder="Enter amount"
+                    {...register("amount", {
+                      required: "Amount is required",
+                      min: {
+                        value: 0.000001,
+                        message: "Amount must be greater than 0",
+                      },
+                      validate: {
+                        maxU128: (value) => {
+                          const maxU128 = Big(
+                            "340282366920938463463374607431768211455"
+                          );
+                          if (Big(value || 0).gt(maxU128)) {
+                            return "Amount exceeds maximum allowed value";
+                          }
+                          return true;
+                        },
+                      },
+                    })}
+                    onChange={(e) => {
+                      setValue("amount", e.target.value, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
+                    }}
+                  />
+                  {errors.amount && (
+                    <div className="invalid-feedback d-block">
+                      {errors.amount.message}
+                    </div>
+                  )}
+                  {tokenId === tokenMapping.NEAR && (
+                    <div className="d-flex gap-2 align-items-center justify-content-between">
+                      <div className="d-flex gap-1 align-items-center">
+                        {"$" +
+                          Big(amount ? amount : 0)
+                            .mul(nearPrice)
+                            .toFixed(2)
+                            .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                        <Tooltip tooltip="The USD value is calculated based on token prices from CoinGecko and updates automatically every minute." />
+                      </div>
+                      <div>${Big(nearPrice).toFixed(2)}</div>
                     </div>
                   )}
                 </div>
@@ -833,66 +876,6 @@ const CreatePaymentRequest = ({
                   {errors.receiver && (
                     <div className="invalid-feedback d-block">
                       {errors.receiver.message}
-                    </div>
-                  )}
-                </div>
-                <div className="d-flex flex-column gap-1">
-                  <label htmlFor="amount">
-                    Total Amount
-                    {errors.amount && (
-                      <span className="text-danger ms-1">*</span>
-                    )}
-                  </label>
-                  <input
-                    id="amount"
-                    type="number"
-                    min="0"
-                    step="any"
-                    className={`form-control ${
-                      errors.amount ? "is-invalid" : ""
-                    }`}
-                    placeholder="Enter amount"
-                    {...register("amount", {
-                      required: "Amount is required",
-                      min: {
-                        value: 0.000001,
-                        message: "Amount must be greater than 0",
-                      },
-                      validate: {
-                        maxU128: (value) => {
-                          const maxU128 = Big(
-                            "340282366920938463463374607431768211455"
-                          );
-                          if (Big(value || 0).gt(maxU128)) {
-                            return "Amount exceeds maximum allowed value";
-                          }
-                          return true;
-                        },
-                      },
-                    })}
-                    onChange={(e) => {
-                      setValue("amount", e.target.value, {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      });
-                    }}
-                  />
-                  {errors.amount && (
-                    <div className="invalid-feedback d-block">
-                      {errors.amount.message}
-                    </div>
-                  )}
-                  {tokenId === tokenMapping.NEAR && (
-                    <div className="d-flex gap-2 align-items-center justify-content-between">
-                      <div className="d-flex gap-1 align-items-center">
-                        {"$" +
-                          Big(amount ? amount : 0)
-                            .mul(nearPrice)
-                            .toFixed(2)
-                            .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                        <Tooltip tooltip="The USD value is calculated based on token prices from CoinGecko and updates automatically every minute." />
-                      </div>
-                      <div>${Big(nearPrice).toFixed(2)}</div>
                     </div>
                   )}
                 </div>

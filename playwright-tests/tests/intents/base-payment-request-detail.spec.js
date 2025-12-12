@@ -258,10 +258,11 @@ test.describe("Base Payment Request Detail", () => {
     await page.goto(`http://localhost:3000/${daoAccountId}/payments`);
     await page.waitForLoadState("networkidle");
 
-    // Click Create Request
+    // Click Create Request dropdown and select Single Payment
     const createButton = page.getByRole("button", { name: "Create Request" });
     await expect(createButton).toBeVisible({ timeout: 10000 });
     await createButton.click();
+    await page.getByText("Single Payment").click();
 
     // Wait for form to open - the form is in an offcanvas
     await page.waitForTimeout(1000);
@@ -317,8 +318,8 @@ test.describe("Base Payment Request Detail", () => {
     console.log("✓ Entered summary");
 
     // Fill in amount
-    await page.getByRole("spinbutton", { name: "Total Amount" }).click();
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("50");
+    await page.getByRole("spinbutton", { name: "Amount" }).click();
+    await page.getByRole("spinbutton", { name: "Amount" }).fill("50");
     console.log("✓ Entered amount: 50 USDC");
 
     // Fill in recipient address (Base address)
