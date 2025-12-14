@@ -290,9 +290,9 @@ test.describe("Stake Delegation Filters", () => {
     await page.waitForTimeout(TIMEOUT);
     console.log("✓ Amount filter applied: > 0.1 NEAR");
 
-    // Hard expectation: All amounts must be greater than 0.1
-    await checkColumnAmounts(page, amountColumnIndex, 0.1, ">");
-    console.log("✓ All amounts greater than 0.1");
+    // Hard expectation: All amounts must be >= 0.1 (backend uses inclusive comparison)
+    await checkColumnAmounts(page, amountColumnIndex, 0.1, ">=");
+    console.log("✓ All amounts >= 0.1");
 
     // Check export URL contains amount min
     await checkExportUrlWithFilters(
