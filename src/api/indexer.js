@@ -185,14 +185,28 @@ export function generateFilteredProposalsQuery(
                 return date.toISOString().split("T")[0];
               };
 
-              if (fromDate && toDate) {
-                queryParams.push(
-                  `created_date_from=${fromDate}&created_date_to=${getNextDay(toDate)}`
-                );
-              } else if (fromDate) {
-                queryParams.push(`created_date_from=${fromDate}`);
-              } else if (toDate) {
-                queryParams.push(`created_date_to=${getNextDay(toDate)}`);
+              if (include) {
+                // "is" - include dates in range
+                if (fromDate && toDate) {
+                  queryParams.push(
+                    `created_date_from=${fromDate}&created_date_to=${getNextDay(toDate)}`
+                  );
+                } else if (fromDate) {
+                  queryParams.push(`created_date_from=${fromDate}`);
+                } else if (toDate) {
+                  queryParams.push(`created_date_to=${getNextDay(toDate)}`);
+                }
+              } else {
+                // "is not" - exclude dates in range
+                if (fromDate && toDate) {
+                  queryParams.push(
+                    `created_date_from_not=${fromDate}&created_date_to_not=${getNextDay(toDate)}`
+                  );
+                } else if (fromDate) {
+                  queryParams.push(`created_date_from_not=${fromDate}`);
+                } else if (toDate) {
+                  queryParams.push(`created_date_to_not=${getNextDay(toDate)}`);
+                }
               }
               break;
 
@@ -275,21 +289,35 @@ export function generateFilteredProposalsQuery(
     const hasMin = amountValues.min && amountValues.min !== "";
     const hasMax = amountValues.max && amountValues.max !== "";
 
-    // If both min and max are set and equal, use amount_equal instead
-    // This handles the "between X and X" case which should match exact value
-    if (hasMin && hasMax && amountValues.min === amountValues.max) {
-      queryParams.push(`amount_equal=${amountValues.min}`);
-    } else {
-      if (hasMin) {
-        queryParams.push(`amount_min=${amountValues.min}`);
-      }
-      if (hasMax) {
-        queryParams.push(`amount_max=${amountValues.max}`);
-      }
-    }
+    // Validate range: if both min and max exist, min should not be greater than max
+    const isValidRange =
+      !hasMin ||
+      !hasMax ||
+      parseFloat(amountValues.min) <= parseFloat(amountValues.max);
 
-    if (amountValues.equal && amountValues.equal !== "") {
-      queryParams.push(`amount_equal=${amountValues.equal}`);
+    if (!isValidRange) {
+      // Skip adding invalid range parameters
+      console.warn(
+        "Invalid amount range: min cannot be greater than max",
+        amountValues
+      );
+    } else {
+      // If both min and max are set and equal, use amount_equal instead
+      // This handles the "between X and X" case which should match exact value
+      if (hasMin && hasMax && amountValues.min == amountValues.max) {
+        queryParams.push(`amount_equal=${amountValues.min}`);
+      } else {
+        if (hasMin) {
+          queryParams.push(`amount_min=${amountValues.min}`);
+        }
+        if (hasMax) {
+          queryParams.push(`amount_max=${amountValues.max}`);
+        }
+      }
+
+      if (amountValues.equal && amountValues.equal !== "") {
+        queryParams.push(`amount_equal=${amountValues.equal}`);
+      }
     }
   }
 

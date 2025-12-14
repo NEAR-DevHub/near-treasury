@@ -653,6 +653,7 @@ const Thresholds = () => {
                   Cancel
                 </button>
                 <InsufficientBannerModal
+                  disabled={disableSubmit}
                   ActionButton={() => (
                     <button
                       className="btn theme-btn"
