@@ -59,10 +59,10 @@ const FunctionCall = () => {
     search,
   });
 
-  // Reset page when tab changes
+  // Reset page when tab or search changes
   useEffect(() => {
     setPage(0);
-  }, [tab]);
+  }, [tab, search]);
 
   function toggleCreatePage() {
     setShowCreateRequest(!showCreateRequest);
