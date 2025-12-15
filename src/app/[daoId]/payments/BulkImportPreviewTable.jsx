@@ -966,7 +966,7 @@ const BulkImportPreviewTable = ({
         {!isValidating &&
           !hasExceededQuota &&
           unregisteredAccounts.length > 0 && (
-            <div className="warning-box d-flex gap-3 my-2 p-2 rounded-3 align-items-center">
+            <div className="warning-box d-flex gap-3 mb-3 p-2 rounded-3 align-items-center">
               <i className="bi bi-exclamation-triangle h5 mb-0 mt-1"></i>
               <div className="flex-grow-1">
                 <strong>Storage Deposit Required</strong>
