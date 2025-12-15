@@ -122,6 +122,28 @@ export async function getPaymentListStatus(listId) {
   }
 }
 
+/**
+ * Get the transaction hash for a specific recipient's payment
+ * @param {string} listId - The payment list ID
+ * @param {string} recipient - The recipient account ID
+ * @returns {Promise<{success: boolean, recipient: string, amount: string, block_height: number, transaction_hash: string, error: string}>}
+ */
+export async function getPaymentTransactionHash(listId, recipient) {
+  try {
+    const response = await fetch(
+      `${BULK_PAYMENT_API_URL}/list/${listId}/transaction/${recipient}`
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching payment transaction hash:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 export async function getPaymentList(listId) {
   try {
     const response = await Near.view(BULK_PAYMENT_CONTRACT_ID, "view_list", {
@@ -295,6 +317,7 @@ export const BulkPaymentContract = {
   viewStorageCredits,
   submitPaymentList,
   getPaymentListStatus,
+  getPaymentTransactionHash,
   buildApproveListProposal,
   isBulkPaymentApproveProposal,
   getBulkPaymentContractId,

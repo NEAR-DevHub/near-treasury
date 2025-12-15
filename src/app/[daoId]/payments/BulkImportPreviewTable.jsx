@@ -35,6 +35,7 @@ const PaymentRow = memo(function PaymentRow({
   onDelete,
   error,
   selectedToken,
+  isUnregistered,
 }) {
   const hasError = error && error.length > 0;
   const isRecipientError =
@@ -47,11 +48,21 @@ const PaymentRow = memo(function PaymentRow({
     <tr>
       <td style={{ width: "50px" }}>{index + 1}</td>
       <td>
-        {isRecipientError ? (
-          <span className="small">{item["Recipient"] || ""}</span>
-        ) : (
-          <Profile accountId={item["Recipient"]} showKYC={false} />
-        )}
+        <div className="d-flex align-items-center gap-2">
+          {isRecipientError ? (
+            <span className="small">{item["Recipient"] || ""}</span>
+          ) : (
+            <Profile accountId={item["Recipient"]} showKYC={false} />
+          )}
+          {isUnregistered && (
+            <span
+              className="warning-box p-1 px-2 rounded-4 text-sm"
+              title="Storage deposit required"
+            >
+              Unregistered
+            </span>
+          )}
+        </div>
       </td>
       <td>{hasError && <span className="text-danger small">{error}</span>}</td>
       <td className="text-end">
@@ -120,15 +131,10 @@ const BulkImportPreviewTable = ({
 
   // Unregistered accounts (need storage deposit)
   const [unregisteredAccounts, setUnregisteredAccounts] = useState([]); // Array of indices
-  const [selectedUnregistered, setSelectedUnregistered] = useState(new Set());
-  const [isPayingStorage, setIsPayingStorage] = useState(false);
 
   // Bulk payment state
   const [storageCredits, setStorageCredits] = useState(0); // Number of available storage records
   const [isLoadingCredits, setIsLoadingCredits] = useState(true);
-  const [showUnregisteredWarningModal, setShowUnregisteredWarningModal] =
-    useState(false);
-  const [showGasFeePaymentModal, setShowGasFeePaymentModal] = useState(false);
 
   // Calculate totals
   const totalAmount = useMemo(() => {
@@ -175,9 +181,7 @@ const BulkImportPreviewTable = ({
   const sortedProposalList = useMemo(() => {
     return proposalList
       .map((item, originalIndex) => ({ item, originalIndex }))
-      .filter(
-        ({ originalIndex }) => !unregisteredAccounts.includes(originalIndex)
-      )
+
       .sort((a, b) => {
         const aHasError = rowErrors[a.originalIndex] ? 1 : 0;
         const bHasError = rowErrors[b.originalIndex] ? 1 : 0;
@@ -500,85 +504,9 @@ const BulkImportPreviewTable = ({
   }, [deletingIndex, proposalList]);
 
   /**
-   * Pay storage deposit for unregistered accounts
-   */
-  async function payStorageForRecipients() {
-    if (selectedUnregistered.size === 0) return;
-
-    setIsPayingStorage(true);
-    const tokenId = selectedToken?.contract;
-
-    try {
-      const selectedIndices = Array.from(selectedUnregistered);
-      const recipients = selectedIndices.map(
-        (index) => proposalList[index].Recipient
-      );
-
-      // Create storage deposit transactions for each recipient
-      const transactions = recipients.map((recipient) => ({
-        receiverId: tokenId,
-        signerId: accountId,
-        actions: [
-          {
-            type: "FunctionCall",
-            params: {
-              methodName: "storage_deposit",
-              args: {
-                account_id: recipient,
-                registration_only: true,
-              },
-              gas: "30000000000000", // 30 TGas
-              deposit: "12500000000000000000000", // 0.0125 NEAR
-            },
-          },
-        ],
-      }));
-
-      // Execute transactions
-      const result = await signAndSendTransactions({ transactions });
-
-      // Check if transaction was successful
-      if (
-        result &&
-        result.length > 0 &&
-        result[0]?.status?.SuccessValue !== undefined
-      ) {
-        // Show success message (without refresh or view request button)
-        showToast({
-          type: "success",
-          title: "Storage Payment Successful",
-          description: `Storage deposit paid for ${recipients.length} recipient${recipients.length !== 1 ? "s" : ""}. These accounts can now receive payments.`,
-        });
-
-        // Remove paid accounts from unregistered list
-        const updatedUnregistered = unregisteredAccounts.filter(
-          (index) => !selectedIndices.includes(index)
-        );
-        setUnregisteredAccounts(updatedUnregistered);
-
-        // Clear selection
-        setSelectedUnregistered(new Set());
-      } else {
-        // Transaction failed
-        throw new Error("Transaction failed or was rejected");
-      }
-    } catch (error) {
-      console.error("Error paying storage:", error);
-      showToast({
-        type: "error",
-        title: "Storage Payment Failed",
-        description: error.message || "Failed to pay storage deposit",
-      });
-    } finally {
-      setIsPayingStorage(false);
-      setShowGasFeePaymentModal(false);
-    }
-  }
-
-  /**
    * Create bulk payment proposal using the bulk payment contract flow:
    * 1. Generate list_id from payments
-   * 2. If insufficient storage credits, create buy_storage proposal first
+   * 2. If there are unregistered accounts, add storage deposit transactions first
    * 3. Create approve_list proposal (NEAR) or ft_transfer_call proposal (FT)
    * 4. Submit payment list to backend API after proposal is created
    */
@@ -620,7 +548,39 @@ const BulkImportPreviewTable = ({
 
       const transactions = [];
 
-      // Create approve_list proposal - convert totalAmount to smallest units
+      // Step 1: Add storage deposit transactions for unregistered accounts (if any)
+      if (unregisteredAccounts.length > 0 && !isNEAR) {
+        const unregisteredRecipients = unregisteredAccounts.map(
+          (index) => proposalList[index].Recipient
+        );
+
+        // Create storage deposit transactions for each unregistered recipient
+        const storageTransactions = unregisteredRecipients.map((recipient) => ({
+          receiverId: tokenId,
+          signerId: accountId,
+          actions: [
+            {
+              type: "FunctionCall",
+              params: {
+                methodName: "storage_deposit",
+                args: {
+                  account_id: recipient,
+                  registration_only: true,
+                },
+                gas: "30000000000000", // 30 TGas
+                deposit: "12500000000000000000000", // 0.0125 NEAR
+              },
+            },
+          ],
+        }));
+
+        transactions.push(...storageTransactions);
+        console.log(
+          `Added ${storageTransactions.length} storage deposit transaction(s)`
+        );
+      }
+
+      // Step 2: Create approve_list proposal - convert totalAmount to smallest units
       const totalAmountInSmallestUnits = Big(totalAmount)
         .times(Big(10).pow(selectedToken?.decimals || 24))
         .toFixed();
@@ -773,131 +733,6 @@ const BulkImportPreviewTable = ({
           Are you sure you want to remove the payment to{" "}
           <strong>{proposalList?.[deletingIndex]?.Recipient}</strong>? This
           action cannot be undone.
-        </div>
-      </Modal>
-
-      {/* Storage Deposit Payment Confirmation Modal */}
-      <Modal
-        isOpen={showGasFeePaymentModal}
-        heading="Confirm Storage Deposit Payment"
-        onClose={() => setShowGasFeePaymentModal(false)}
-        footer={
-          <>
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => setShowGasFeePaymentModal(false)}
-              disabled={isPayingStorage}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn theme-btn"
-              onClick={() => {
-                setShowGasFeePaymentModal(false);
-                payStorageForRecipients();
-              }}
-              disabled={isPayingStorage}
-            >
-              {isPayingStorage ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                  ></span>
-                  Processing...
-                </>
-              ) : (
-                "Confirm"
-              )}
-            </button>
-          </>
-        }
-      >
-        <div className="text-color">
-          <p className="mb-2">
-            You selected to pay the storage deposit for{" "}
-            {selectedUnregistered.size} recipient
-            {selectedUnregistered.size !== 1 ? "s" : ""}:{" "}
-            <strong>
-              {Array.from(selectedUnregistered)
-                .map((index) => proposalList[index].Recipient)
-                .join(", ")}
-            </strong>
-            . The total one-time storage deposit is{" "}
-            <strong>
-              {Big(selectedUnregistered.size).mul(0.0125).toFixed(4)} NEAR
-            </strong>
-            .
-          </p>
-          <p className="mb-0">
-            Once the payment is complete, you'll be able to create a payment
-            request for these recipients.
-          </p>
-        </div>
-      </Modal>
-
-      {/* Unregistered Accounts Warning Modal */}
-      <Modal
-        isOpen={showUnregisteredWarningModal}
-        heading="Confirm Request Creation"
-        onClose={() => setShowUnregisteredWarningModal(false)}
-        footer={
-          <>
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => setShowUnregisteredWarningModal(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn theme-btn"
-              onClick={() => {
-                setShowUnregisteredWarningModal(false);
-                // Filter out unregistered accounts and proceed
-                const filteredList = proposalList.filter(
-                  (_, index) => !unregisteredAccounts.includes(index)
-                );
-                setProposalList(filteredList);
-                setIsCreatingRequest(true);
-                createPaymentTx();
-              }}
-            >
-              Confirm
-            </button>
-          </>
-        }
-      >
-        <div className="text-color">
-          <p>
-            You are about to create a payment request for{" "}
-            <strong>
-              {proposalList.length - unregisteredAccounts.length} recipients
-            </strong>
-            .
-          </p>
-          {unregisteredAccounts.length > 0 && (
-            <>
-              <p className="mt-3 mb-2">
-                For the following recipients, the payment will fail:
-              </p>
-              <p className="mb-2">
-                <strong>
-                  {unregisteredAccounts
-                    .map((index) => proposalList[index].Recipient)
-                    .join(", ")}
-                  .
-                </strong>
-              </p>
-              <p className="mb-0">
-                To enable their payment contract, you need to pay a one-time
-                storage deposit of <strong>0.0125 NEAR</strong> per recipient.
-              </p>
-            </>
-          )}
         </div>
       </Modal>
 
@@ -1077,146 +912,6 @@ const BulkImportPreviewTable = ({
           </div>
         )}
 
-        {/* Unregistered Accounts Banner */}
-        {!isValidating &&
-          !hasExceededQuota &&
-          unregisteredAccounts.length > 0 && (
-            <div className="d-flex flex-column gap-3">
-              <div className="warning-box d-flex gap-3 mt-2 p-3 rounded-3 align-items-center">
-                <i className="bi bi-exclamation-triangle h5 mb-0"></i>
-                <div className="flex-grow-1">
-                  <strong>
-                    The payment will fail for these recipients if you don't pay
-                    the storage deposit.
-                  </strong>
-                  <div>
-                    To enable their payment contract, you need to pay a one-time
-                    storage deposit of <strong>0.0125 NEAR</strong> per
-                    recipient. Once it's paid, you'll be able to create a
-                    payment request for them.
-                  </div>
-                </div>
-              </div>
-
-              {/* List of unregistered accounts with checkboxes */}
-              <div className="mt-3" style={{ overflowX: "auto" }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th
-                        className="text-secondary small fw-normal"
-                        style={{ width: "50px" }}
-                      >
-                        <input
-                          style={{ width: "15px", height: "15px" }}
-                          type="checkbox"
-                          className="form-check-input"
-                          checked={
-                            selectedUnregistered.size ===
-                              unregisteredAccounts.length &&
-                            unregisteredAccounts.length > 0
-                          }
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUnregistered(
-                                new Set(unregisteredAccounts)
-                              );
-                            } else {
-                              setSelectedUnregistered(new Set());
-                            }
-                          }}
-                        />
-                      </th>
-                      <th className="text-secondary small fw-normal">
-                        Recipient
-                      </th>
-                      <th className="text-secondary small fw-normal text-end">
-                        Funding Ask
-                      </th>
-                      <th className="text-secondary small fw-normal text-end">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unregisteredAccounts.map((index) => {
-                      const item = proposalList[index];
-                      return (
-                        <tr key={index}>
-                          <td>
-                            <input
-                              style={{ width: "15px", height: "15px" }}
-                              type="checkbox"
-                              className="form-check-input"
-                              checked={selectedUnregistered.has(index)}
-                              onChange={(e) => {
-                                const newSelected = new Set(
-                                  selectedUnregistered
-                                );
-                                if (e.target.checked) {
-                                  newSelected.add(index);
-                                } else {
-                                  newSelected.delete(index);
-                                }
-                                setSelectedUnregistered(newSelected);
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <Profile
-                              accountId={item.Recipient}
-                              showKYC={false}
-                            />
-                          </td>
-                          <td className="text-end">
-                            <TokenAmount
-                              amountWithDecimals={item["Amount"]}
-                              address={selectedToken?.contract}
-                              showUSDValue={true}
-                            />
-                          </td>
-                          <td style={{ width: "100px" }}>
-                            <div className="d-flex gap-2 justify-content-end">
-                              <button
-                                className="btn btn-sm btn-link p-0 text-decoration-none"
-                                onClick={() => handleEdit(index)}
-                                title="Edit"
-                              >
-                                <Edit width={24} height={24} />
-                              </button>
-                              <button
-                                className="btn btn-sm btn-link p-0 text-decoration-none"
-                                onClick={() => handleDelete(index)}
-                                title="Delete"
-                              >
-                                <i className="bi bi-trash text-danger h5 mb-0"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {/* Pay Storage Button */}
-                <div className="d-flex justify-content-end mb-2">
-                  <button
-                    type="button"
-                    className="btn theme-btn"
-                    disabled={
-                      selectedUnregistered.size === 0 || isPayingStorage
-                    }
-                    onClick={() => {
-                      setShowGasFeePaymentModal(true);
-                    }}
-                  >
-                    Pay {Big(selectedUnregistered.size).mul(0.0125).toFixed(4)}{" "}
-                    NEAR
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         {/* Table */}
         <div style={{ overflowX: "auto" }}>
           {title && (
@@ -1256,6 +951,9 @@ const BulkImportPreviewTable = ({
                       onDelete={() => handleDelete(originalIndex)}
                       error={rowErrors[originalIndex]}
                       selectedToken={selectedToken}
+                      isUnregistered={unregisteredAccounts.includes(
+                        originalIndex
+                      )}
                     />
                   )
                 )
@@ -1263,6 +961,32 @@ const BulkImportPreviewTable = ({
             </tbody>
           </table>
         </div>
+
+        {/* Unregistered Accounts Warning */}
+        {!isValidating &&
+          !hasExceededQuota &&
+          unregisteredAccounts.length > 0 && (
+            <div className="warning-box d-flex gap-3 my-2 p-2 rounded-3 align-items-center">
+              <i className="bi bi-exclamation-triangle h5 mb-0 mt-1"></i>
+              <div className="flex-grow-1">
+                <strong>Storage Deposit Required</strong>
+                <div className="mt-1">
+                  You'll pay a total of{" "}
+                  <strong>
+                    {Big(unregisteredAccounts.length).mul(0.0125).toFixed(4)}{" "}
+                    NEAR
+                  </strong>{" "}
+                  (0.0125 NEAR per account) to register{" "}
+                  <strong>
+                    {unregisteredAccounts.length} account
+                    {unregisteredAccounts.length !== 1 ? "s" : ""}
+                  </strong>{" "}
+                  when you submit this request. This one-time deposit enables
+                  these recipients to receive payments.
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Insufficient Balance Warning */}
         {!isBalanceSufficient && (
@@ -1299,14 +1023,8 @@ const BulkImportPreviewTable = ({
               hasExceededQuota
             }
             onClick={() => {
-              // Check if there are unregistered accounts
-              if (unregisteredAccounts.length > 0) {
-                setShowUnregisteredWarningModal(true);
-              } else {
-                // Proceed directly
-                setIsCreatingRequest(true);
-                createPaymentTx();
-              }
+              setIsCreatingRequest(true);
+              createPaymentTx();
             }}
           >
             {isCreatingRequest || isTxnCreated

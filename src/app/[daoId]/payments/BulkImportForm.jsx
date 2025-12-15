@@ -277,9 +277,8 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
       {/* Header */}
       <div className="d-flex flex-column gap-2">
         <p className="mb-0 text-secondary">
-          Create a bulk payment request by uploading a CSV file or pasting data
-          directly into the form. You'll only need to approve the request once,
-          and it will cover all included recipients.
+          Pay multiple recipients with a single proposal. Upload a CSV file or
+          paste your payment data below.
         </p>
 
         {/* Credits Info Bar */}
@@ -306,8 +305,8 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
           </div>
         ) : !isLoadingCredits ? (
           <div>
-            You have <strong>{storageCredits}</strong> recipient credit
-            {storageCredits !== 1 ? "s" : ""} available. Need more?{" "}
+            You can include up to <strong>{storageCredits}</strong> recipient
+            {storageCredits !== 1 ? "s" : ""} in each bulk payment.{" "}
             <a
               href="https://docs.neartreasury.com/support"
               target="_blank"
@@ -315,8 +314,8 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
               className="text-decoration-underline"
             >
               Contact Us
-            </a>
-            .
+            </a>{" "}
+            to increase this limit.
           </div>
         ) : null}
       </div>

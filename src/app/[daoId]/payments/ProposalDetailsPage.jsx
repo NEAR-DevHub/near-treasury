@@ -14,6 +14,8 @@ import { fetchWithdrawalStatus } from "@/api/chaindefuser";
 import {
   isBulkPaymentApproveProposal,
   getPaymentList,
+  getPaymentListStatus,
+  getPaymentTransactionHash,
 } from "@/api/bulk-payment";
 import Big from "big.js";
 import ProposalDetails from "@/components/proposals/ProposalDetails";
@@ -22,6 +24,7 @@ import Profile from "@/components/ui/Profile";
 import Copy from "@/components/ui/Copy";
 import TokenAmount from "@/components/proposals/TokenAmount";
 import TableSkeleton from "@/components/ui/TableSkeleton";
+import BulkPaymentProcessingToast from "@/components/proposals/BulkPaymentProcessingToast";
 
 const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   const router = useRouter();
@@ -34,20 +37,18 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
   const { proposal: rawProposal, isError: isDeleted } = useProposal(id);
 
-  // Check if this is a bulk payment proposal to conditionally fetch storage proposal
-  const isBulkPayment = rawProposal
-    ? isBulkPaymentApproveProposal(rawProposal)
-    : false;
-
-  // Only fetch potential linked storage proposal if this is a bulk payment
-  const { proposal: potentialStorageProposal } = useProposal(
-    isBulkPayment && id > 0 ? id - 1 : null
-  );
-
   const [proposalData, setProposalData] = useState(null);
   const [linkedStorageProposal, setLinkedStorageProposal] = useState(null);
   const [paymentList, setPaymentList] = useState(null);
   const [isLoadingPaymentList, setIsLoadingPaymentList] = useState(false);
+  const [isProcessingPayments, setIsProcessingPayments] = useState(false);
+  const [showProcessingToast, setShowProcessingToast] = useState(false);
+  const [hasCompletedProcessing, setHasCompletedProcessing] = useState(false);
+  const [paymentCounts, setPaymentCounts] = useState({
+    paid: 0,
+    failed: 0,
+    pending: 0,
+  });
   const [networkInfo, setNetworkInfo] = useState({
     blockchain: null,
     blockchainIcon: null,
@@ -77,6 +78,8 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
     setProposalData(null);
     setLinkedStorageProposal(null);
     setPaymentList(null);
+    setIsProcessingPayments(false);
+    setHasCompletedProcessing(false);
     setNetworkInfo({
       blockchain: null,
       blockchainIcon: null,
@@ -113,6 +116,80 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
 
     fetchPaymentList();
   }, [isCompactVersion, proposalData?.bulkPaymentInfo?.listId]);
+
+  // Poll bulk payment processing status for approved bulk payments
+  // Shows "Processing" banner and toast until all payments complete
+  useEffect(() => {
+    const checkProcessingStatus = async () => {
+      if (
+        proposalData?.bulkPaymentInfo?.listId &&
+        proposalData?.status === "Approved"
+      ) {
+        try {
+          const result = await getPaymentListStatus(
+            proposalData.bulkPaymentInfo.listId
+          );
+
+          if (result?.success && result?.list) {
+            const { pending_payments, paid_payments, failed_payments } =
+              result.list;
+            const wasProcessing = isProcessingPayments;
+            const isProcessing = pending_payments > 0;
+
+            setIsProcessingPayments(isProcessing);
+            setPaymentCounts({
+              paid: paid_payments || 0,
+              failed: failed_payments || 0,
+              pending: pending_payments || 0,
+            });
+
+            // Show toast while processing
+            if (isProcessing) {
+              setShowProcessingToast(true);
+            } else {
+              // If processing just finished, fetch the final payment list with transaction details
+              if (wasProcessing && !isProcessing) {
+                setHasCompletedProcessing(true);
+                try {
+                  const finalList = await getPaymentList(
+                    proposalData.bulkPaymentInfo.listId
+                  );
+                  if (finalList && finalList.payments) {
+                    setPaymentList(finalList.payments);
+                  }
+                } catch (error) {
+                  console.error("Error fetching final payment list:", error);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error checking processing status:", error);
+        }
+      }
+    };
+
+    // Only check/poll if proposal is approved and hasn't completed processing yet
+    if (
+      proposalData?.bulkPaymentInfo?.listId &&
+      proposalData?.status === "Approved" &&
+      !hasCompletedProcessing
+    ) {
+      // Initial check
+      checkProcessingStatus();
+
+      // Poll every 3 seconds ONLY while payments are being processed
+      if (isProcessingPayments) {
+        const interval = setInterval(checkProcessingStatus, 3000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [
+    proposalData?.bulkPaymentInfo?.listId,
+    proposalData?.status,
+    isProcessingPayments,
+    hasCompletedProcessing,
+  ]);
 
   // Process raw proposal data when it changes
   useEffect(() => {
@@ -603,307 +680,405 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
   }
 
   return (
-    <ProposalDetails
-      proposalData={proposalData}
-      isDeleted={isDeleted}
-      currentTab={currentTab}
-      proposalPeriod={proposalPeriod}
-      page="payments"
-      isCompactVersion={isCompactVersion}
-      onClose={onClose}
-      approversGroup={transferApproversGroup}
-      proposalStatusLabel={{
-        approved: "Payment Request Approved",
-        rejected: "Payment Request Rejected",
-        deleted: "Payment Request Deleted",
-        failed: "Payment Request Failed",
-        expired: "Payment Request Expired",
-      }}
-      VoteActions={
-        (hasVotingPermission || hasDeletePermission) &&
-        proposalData?.status === "InProgress" ? (
-          <VoteActions
-            votes={proposalData?.votes}
-            proposalId={proposalData?.id}
-            hasDeletePermission={hasDeletePermission}
-            hasVotingPermission={hasVotingPermission}
-            proposalCreator={proposalData?.proposer}
-            isIntentsRequest={proposalData?.isIntentsPayment}
-            currentAmount={
-              proposalData?.bulkPaymentInfo?.totalAmount ||
-              proposalData?.args?.amount
-            }
-            currentContract={
-              proposalData?.bulkPaymentInfo?.contract ||
-              proposalData?.args?.token_id
-            }
-            isProposalDetailsPage={true}
-            proposal={proposalData?.proposal}
-            context="payment"
-            linkedStorageProposal={linkedStorageProposal}
-            bulkPaymentListId={proposalData?.bulkPaymentInfo?.listId}
-          />
-        ) : null
-      }
-      ProposalContent={
-        proposalData?.bulkPaymentInfo ? (
-          // Bulk Payment Content
-          <div className="card card-body d-flex flex-column gap-2">
-            <div className="d-flex flex-column gap-2 mt-1">
-              <label className="proposal-label">Source Wallet</label>
-              <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
-            </div>
-            {proposalData?.bulkPaymentInfo?.title && (
-              <h6 className="mb-0 flex-1 border-top pt-3">
-                {proposalData.bulkPaymentInfo.title}
-              </h6>
-            )}
-            <div className="d-flex flex-column gap-2 mt-1">
-              <label className="border-top proposal-label">Total Amount</label>
-              <TokenAmount
-                amountWithoutDecimals={
-                  proposalData?.bulkPaymentInfo?.totalAmount
+    <>
+      <ProposalDetails
+        proposalData={proposalData}
+        isDeleted={isDeleted}
+        currentTab={currentTab}
+        proposalPeriod={proposalPeriod}
+        page="payments"
+        isCompactVersion={isCompactVersion}
+        onClose={onClose}
+        approversGroup={transferApproversGroup}
+        proposalStatusLabel={{
+          approved: "Payment Request Approved",
+          rejected: "Payment Request Rejected",
+          deleted: "Payment Request Deleted",
+          failed: "Payment Request Failed",
+          expired: "Payment Request Expired",
+          processing: "Processing Payments",
+        }}
+        customStatus={
+          isProcessingPayments && proposalData?.status === "Approved"
+            ? "Processing"
+            : null
+        }
+        VoteActions={
+          (hasVotingPermission || hasDeletePermission) &&
+          proposalData?.status === "InProgress" ? (
+            <VoteActions
+              votes={proposalData?.votes}
+              proposalId={proposalData?.id}
+              hasDeletePermission={hasDeletePermission}
+              hasVotingPermission={hasVotingPermission}
+              proposalCreator={proposalData?.proposer}
+              isIntentsRequest={proposalData?.isIntentsPayment}
+              currentAmount={
+                proposalData?.bulkPaymentInfo?.totalAmount ||
+                proposalData?.args?.amount
+              }
+              currentContract={
+                proposalData?.bulkPaymentInfo?.contract ||
+                proposalData?.args?.token_id
+              }
+              isProposalDetailsPage={true}
+              proposal={proposalData?.proposal}
+              context="payment"
+              linkedStorageProposal={linkedStorageProposal}
+              getShowVoteToast={(proposalResult) => {
+                // Don't show approval toast for bulk payments (processing toast will be shown instead)
+                const isBulkPayment = !!proposalData?.bulkPaymentInfo;
+                return !(isBulkPayment && proposalResult.status === "Approved");
+              }}
+              onVoteSuccess={async (proposalResult) => {
+                // If bulk payment was just approved, start showing processing state
+                // The regular polling will handle checking actual status and updating
+                if (
+                  proposalData?.bulkPaymentInfo &&
+                  proposalResult.status === "Approved"
+                ) {
+                  setIsProcessingPayments(true);
+                  setShowProcessingToast(true);
+                  // The polling effect will check actual status and update accordingly
                 }
-                showUSDValue={true}
-                address={proposalData?.bulkPaymentInfo?.contract}
-                isProposalDetails={true}
-              />
-            </div>
-            <div className="d-flex flex-column gap-2 mt-1">
-              <label className="border-top proposal-label">
-                Total Recipients
-              </label>
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="h6 mb-0">
-                  {proposalData?.bulkPaymentInfo?.recipientCount} Recipient
-                  {proposalData?.bulkPaymentInfo?.recipientCount !== 1
-                    ? "s"
-                    : ""}
-                </div>
-                {isCompactVersion && (
-                  <button
-                    className="btn btn-sm btn-outline-secondary"
-                    onClick={() => {
-                      // Close compact view and navigate to expanded view
-                      if (onClose) onClose();
-                      const tabParam =
-                        currentTab?.title === "History" ? "history" : "pending";
-                      router.push(
-                        `/${treasuryDaoID}/payments?tab=${tabParam}&id=${id}`
-                      );
-                    }}
-                  >
-                    View Details
-                  </button>
-                )}
+              }}
+            />
+          ) : null
+        }
+        ProposalContent={
+          proposalData?.bulkPaymentInfo ? (
+            // Bulk Payment Content
+            <div className="card card-body d-flex flex-column gap-2">
+              <div className="d-flex flex-column gap-2 mt-1">
+                <label className="proposal-label">Source Wallet</label>
+                <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
               </div>
-            </div>
-            {/* Recipients Table - only in expanded view */}
-            {!isCompactVersion && (
-              <div className="d-flex flex-column gap-2 mt-2 border-top">
-                {isLoadingPaymentList ? (
-                  <table
-                    className="table table-sm mb-0 no-padding"
-                    style={{ fontSize: 14 }}
-                  >
-                    <thead>
-                      <tr className="text-secondary">
-                        <td style={{ width: 40 }}>№</td>
-                        <td>Recipient</td>
-                        <td className="text-right">Funding Ask</td>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <TableSkeleton numberOfCols={3} numberOfRows={3} />
-                    </tbody>
-                  </table>
-                ) : paymentList && paymentList.length > 0 ? (
-                  <table
-                    className="table table-sm mb-0 no-padding"
-                    style={{ fontSize: 14 }}
-                  >
-                    <thead>
-                      <tr className="text-secondary">
-                        <td style={{ width: 40 }}>№</td>
-                        <td>Recipient</td>
-                        <td className="text-right">Funding Ask</td>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paymentList.map((payment, index) => (
-                        <tr key={index}>
-                          <td className="fw-semibold">{index + 1}</td>
-                          <td>
-                            <Profile
-                              accountId={payment.recipient}
-                              displayImage={true}
-                              displayName={true}
-                              profileClass="text-secondary text-sm"
-                            />
-                          </td>
-                          <td className="text-end">
-                            <div className="d-flex flex-column align-items-end">
-                              <TokenAmount
-                                amountWithoutDecimals={payment.amount}
-                                address={
-                                  proposalData?.bulkPaymentInfo?.contract
-                                }
-                                showUSDValue={true}
-                                isProposalDetails={true}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : null}
-              </div>
-            )}
-          </div>
-        ) : (
-          // Regular Payment Content
-          <div className="card card-body d-flex flex-column gap-2">
-            <div className="d-flex flex-column gap-2 mt-1">
-              <label className="proposal-label">Source Wallet</label>
-              <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
-            </div>
-            <h6 className="mb-0 flex-1 border-top pt-3">
-              {proposalData?.title}
-            </h6>
-            {proposalData?.summary && (
-              <div className="text-secondary">{proposalData?.summary}</div>
-            )}
-            {proposalData?.proposalId && (
-              <div>
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={proposalData?.proposalUrl}
-                >
-                  <button
-                    className="btn p-0 d-flex align-items-center gap-2 h-auto text-color"
-                    style={{ fontSize: 14 }}
-                  >
-                    Open Proposal <i className="bi bi-box-arrow-up-right"></i>
-                  </button>
-                </a>
-              </div>
-            )}
-            <div className="d-flex flex-column gap-2 mt-1">
-              <label className="border-top proposal-label">Recipient</label>
-              <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
-                <Profile
-                  accountId={proposalData?.args?.receiver_id}
-                  displayImage={true}
-                  displayName={true}
-                  profileClass="text-secondary text-sm"
-                />
-                <Copy
-                  label="Copy Address"
-                  clipboardText={proposalData?.args?.receiver_id}
-                  showLogo={true}
-                  className="btn btn-outline-secondary d-flex gap-1 align-items-center"
+              {proposalData?.bulkPaymentInfo?.title && (
+                <h6 className="mb-0 flex-1 border-top pt-3">
+                  {proposalData.bulkPaymentInfo.title}
+                </h6>
+              )}
+              <div className="d-flex flex-column gap-2 mt-1">
+                <label className="border-top proposal-label">
+                  Total Amount
+                </label>
+                <TokenAmount
+                  amountWithDecimals={
+                    proposalData?.bulkPaymentInfo?.totalAmount
+                  }
+                  showUSDValue={true}
+                  address={proposalData?.bulkPaymentInfo?.contract}
+                  isProposalDetails={true}
                 />
               </div>
-            </div>
-            <div className="d-flex flex-column gap-2 mt-1">
-              <label className="border-top proposal-label">Funding Ask</label>
-              <TokenAmount
-                amountWithoutDecimals={proposalData?.args?.amount}
-                showUSDValue={false}
-                address={
-                  proposalData?.isIntentsPayment
-                    ? proposalData?.intentsTokenInfo?.tokenContract
-                    : proposalData?.args?.token_id
-                }
-                isProposalDetails={true}
-              />
-              {proposalData?.isIntentsPayment && networkInfo.blockchain && (
-                <div className="d-flex flex-column gap-2 mt-3">
-                  <label className="border-top proposal-label">Network</label>
-                  <div className="d-flex gap-1 align-items-center">
-                    {networkInfo.blockchainIcon && (
-                      <img
-                        src={networkInfo.blockchainIcon}
-                        width="25"
-                        height="25"
-                        alt={networkInfo.blockchain}
-                        className="rounded-circle object-fit-cover"
-                      />
-                    )}
-                    <span
-                      style={{ fontSize: "18px" }}
-                      className="text-capitalize fw-semi-bold"
-                    >
-                      {networkInfo.name ?? networkInfo.blockchain}
-                    </span>
+              <div className="d-flex flex-column gap-2 mt-1">
+                <label className="border-top proposal-label">
+                  Total Recipients
+                </label>
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="h6 fw-semibold mb-0">
+                    {proposalData?.bulkPaymentInfo?.recipientCount} Recipient
+                    {proposalData?.bulkPaymentInfo?.recipientCount !== 1
+                      ? "s"
+                      : ""}
                   </div>
+                  {isCompactVersion && (
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => {
+                        // Close compact view and navigate to expanded view
+                        if (onClose) onClose();
+                        const tabParam =
+                          currentTab?.title === "History"
+                            ? "history"
+                            : "pending";
+                        router.push(
+                          `/${treasuryDaoID}/payments?tab=${tabParam}&id=${id}`
+                        );
+                      }}
+                    >
+                      View Details
+                    </button>
+                  )}
+                </div>
+              </div>
+              {/* Recipients Table - only in expanded view */}
+              {!isCompactVersion && (
+                <div>
+                  {isLoadingPaymentList ? (
+                    <div className="mt-2 border-top">
+                      <table
+                        className="table table-sm mb-0 no-padding"
+                        style={{ fontSize: 14 }}
+                      >
+                        <thead>
+                          <tr className="text-secondary">
+                            <td style={{ width: 40 }}>№</td>
+                            <td>Recipient</td>
+                            <td className="text-right">Funding Ask</td>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <TableSkeleton numberOfCols={3} numberOfRows={3} />
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : paymentList && paymentList.length > 0 ? (
+                    <div className="mt-2 border-top">
+                      <table
+                        className="table table-sm mb-0 no-padding"
+                        style={{ fontSize: 14 }}
+                      >
+                        <thead>
+                          <tr className="text-secondary">
+                            <td style={{ width: 40 }}>№</td>
+                            <td>Recipient</td>
+                            <td className="text-right">Funding Ask</td>
+                            {proposalData?.status === "Approved" &&
+                              !isProcessingPayments && (
+                                <td className="text-right">Transaction Link</td>
+                              )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paymentList.map((payment, index) => (
+                            <tr key={index}>
+                              <td className="fw-semibold">{index + 1}</td>
+                              <td>
+                                <Profile
+                                  accountId={payment.recipient}
+                                  displayImage={true}
+                                  displayName={true}
+                                  profileClass="text-secondary text-sm"
+                                />
+                              </td>
+                              <td className="text-end">
+                                <div className="d-flex flex-column align-items-end">
+                                  <TokenAmount
+                                    amountWithoutDecimals={payment.amount}
+                                    address={
+                                      proposalData?.bulkPaymentInfo?.contract
+                                    }
+                                    showUSDValue={true}
+                                  />
+                                </div>
+                              </td>
+                              {proposalData?.status === "Approved" &&
+                                !isProcessingPayments && (
+                                  <td className="text-end">
+                                    {payment.status?.Paid ? (
+                                      <button
+                                        className="btn btn-sm btn-link p-0 text-decoration-none text-color d-flex align-items-center gap-1 justify-content-end w-100"
+                                        onClick={async () => {
+                                          try {
+                                            const result =
+                                              await getPaymentTransactionHash(
+                                                proposalData.bulkPaymentInfo
+                                                  .listId,
+                                                payment.recipient
+                                              );
+                                            if (
+                                              result.success &&
+                                              result.transaction_hash
+                                            ) {
+                                              window.open(
+                                                `https://nearblocks.io/txns/${result.transaction_hash}`,
+                                                "_blank"
+                                              );
+                                            } else {
+                                              console.error(
+                                                "Transaction hash not found:",
+                                                result.error
+                                              );
+                                            }
+                                          } catch (error) {
+                                            console.error(
+                                              "Error fetching transaction:",
+                                              error
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <div className="text-decoration-underline">
+                                          View transaction
+                                        </div>
+                                        <i className="bi bi-box-arrow-up-right"></i>
+                                      </button>
+                                    ) : (
+                                      <span className="text-secondary small">
+                                        {payment.status === "Pending"
+                                          ? "Pending"
+                                          : "Failed"}
+                                      </span>
+                                    )}
+                                  </td>
+                                )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
                 </div>
               )}
-              {proposalData?.isIntentsPayment &&
-                estimatedFee &&
-                !estimatedFee.isZero && (
+            </div>
+          ) : (
+            // Regular Payment Content
+            <div className="card card-body d-flex flex-column gap-2">
+              <div className="d-flex flex-column gap-2 mt-1">
+                <label className="proposal-label">Source Wallet</label>
+                <div className="h6 mb-0">{proposalData?.sourceWallet}</div>
+              </div>
+              <h6 className="mb-0 flex-1 border-top pt-3">
+                {proposalData?.title}
+              </h6>
+              {proposalData?.summary && (
+                <div className="text-secondary">{proposalData?.summary}</div>
+              )}
+              {proposalData?.proposalId && (
+                <div>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={proposalData?.proposalUrl}
+                  >
+                    <button
+                      className="btn p-0 d-flex align-items-center gap-2 h-auto text-color"
+                      style={{ fontSize: 14 }}
+                    >
+                      Open Proposal <i className="bi bi-box-arrow-up-right"></i>
+                    </button>
+                  </a>
+                </div>
+              )}
+              <div className="d-flex flex-column gap-2 mt-1">
+                <label className="border-top proposal-label">Recipient</label>
+                <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
+                  <Profile
+                    accountId={proposalData?.args?.receiver_id}
+                    displayImage={true}
+                    displayName={true}
+                    profileClass="text-secondary text-sm"
+                  />
+                  <Copy
+                    label="Copy Address"
+                    clipboardText={proposalData?.args?.receiver_id}
+                    showLogo={true}
+                    className="btn btn-outline-secondary d-flex gap-1 align-items-center"
+                  />
+                </div>
+              </div>
+              <div className="d-flex flex-column gap-2 mt-1">
+                <label className="border-top proposal-label">Funding Ask</label>
+                <TokenAmount
+                  amountWithoutDecimals={proposalData?.args?.amount}
+                  showUSDValue={false}
+                  address={
+                    proposalData?.isIntentsPayment
+                      ? proposalData?.intentsTokenInfo?.tokenContract
+                      : proposalData?.args?.token_id
+                  }
+                  isProposalDetails={true}
+                />
+                {proposalData?.isIntentsPayment && networkInfo.blockchain && (
                   <div className="d-flex flex-column gap-2 mt-3">
-                    <label className="border-top proposal-label">
-                      Estimated Fee
-                    </label>
-                    <div className="d-flex flex-column gap-2">
-                      <span style={{ fontSize: "16px" }}>
-                        {estimatedFee.amount} {estimatedFee.symbol}
-                      </span>
-                      <small
-                        className="text-secondary"
-                        style={{ fontSize: "12px" }}
+                    <label className="border-top proposal-label">Network</label>
+                    <div className="d-flex gap-1 align-items-center">
+                      {networkInfo.blockchainIcon && (
+                        <img
+                          src={networkInfo.blockchainIcon}
+                          width="25"
+                          height="25"
+                          alt={networkInfo.blockchain}
+                          className="rounded-circle object-fit-cover"
+                        />
+                      )}
+                      <span
+                        style={{ fontSize: "18px" }}
+                        className="text-capitalize fw-semi-bold"
                       >
-                        This is an estimated fee. Check the transaction links
-                        below for the actual fee charged.
-                      </small>
+                        {networkInfo.name ?? networkInfo.blockchain}
+                      </span>
                     </div>
                   </div>
                 )}
-              {(proposalData?.status === "Approved" ||
-                proposalData?.status === "Failed") &&
-                transactionInfo.nearTxHash && (
-                  <div className="d-flex flex-column gap-2 mt-1">
-                    <label className="border-top proposal-label">
-                      Transaction Links
-                    </label>
-                    <div className="d-flex flex-column gap-2">
-                      <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
-                        <a
-                          href={transactionInfo.nearTxHash}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="d-flex align-items-center gap-2 text-color text-underline"
+                {proposalData?.isIntentsPayment &&
+                  estimatedFee &&
+                  !estimatedFee.isZero && (
+                    <div className="d-flex flex-column gap-2 mt-3">
+                      <label className="border-top proposal-label">
+                        Estimated Fee
+                      </label>
+                      <div className="d-flex flex-column gap-2">
+                        <span style={{ fontSize: "16px" }}>
+                          {estimatedFee.amount} {estimatedFee.symbol}
+                        </span>
+                        <small
+                          className="text-secondary"
+                          style={{ fontSize: "12px" }}
                         >
-                          View execution on nearblocks.io{" "}
-                          <i className="bi bi-box-arrow-up-right"></i>
-                        </a>
+                          This is an estimated fee. Check the transaction links
+                          below for the actual fee charged.
+                        </small>
                       </div>
-                      {transactionInfo.targetTxHash && (
+                    </div>
+                  )}
+                {(proposalData?.status === "Approved" ||
+                  proposalData?.status === "Failed") &&
+                  transactionInfo.nearTxHash && (
+                    <div className="d-flex flex-column gap-2 mt-1">
+                      <label className="border-top proposal-label">
+                        Transaction Links
+                      </label>
+                      <div className="d-flex flex-column gap-2">
                         <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
                           <a
-                            href={transactionInfo.targetTxHash}
+                            href={transactionInfo.nearTxHash}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="d-flex align-items-center gap-2 text-color text-underline"
                           >
-                            {getExplorerButtonText(
-                              transactionInfo.targetTxHash
-                            )}{" "}
+                            View execution on nearblocks.io{" "}
                             <i className="bi bi-box-arrow-up-right"></i>
                           </a>
                         </div>
-                      )}
+                        {transactionInfo.targetTxHash && (
+                          <div className="d-flex justify-content-between gap-2 align-items-center flex-wrap">
+                            <a
+                              href={transactionInfo.targetTxHash}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="d-flex align-items-center gap-2 text-color text-underline"
+                            >
+                              {getExplorerButtonText(
+                                transactionInfo.targetTxHash
+                              )}{" "}
+                              <i className="bi bi-box-arrow-up-right"></i>
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+              </div>
             </div>
-          </div>
-        )
-      }
-    />
+          )
+        }
+      />
+
+      {/* Bulk Payment Processing Toast */}
+      {showProcessingToast &&
+        proposalData?.bulkPaymentInfo?.listId &&
+        paymentList && (
+          <BulkPaymentProcessingToast
+            recipients={paymentList}
+            paidCount={paymentCounts.paid}
+            failedCount={paymentCounts.failed}
+            pendingCount={paymentCounts.pending}
+            onClose={() => setShowProcessingToast(false)}
+          />
+        )}
+    </>
   );
 };
 

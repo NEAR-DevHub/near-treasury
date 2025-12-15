@@ -242,7 +242,6 @@ const Table = ({
           let bulkPaymentRecipientCount = null;
           let bulkPaymentContract = null;
           let bulkPaymentAmount = null;
-          let bulkPaymentListId = null;
           let bulkPaymentTitle = null;
           if (isBulkPayment) {
             // Decode from markdown format: proposal_action: "bulk-payment", recipients, contract
@@ -258,10 +257,7 @@ const Table = ({
               "amount",
               item.description
             );
-            const listId = decodeProposalDescription(
-              "list_id",
-              item.description
-            );
+
             const bulkTitle = decodeProposalDescription(
               "title",
               item.description
@@ -271,7 +267,6 @@ const Table = ({
               : null;
             bulkPaymentContract = contract || null;
             bulkPaymentAmount = amount || null;
-            bulkPaymentListId = listId || null;
             bulkPaymentTitle = bulkTitle || null;
           }
           const intentsToken =
@@ -407,7 +402,9 @@ const Table = ({
               </td>
               <td className={isVisible("Funding Ask") + " text-right"}>
                 <TokenAmount
-                  amountWithoutDecimals={bulkPaymentAmount || args.amount}
+                  {...(isBulkPayment
+                    ? { amountWithDecimals: bulkPaymentAmount }
+                    : { amountWithoutDecimals: args.amount })}
                   address={bulkPaymentContract || args.token_id}
                   price={oneClickPrices[args.token_id] || undefined}
                   showUSDValue={false}
@@ -499,7 +496,6 @@ const Table = ({
                         currentContract={bulkPaymentContract || args.token_id}
                         proposal={item}
                         context="payment"
-                        bulkPaymentListId={bulkPaymentListId}
                       />
                     </td>
                   )

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
 import { normalize } from "@/helpers/formatters";
+import { LOCAL_STORAGE_KEYS } from "@/constants/localStorage";
 import Table from "@/app/[daoId]/payments/Table";
 import ProposalDetailsPage from "@/app/[daoId]/payments/ProposalDetailsPage";
 import CreatePaymentRequest from "@/app/[daoId]/payments/CreatePaymentRequest";
@@ -65,8 +66,36 @@ const PaymentsIndex = () => {
     value: "between",
   });
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showBulkTooltip, setShowBulkTooltip] = useState(false);
+  const createButtonRef = useRef(null);
 
   const hasCreatePermission = hasPermission?.("transfer", "AddProposal");
+
+  // Check if bulk import tooltip should be shown on first visit
+  useEffect(() => {
+    const dismissed = localStorage.getItem(
+      LOCAL_STORAGE_KEYS.BULK_IMPORT_TOOLTIP_DISMISSED
+    );
+    if (!dismissed && hasCreatePermission) {
+      // Show tooltip after a short delay for better UX
+      const timer = setTimeout(() => setShowBulkTooltip(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasCreatePermission]);
+
+  const dismissBulkTooltip = () => {
+    setShowBulkTooltip(false);
+    localStorage.setItem(
+      LOCAL_STORAGE_KEYS.BULK_IMPORT_TOOLTIP_DISMISSED,
+      "true"
+    );
+  };
+
+  const handleTryBulkImport = () => {
+    dismissBulkTooltip();
+    setIsBulkImport(true);
+    setShowCreateRequest(true);
+  };
 
   // Use the proposals hook
   const {
@@ -281,14 +310,20 @@ const PaymentsIndex = () => {
 
                       {hasCreatePermission && (
                         <div
-                          className="dropdown"
+                          className="dropdown position-relative"
                           style={{ minWidth: "fit-content" }}
+                          ref={createButtonRef}
                         >
                           <button
                             className="btn primary-button d-flex align-items-center gap-2 mb-0 dropdown-toggle"
                             type="button"
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
+                            onClick={() => {
+                              if (showBulkTooltip) {
+                                dismissBulkTooltip();
+                              }
+                            }}
                           >
                             <i className="bi bi-plus-lg h5 mb-0"></i>
                             <span className="responsive-text">
@@ -321,6 +356,52 @@ const PaymentsIndex = () => {
                               </button>
                             </li>
                           </ul>
+
+                          {/* Bulk Import Tooltip */}
+                          {showBulkTooltip && (
+                            <div
+                              className="position-absolute"
+                              style={{
+                                top: "calc(100% + 8px)",
+                                right: 0,
+                                zIndex: 1060,
+                                minWidth: "320px",
+                                maxWidth: "400px",
+                              }}
+                            >
+                              <div className="card shadow-lg rounded-4 overflow-hidden">
+                                <div
+                                  className="card-body p-3"
+                                  style={{
+                                    background: "var(--bg-page-color)",
+                                  }}
+                                >
+                                  <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 className="fw-bold mb-0">
+                                      Save Time with Bulk Payments
+                                    </h6>
+                                    <button
+                                      type="button"
+                                      className="btn-close btn-sm"
+                                      aria-label="Close"
+                                      onClick={dismissBulkTooltip}
+                                      style={{ fontSize: "0.75rem" }}
+                                    ></button>
+                                  </div>
+                                  <p className="mb-3 text-secondary small">
+                                    Create one proposal to pay multiple
+                                    recipients. Upload a CSV file to begin.
+                                  </p>
+                                  <button
+                                    className="btn theme-btn btn-sm w-100"
+                                    onClick={handleTryBulkImport}
+                                  >
+                                    Try It
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
