@@ -48,24 +48,12 @@ const VotingDurationPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAffectedProposals, setLoadingAffectedProposals] =
     useState(false);
-  const [validationError, setValidationError] = useState("");
 
   const hasCreatePermission = hasPermission?.(
     "policy_update_parameters",
     "AddProposal"
   );
   const deposit = daoPolicy?.proposal_bond || 0;
-
-  // Validate voting duration
-  const validateDuration = (value) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue) || numValue <= 0) {
-      setValidationError("Voting duration must be greater than 0 days");
-      return false;
-    }
-    setValidationError("");
-    return true;
-  };
 
   // Initialize duration from daoPolicy
   useEffect(() => {
@@ -89,8 +77,8 @@ const VotingDurationPage = () => {
     const value = parseFloat(newDurationDays) || 0;
     setValue("durationDays", value, {
       shouldDirty: true,
+      shouldValidate: true,
     });
-    validateDuration(value);
   };
 
   const cancelChangeRequest = () => {
@@ -268,11 +256,6 @@ const VotingDurationPage = () => {
   };
 
   const submitChangeRequest = () => {
-    // Validate before submitting
-    if (!validateDuration(durationDays)) {
-      return;
-    }
-
     findAffectedProposals((shouldShowAffectedProposalsModal) => {
       if (shouldShowAffectedProposalsModal) {
         setShowAffectedProposalsModal(true);
@@ -284,11 +267,6 @@ const VotingDurationPage = () => {
 
   const isInitialValues = () => {
     return durationDays === currentDurationDays;
-  };
-
-  const isInvalidDuration = () => {
-    const numValue = parseFloat(durationDays);
-    return isNaN(numValue) || numValue <= 0;
   };
 
   const showImpactedRequests =
@@ -419,16 +397,33 @@ const VotingDurationPage = () => {
             <input
               id="votingDuration"
               type="number"
-              className={`form-control ${validationError ? "is-invalid" : ""}`}
+              className={`form-control ${errors.durationDays ? "is-invalid" : ""}`}
               placeholder="Enter voting duration days"
-              value={durationDays}
-              onChange={(e) => changeDurationDays(e.target.value)}
+              {...register("durationDays", {
+                required: "Voting duration is required",
+                min: {
+                  value: 1,
+                  message: "Voting duration must be at least 1 day",
+                },
+                max: {
+                  value: 1000,
+                  message: "Voting duration cannot exceed 1000 days",
+                },
+                validate: {
+                  isInteger: (value) =>
+                    Number.isInteger(Number(value)) ||
+                    "Voting duration must be a whole number",
+                },
+              })}
               disabled={!hasCreatePermission}
-              min="0.01"
-              step="0.01"
+              min="1"
+              max="1000"
+              step="1"
             />
-            {validationError && (
-              <div className="invalid-feedback d-block">{validationError}</div>
+            {errors.durationDays && (
+              <div className="invalid-feedback d-block">
+                {errors.durationDays.message}
+              </div>
             )}
           </div>
 
@@ -447,10 +442,10 @@ const VotingDurationPage = () => {
                     className="btn theme-btn"
                     disabled={
                       isInitialValues() ||
-                      isInvalidDuration() ||
                       loadingAffectedProposals ||
                       !hasCreatePermission ||
-                      isTxnCreated
+                      isTxnCreated ||
+                      !!errors.durationDays
                     }
                   >
                     Submit Request
@@ -458,6 +453,13 @@ const VotingDurationPage = () => {
                 )}
                 checkForDeposit={true}
                 callbackAction={submitChangeRequest}
+                disabled={
+                  isInitialValues() ||
+                  loadingAffectedProposals ||
+                  !hasCreatePermission ||
+                  isTxnCreated ||
+                  !!errors.durationDays
+                }
               />
             </div>
           )}

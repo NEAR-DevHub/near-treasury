@@ -18,6 +18,7 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
   const [showMoreLoading, setShowMoreLoading] = useState(false);
   const [hideViewMore, setHideViewMore] = useState(false);
   const [contractMetadataCache, setContractMetadataCache] = useState({});
+  const [previousDataLength, setPreviousDataLength] = useState(0);
 
   const totalTxnsPerPage = 15;
 
@@ -36,9 +37,19 @@ const TransactionHistory = ({ treasuryDaoID, lockupContract }) => {
           if (!res || !res.data) {
             setAPIError();
           } else {
-            if (res.data.length < page * totalTxnsPerPage) {
+            // Hide "Show More" if:
+            // 1. Data length hasn't increased (no new transactions), OR
+            // 2. We received fewer transactions than expected for this page
+            if (
+              res.data.length === previousDataLength ||
+              res.data.length < page * totalTxnsPerPage
+            ) {
               setHideViewMore(true);
             }
+
+            // Update previous data length for next comparison
+            setPreviousDataLength(res.data.length);
+
             setError(null);
             setTransactionWithBalance(res.data);
 

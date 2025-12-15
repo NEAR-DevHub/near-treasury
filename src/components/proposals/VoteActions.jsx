@@ -7,6 +7,7 @@ import InsufficientBannerModal from "@/components/proposals/InsufficientBannerMo
 import ProposalStatus from "@/components/proposals/ProposalStatus";
 import TokenAmount from "@/components/proposals/TokenAmount";
 import Tooltip from "@/components/ui/Tooltip";
+import Skeleton from "@/components/ui/Skeleton";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
@@ -72,6 +73,15 @@ const VoteActions = ({
   const [showConfirmModal, setConfirmModal] = useState(false);
   const [userBalance, setUserBalance] = useState("0");
 
+  // Universal loading state - tracks all async checks
+  const [loadingStates, setLoadingStates] = useState({
+    withdrawCheck: isWithdrawRequest, // Only check if it's a withdraw request
+    balanceCheck: !avoidCheckForBalance, // Only check if balance check is needed
+  });
+
+  // Computed loading state - true if any check is pending
+  const isLoading = loadingStates.withdrawCheck || loadingStates.balanceCheck;
+
   // Get user balance from DAO context
   useEffect(() => {
     if (isNEAR) {
@@ -109,6 +119,11 @@ const VoteActions = ({
           : contractBalance?.amount || "0"
       );
     }
+
+    // Mark balance check as complete after balance is set
+    if (!avoidCheckForBalance) {
+      setLoadingStates((prev) => ({ ...prev, balanceCheck: false }));
+    }
   }, [
     isNEAR,
     isHumanReadableCurrentAmount,
@@ -117,6 +132,7 @@ const VoteActions = ({
     currentContract,
     daoFtBalances,
     intentsBalances,
+    avoidCheckForBalance,
   ]);
 
   // Check if user has sufficient balance
@@ -148,7 +164,13 @@ const VoteActions = ({
           setIsReadyToBeWithdrawn(res);
         } catch (error) {
           console.error("Error checking withdraw status:", error);
+        } finally {
+          // Mark withdraw check as complete
+          setLoadingStates((prev) => ({ ...prev, withdrawCheck: false }));
         }
+      } else if (!isWithdrawRequest) {
+        // Not a withdraw request, mark as complete immediately
+        setLoadingStates((prev) => ({ ...prev, withdrawCheck: false }));
       }
     };
 
@@ -349,7 +371,25 @@ const VoteActions = ({
         </div>
       </Modal>
 
-      {alreadyVoted ? (
+      {/* Show skeleton while loading */}
+      {isLoading ? (
+        <div className={containerClass}>
+          <Skeleton
+            className="rounded-3"
+            style={{
+              width: isProposalDetailsPage ? "250px" : "150px",
+              height: "38px",
+            }}
+          />
+          <Skeleton
+            className="rounded-3"
+            style={{
+              width: isProposalDetailsPage ? "250px" : "150px",
+              height: "38px",
+            }}
+          />
+        </div>
+      ) : alreadyVoted ? (
         <div className={containerClass}>
           <ProposalStatus
             isVoteStatus={true}
