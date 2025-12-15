@@ -111,7 +111,7 @@ const ProposalToast = ({
       stake: "stake-delegation",
       exchange: "asset-exchange",
       function: "function-call",
-      settings: "settings/feed",
+      settings: "settings",
     };
 
     return contextToPageMap[context] || "payments";
@@ -120,12 +120,14 @@ const ProposalToast = ({
   const handleViewClick = () => {
     const pagePath = getPagePath();
     const newUrl = `/${daoId}/${pagePath}?id=${proposalId}`;
+    onClose(); // Close toast before navigation
     router.push(newUrl);
   };
 
   const handleViewHistoryClick = () => {
     const pagePath = getPagePath();
     const newUrl = `/${daoId}/${pagePath}?id=${proposalId}&tab=history`;
+    onClose(); // Close toast before navigation
     router.push(newUrl);
   };
 

@@ -1432,3 +1432,15 @@ input.hide-bg:active {
 input.hide-bg:focus-visible {
   background-color: transparent !important;
 }
+
+.color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.color-picker-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+.color-picker-input::-moz-color-swatch {
+  border: none;
+  border-radius: 5px;
+}

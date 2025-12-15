@@ -284,6 +284,7 @@ const Theme = () => {
               <div className="d-flex border border-1 align-items-center rounded-3 gap-2 p-1 px-2">
                 <input
                   type="color"
+                  className="color-picker-input"
                   value={color}
                   onChange={(e) =>
                     setValue("color", e.target.value, { shouldDirty: true })
@@ -291,9 +292,8 @@ const Theme = () => {
                   style={{
                     width: 35,
                     height: 30,
-                    border: "none",
+                    border: color,
                     borderRadius: 5,
-                    appearance: "none",
                     padding: 0,
                     cursor: "pointer",
                   }}
@@ -331,6 +331,7 @@ const Theme = () => {
                   )}
                   checkForDeposit={true}
                   callbackAction={handleSave}
+                  disabled={!isDirty || isTxnCreated}
                 />
               )}
             </div>

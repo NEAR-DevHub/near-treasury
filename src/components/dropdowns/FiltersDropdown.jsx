@@ -38,9 +38,6 @@ const FiltersDropdown = ({
 
   const amountInputRefs = useRef({});
 
-  // Memoized computed values
-  const hideInclude = useMemo(() => type === "vote" || type === "date", [type]);
-
   const voteOptions = useMemo(
     () => [
       "Approved",
@@ -128,6 +125,13 @@ const FiltersDropdown = ({
     [setAmountValues]
   );
 
+  const handleAmountKeyDown = useCallback((e) => {
+    // Prevent 'e', 'E', '+', '-' from being entered in number inputs
+    if (e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+      e.preventDefault();
+    }
+  }, []);
+
   const handleAmountValueChange = useCallback(
     (field, value) => {
       const activeElement = document.activeElement;
@@ -214,45 +218,57 @@ const FiltersDropdown = ({
         </div>
 
         {amountValues.value && (
-          <div className="d-flex align-items-center gap-2 mt-2">
+          <div className="d-flex flex-column gap-2 mt-2">
             {amountValues.value === "between" ? (
-              <div className="d-flex align-items-center gap-2">
-                <div>
-                  <label className="form-label mb-1 text-sm">From</label>
-                  <input
-                    ref={(el) => (amountInputRefs.current["amount-min"] = el)}
-                    name="amount-min"
-                    type="number"
-                    className="form-control form-control-sm"
-                    placeholder="0"
-                    min="0"
-                    max={amountValues.max || undefined}
-                    value={amountValues.min}
-                    onChange={(e) =>
-                      handleAmountValueChange("min", e.target.value)
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  />
+              <>
+                <div className="d-flex align-items-center gap-2">
+                  <div style={{ width: "140px" }}>
+                    <label className="form-label mb-1 text-sm">From</label>
+                    <input
+                      ref={(el) => (amountInputRefs.current["amount-min"] = el)}
+                      name="amount-min"
+                      type="number"
+                      className="form-control form-control-sm"
+                      placeholder="0"
+                      min="0"
+                      max={amountValues.max || undefined}
+                      value={amountValues.min}
+                      onChange={(e) =>
+                        handleAmountValueChange("min", e.target.value)
+                      }
+                      onKeyDown={handleAmountKeyDown}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div style={{ width: "140px" }}>
+                    <label className="form-label mb-1 text-sm">To</label>
+                    <input
+                      ref={(el) => (amountInputRefs.current["amount-max"] = el)}
+                      name="amount-max"
+                      type="number"
+                      className="form-control form-control-sm"
+                      placeholder="0"
+                      min={amountValues.min || "0"}
+                      value={amountValues.max}
+                      onChange={(e) =>
+                        handleAmountValueChange("max", e.target.value)
+                      }
+                      onKeyDown={handleAmountKeyDown}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="form-label mb-1 text-sm">To</label>
-                  <input
-                    ref={(el) => (amountInputRefs.current["amount-max"] = el)}
-                    name="amount-max"
-                    type="number"
-                    className="form-control form-control-sm"
-                    placeholder="0"
-                    min={amountValues.min || "0"}
-                    value={amountValues.max}
-                    onChange={(e) =>
-                      handleAmountValueChange("max", e.target.value)
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </div>
+                {amountValues.min &&
+                  amountValues.max &&
+                  parseFloat(amountValues.min) >
+                    parseFloat(amountValues.max) && (
+                    <div className="text-danger text-sm">
+                      "From" value cannot be greater than "To" value
+                    </div>
+                  )}
+              </>
             ) : (
               <input
                 ref={(el) => {
@@ -290,6 +306,7 @@ const FiltersDropdown = ({
                         : "equal";
                   handleAmountValueChange(field, e.target.value);
                 }}
+                onKeyDown={handleAmountKeyDown}
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
               />
@@ -647,15 +664,7 @@ const FiltersDropdown = ({
           <span className="text-secondary">{label}</span>
           {(selected.length > 0 || type === "amount") && (
             <div className="d-flex align-items-center gap-2 text-start">
-              {!include && (
-                <span
-                  style={{
-                    display: hideInclude ? "none" : "inline",
-                  }}
-                >
-                  {includeOptions[1]?.label}
-                </span>
-              )}
+              {!include && <span>{includeOptions[1]?.label}</span>}
               <span className="text-secondary">:</span>
               <span>{getDisplayValue}</span>
             </div>
@@ -683,7 +692,7 @@ const FiltersDropdown = ({
             {type !== "amount" && (
               <div
                 className="d-flex align-items-center gap-1"
-                style={{ padding: hideInclude ? "8px 12px" : "4px 12px" }}
+                style={{ padding: "4px 12px" }}
               >
                 <span className="text-secondary" style={{ fontSize: "14px" }}>
                   {label}
@@ -695,9 +704,6 @@ const FiltersDropdown = ({
                       e.preventDefault();
                       e.stopPropagation();
                       toggleIncludeDropdown();
-                    }}
-                    style={{
-                      display: hideInclude ? "none" : "flex",
                     }}
                   >
                     {
