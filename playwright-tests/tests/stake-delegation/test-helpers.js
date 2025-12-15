@@ -216,7 +216,7 @@ export async function openCreateRequestForm({ page, requestType }) {
 
   const requestOption = await page
     .locator(".dropdown-item")
-    .filter({ hasText: requestType });
+    .getByText(requestType, { exact: true });
   await requestOption.click();
   await page.waitForTimeout(1500);
   console.log(`✓ Selected '${requestType}' from dropdown`);
