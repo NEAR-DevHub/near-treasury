@@ -287,6 +287,7 @@ const Theme = () => {
                 <input
                   data-testid="color-picker-input"
                   type="color"
+                  className="color-picker-input"
                   value={color}
                   onChange={(e) =>
                     setValue("color", e.target.value, { shouldDirty: true })
@@ -294,9 +295,8 @@ const Theme = () => {
                   style={{
                     width: 35,
                     height: 30,
-                    border: "none",
+                    border: color,
                     borderRadius: 5,
-                    appearance: "none",
                     padding: 0,
                     cursor: "pointer",
                   }}

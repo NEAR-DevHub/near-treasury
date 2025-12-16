@@ -23,7 +23,8 @@ const VotingDurationPage = () => {
     watch,
     setValue,
     reset,
-    formState: { isDirty },
+    formState: { isDirty, errors },
+    register,
   } = useForm({
     mode: "onChange",
     defaultValues: {
@@ -73,8 +74,10 @@ const VotingDurationPage = () => {
   }, [daoPolicy, reset]);
 
   const changeDurationDays = (newDurationDays) => {
-    setValue("durationDays", parseFloat(newDurationDays) || 0, {
+    const value = parseFloat(newDurationDays) || 0;
+    setValue("durationDays", value, {
       shouldDirty: true,
+      shouldValidate: true,
     });
   };
 
@@ -394,12 +397,34 @@ const VotingDurationPage = () => {
             <input
               id="votingDuration"
               type="number"
-              className="form-control"
+              className={`form-control ${errors.durationDays ? "is-invalid" : ""}`}
               placeholder="Enter voting duration days"
-              value={durationDays}
-              onChange={(e) => changeDurationDays(e.target.value)}
+              {...register("durationDays", {
+                required: "Voting duration is required",
+                min: {
+                  value: 1,
+                  message: "Voting duration must be at least 1 day",
+                },
+                max: {
+                  value: 1000,
+                  message: "Voting duration cannot exceed 1000 days",
+                },
+                validate: {
+                  isInteger: (value) =>
+                    Number.isInteger(Number(value)) ||
+                    "Voting duration must be a whole number",
+                },
+              })}
               disabled={!hasCreatePermission}
+              min="1"
+              max="1000"
+              step="1"
             />
+            {errors.durationDays && (
+              <div className="invalid-feedback d-block">
+                {errors.durationDays.message}
+              </div>
+            )}
           </div>
 
           {hasCreatePermission && (
@@ -419,7 +444,8 @@ const VotingDurationPage = () => {
                       isInitialValues() ||
                       loadingAffectedProposals ||
                       !hasCreatePermission ||
-                      isTxnCreated
+                      isTxnCreated ||
+                      !!errors.durationDays
                     }
                   >
                     Submit Request
@@ -427,6 +453,13 @@ const VotingDurationPage = () => {
                 )}
                 checkForDeposit={true}
                 callbackAction={submitChangeRequest}
+                disabled={
+                  isInitialValues() ||
+                  loadingAffectedProposals ||
+                  !hasCreatePermission ||
+                  isTxnCreated ||
+                  !!errors.durationDays
+                }
               />
             </div>
           )}

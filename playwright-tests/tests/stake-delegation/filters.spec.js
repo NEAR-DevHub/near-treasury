@@ -290,9 +290,9 @@ test.describe("Stake Delegation Filters", () => {
     await page.waitForTimeout(TIMEOUT);
     console.log("✓ Amount filter applied: > 0.1 NEAR");
 
-    // Hard expectation: All amounts must be greater than 0.1
-    await checkColumnAmounts(page, amountColumnIndex, 0.1, ">");
-    console.log("✓ All amounts greater than 0.1");
+    // Hard expectation: All amounts must be >= 0.1 (backend uses inclusive comparison)
+    await checkColumnAmounts(page, amountColumnIndex, 0.1, ">=");
+    console.log("✓ All amounts >= 0.1");
 
     // Check export URL contains amount min
     await checkExportUrlWithFilters(
@@ -699,11 +699,12 @@ test.describe("Stake Delegation Filters", () => {
     console.log("✓ All rows have dates within range");
 
     // Check export URL contains date range
+    // Note: toDate is adjusted by +1 day to include the entire end date
     await checkExportUrlWithFilters(
       page,
       {
         created_date_from: "2024-01-01",
-        created_date_to: "2024-12-31",
+        created_date_to: "2025-01-01",
       },
       "stake-delegation"
     );
