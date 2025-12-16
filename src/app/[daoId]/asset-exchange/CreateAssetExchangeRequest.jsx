@@ -288,6 +288,8 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
     ) {
       return;
     }
+    setDryQuoteError(null);
+    setDryQuote(null);
     setIsFetchingDryQuote(true);
     try {
       const result = await fetchDryQuote({
@@ -299,10 +301,8 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
         slippagePct,
       });
       if (result?.error) {
-        setDryQuote(null);
         setDryQuoteError(result.error);
       } else if (result?.quote) {
-        setDryQuoteError(null);
         const amountOut = parseFloat(result.quote.amountOutFormatted || "0");
         const rate =
           Number(result.quote.amountInFormatted || 0) > 0
@@ -898,7 +898,11 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
               {dryQuoteError.toLowerCase().includes("failed") ||
               dryQuoteError.toLowerCase().includes("unable to fetch")
                 ? "We couldn't find a swap for the selected tokens. Try a smaller amount or different token."
-                : dryQuoteError}
+                : dryQuoteError
+                      .toLowerCase()
+                      .includes("amount is too low for bridge")
+                  ? "Amount too low for swap. Cross-chain swaps require a higher minimum to cover network fees."
+                  : dryQuoteError}
             </div>
           </div>
         )}
@@ -1054,6 +1058,7 @@ const CreateAssetExchangeRequest = ({ onCloseCanvas = () => {} }) => {
           disabled={
             isFetchingDryQuote ||
             isFetchingProposalQuote ||
+            dryQuoteError ||
             !!errors.slippagePct ||
             !!errors.sendAmount ||
             !sendAmount ||
