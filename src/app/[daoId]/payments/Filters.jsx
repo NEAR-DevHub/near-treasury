@@ -106,6 +106,15 @@ const Filters = ({
       delete newFilters[filterKey];
       return newFilters;
     });
+    // Reset amount values when removing token filter
+    if (filterKey === "token") {
+      setAmountValues({
+        min: "",
+        max: "",
+        equal: "",
+        value: "between",
+      });
+    }
   };
 
   const updateFilterInclude = (filterKey, include) => {
@@ -131,6 +140,12 @@ const Filters = ({
   const clearAllFilters = () => {
     setShowFilters(false);
     setActiveFilters({});
+    setAmountValues({
+      min: "",
+      max: "",
+      equal: "",
+      value: "between",
+    });
   };
 
   const getFilterLabel = (key) => {
