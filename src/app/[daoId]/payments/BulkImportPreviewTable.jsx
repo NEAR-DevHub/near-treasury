@@ -24,6 +24,7 @@ import { REFRESH_DELAY } from "@/constants/ui";
 import Edit from "@/components/icons/Edit";
 import AccountInput from "@/components/forms/AccountInput";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
+import { parseAmount } from "@/helpers/formatters";
 
 /**
  * Memoized table row component to prevent unnecessary re-renders
@@ -291,7 +292,7 @@ const BulkImportPreviewTable = ({
         if (!amountStr) {
           rowErrors.push("Amount is missing.");
         } else {
-          const value = parseFloat(amountStr.replace(/,/g, ""));
+          const value = parseAmount(amountStr);
           if (isNaN(value) || value <= 0) {
             rowErrors.push("Amount must be a positive number.");
           }
@@ -369,7 +370,7 @@ const BulkImportPreviewTable = ({
     if (!editingData?.Amount || editingData.Amount === "") {
       errors.Amount = "Amount is required";
     } else {
-      const amount = parseFloat(editingData.Amount);
+      const amount = parseAmount(editingData.Amount);
       if (isNaN(amount) || amount <= 0) {
         errors.Amount = "Amount must be a positive number";
       }

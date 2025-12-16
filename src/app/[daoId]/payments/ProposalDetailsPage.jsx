@@ -834,7 +834,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                             <td style={{ width: 40 }}>№</td>
                             <td>Recipient</td>
                             <td className="text-right">Funding Ask</td>
-                            {proposalData?.status === "Approved" &&
+                            {proposalData?.status !== "InProgress" &&
                               !isProcessingPayments && (
                                 <td className="text-right">Transaction Link</td>
                               )}
@@ -863,7 +863,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
                                   />
                                 </div>
                               </td>
-                              {proposalData?.status === "Approved" &&
+                              {proposalData?.status !== "InProgress" &&
                                 !isProcessingPayments && (
                                   <td className="text-end">
                                     {payment.status?.Paid ? (

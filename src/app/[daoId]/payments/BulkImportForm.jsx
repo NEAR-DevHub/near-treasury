@@ -6,6 +6,7 @@ import { viewStorageCredits } from "@/api/bulk-payment";
 import Modal from "@/components/ui/Modal";
 import WalletDropdown from "@/components/dropdowns/WalletDropdown";
 import TokensDropdown from "@/components/dropdowns/TokensDropdown";
+import { parseAmount } from "@/helpers/formatters";
 
 const NEAR_CONTRACT = "near";
 
@@ -191,9 +192,15 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
         continue;
       }
 
+      const amountStr = (row[amountIdx] || "").trim();
+      const parsedAmountValue = parseAmount(amountStr);
+
       const data = {
         Recipient: (row[recipientIdx] || "").trim(),
-        Amount: (row[amountIdx] || "").trim(),
+        // Normalize amount to use dot as decimal separator
+        Amount: !isNaN(parsedAmountValue)
+          ? String(parsedAmountValue)
+          : amountStr,
       };
 
       parsedData.push(data);
