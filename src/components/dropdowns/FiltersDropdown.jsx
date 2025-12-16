@@ -564,8 +564,7 @@ const FiltersDropdown = ({
 
     if (
       amountValues.value === "between" &&
-      amountValues.min &&
-      amountValues.max
+      (amountValues.min || amountValues.max)
     ) {
       return `${amountValues.min}-${amountValues.max}`;
     } else if (amountValues.value === ">" && amountValues.min) {

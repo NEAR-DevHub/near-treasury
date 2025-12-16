@@ -130,6 +130,15 @@ const StakeDelegationFilters = ({
       delete newFilters[filterKey];
       return newFilters;
     });
+    // Reset amount values when removing amount filter
+    if (filterKey === "amount") {
+      setAmountValues({
+        min: "",
+        max: "",
+        equal: "",
+        value: "between",
+      });
+    }
   };
 
   const updateFilterInclude = (filterKey, include) => {

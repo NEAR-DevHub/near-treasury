@@ -53,10 +53,12 @@ const Theme = () => {
       "https://github.com/user-attachments/assets/244e15fc-3fb7-4067-a2c3-013e189e8d20";
     const defaultColor = metadata?.primaryColor || "#01BF7A";
 
-    setValue("image", defaultImage);
-    setValue("color", defaultColor);
+    reset({
+      image: defaultImage,
+      color: defaultColor,
+    });
     setLoadingConfig(false);
-  }, [config, setValue]);
+  }, [config, reset]);
 
   const uploadImageToServer = async (file) => {
     setUploadingImage(true);
@@ -192,7 +194,7 @@ const Theme = () => {
 
   const cleanInputs = () => {
     // Reset form to saved values
-    if (config?.metadata) {
+    if (config) {
       const metadata = config.metadata;
       const defaultImage =
         metadata?.flagLogo ||
@@ -220,7 +222,7 @@ const Theme = () => {
       <TransactionLoader showInProgress={isTxnCreated} />
       <div className="card rounded-4 py-3">
         <div className="card-title px-3 pb-3">Theme & Logo</div>
-        {loadingConfig || !config ? (
+        {loadingConfig ? (
           <div className="d-flex flex-column gap-3 px-3 py-1">
             <Skeleton className="w-100 rounded-3" style={{ height: "100px" }} />
             <Skeleton className="w-100 rounded-3" style={{ height: "50px" }} />
@@ -283,6 +285,7 @@ const Theme = () => {
               <label className="form-label">Primary color</label>
               <div className="d-flex border border-1 align-items-center rounded-3 gap-2 p-1 px-2">
                 <input
+                  data-testid="color-picker-input"
                   type="color"
                   className="color-picker-input"
                   value={color}
@@ -300,6 +303,7 @@ const Theme = () => {
                   disabled={!hasCreatePermission}
                 />
                 <input
+                  data-testid="color-text-input"
                   type="text"
                   value={color}
                   onChange={(e) =>
