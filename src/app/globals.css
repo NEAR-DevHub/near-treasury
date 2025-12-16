@@ -146,6 +146,39 @@
   --bs-border-color: var(--border-color);
 }
 
+/* Theme Inverted - Use opposite theme colors for a specific component */
+/* In light mode, this class applies dark theme colors */
+.theme-inverted {
+  --bg-page-color: #222222;
+  --bg-system-color: #131313;
+  --text-color: #cacaca;
+  --text-secondary-color: #878787;
+  --border-color: #3b3b3b;
+  --grey-01: #f4f4f4;
+  --grey-02: #b3b3b3;
+  --grey-03: #555555;
+  --grey-035: #3e3e3e;
+  --grey-04: #323232;
+  --grey-045: #1d1d1d;
+  --grey-05: #1b1b18;
+}
+
+/* In dark mode, this class applies light theme colors */
+[data-theme="dark"] .theme-inverted {
+  --bg-page-color: #ffffff;
+  --bg-system-color: #f4f4f4;
+  --text-color: #1b1b18;
+  --text-secondary-color: #999999;
+  --border-color: rgba(226, 230, 236, 1);
+  --grey-01: #1b1b18;
+  --grey-02: #555555;
+  --grey-03: #b3b3b3;
+  --grey-035: #e6e6e6;
+  --grey-04: #f4f4f4;
+  --grey-045: #f4f4f4;
+  --grey-05: #f7f7f7;
+}
+
 html,
 body {
   max-width: 100vw;

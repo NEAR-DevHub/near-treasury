@@ -365,11 +365,11 @@ const PaymentsIndex = () => {
                                 top: "calc(100% + 8px)",
                                 right: 0,
                                 zIndex: 1060,
-                                minWidth: "320px",
+                                minWidth: "350px",
                                 maxWidth: "400px",
                               }}
                             >
-                              <div className="card shadow-lg rounded-4 overflow-hidden">
+                              <div className="card shadow-lg rounded-4 overflow-hidden theme-inverted">
                                 <div
                                   className="card-body p-3"
                                   style={{
@@ -380,24 +380,24 @@ const PaymentsIndex = () => {
                                     <h6 className="fw-bold mb-0">
                                       Save Time with Bulk Payments
                                     </h6>
-                                    <button
-                                      type="button"
-                                      className="btn-close btn-sm"
+                                    <i
+                                      className="bi bi-x-lg cursor-pointer text-secondary"
                                       aria-label="Close"
                                       onClick={dismissBulkTooltip}
-                                      style={{ fontSize: "0.75rem" }}
-                                    ></button>
+                                    ></i>
                                   </div>
-                                  <p className="mb-3 text-secondary small">
+                                  <p className="mb-1 text-secondary small">
                                     Create one proposal to pay multiple
                                     recipients. Upload a CSV file to begin.
                                   </p>
-                                  <button
-                                    className="btn theme-btn btn-sm w-100"
-                                    onClick={handleTryBulkImport}
-                                  >
-                                    Try It
-                                  </button>
+                                  <div className="d-flex justify-content-end">
+                                    <button
+                                      className="btn theme-btn btn-sm "
+                                      onClick={handleTryBulkImport}
+                                    >
+                                      Try It
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
