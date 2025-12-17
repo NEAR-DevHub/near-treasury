@@ -177,39 +177,77 @@ export function generateFilteredProposalsQuery(
               const fromDate = originalValues[0];
               const toDate = originalValues[1];
 
-              if (fromDate && toDate) {
-                queryParams.push(
-                  `created_date_from=${fromDate}&created_date_to=${toDate}`
-                );
-              } else if (fromDate) {
-                queryParams.push(`created_date_from=${fromDate}`);
-              } else if (toDate) {
-                queryParams.push(`created_date_to=${toDate}`);
+              // Add one day to toDate to include the entire end date
+              // (backend uses exclusive date comparison)
+              const getNextDay = (dateStr) => {
+                const date = new Date(dateStr);
+                date.setDate(date.getDate() + 1);
+                return date.toISOString().split("T")[0];
+              };
+
+              if (include) {
+                // "is" - include dates in range
+                if (fromDate && toDate) {
+                  queryParams.push(
+                    `created_date_from=${fromDate}&created_date_to=${getNextDay(toDate)}`
+                  );
+                } else if (fromDate) {
+                  queryParams.push(`created_date_from=${fromDate}`);
+                } else if (toDate) {
+                  queryParams.push(`created_date_to=${getNextDay(toDate)}`);
+                }
+              } else {
+                // "is not" - exclude dates in range
+                if (fromDate && toDate) {
+                  queryParams.push(
+                    `created_date_from_not=${fromDate}&created_date_to_not=${getNextDay(toDate)}`
+                  );
+                } else if (fromDate) {
+                  queryParams.push(`created_date_from_not=${fromDate}`);
+                } else if (toDate) {
+                  queryParams.push(`created_date_to_not=${getNextDay(toDate)}`);
+                }
               }
               break;
 
             case "votes":
-              if (values[0] === "Approved") {
-                queryParams.push(`voter_votes=${accountId}:approved`);
-              } else if (values[0] === "Rejected") {
-                queryParams.push(`voter_votes=${accountId}:rejected`);
-              } else if (
-                values[0] === "Awaiting Decision" ||
-                values[0] === "Not Voted"
-              ) {
-                const existingApproversNotIndex = queryParams.findIndex(
-                  (param) => param.startsWith("approvers_not=")
-                );
-                if (existingApproversNotIndex !== -1) {
-                  const existingParam = queryParams[existingApproversNotIndex];
-                  const existingValues = existingParam.split("=")[1].split(",");
-                  const allValues = [
-                    ...new Set([...existingValues, accountId]),
-                  ];
-                  queryParams[existingApproversNotIndex] =
-                    `approvers_not=${allValues.join(",")}`;
-                } else {
-                  queryParams.push(`approvers_not=${accountId}`);
+              if (include) {
+                if (values[0] === "Approved") {
+                  queryParams.push(`voter_votes=${accountId}:approved`);
+                } else if (values[0] === "Rejected") {
+                  queryParams.push(`voter_votes=${accountId}:rejected`);
+                } else if (
+                  values[0] === "Awaiting Decision" ||
+                  values[0] === "Not Voted"
+                ) {
+                  const existingApproversNotIndex = queryParams.findIndex(
+                    (param) => param.startsWith("approvers_not=")
+                  );
+                  if (existingApproversNotIndex !== -1) {
+                    const existingParam =
+                      queryParams[existingApproversNotIndex];
+                    const existingValues = existingParam
+                      .split("=")[1]
+                      .split(",");
+                    const allValues = [
+                      ...new Set([...existingValues, accountId]),
+                    ];
+                    queryParams[existingApproversNotIndex] =
+                      `approvers_not=${allValues.join(",")}`;
+                  } else {
+                    queryParams.push(`approvers_not=${accountId}`);
+                  }
+                }
+              } else {
+                if (values[0] === "Approved") {
+                  queryParams.push(`voter_votes=${accountId}:rejected`);
+                } else if (values[0] === "Rejected") {
+                  queryParams.push(`voter_votes=${accountId}:approved`);
+                } else if (
+                  values[0] === "Awaiting Decision" ||
+                  values[0] === "Not Voted"
+                ) {
+                  queryParams.push(`approvers=${accountId}`);
                 }
               }
               break;
@@ -248,14 +286,38 @@ export function generateFilteredProposalsQuery(
 
   // Handle amount values
   if (amountValues) {
-    if (amountValues.min && amountValues.min !== "") {
-      queryParams.push(`amount_min=${amountValues.min}`);
-    }
-    if (amountValues.max && amountValues.max !== "") {
-      queryParams.push(`amount_max=${amountValues.max}`);
-    }
-    if (amountValues.equal && amountValues.equal !== "") {
-      queryParams.push(`amount_equal=${amountValues.equal}`);
+    const hasMin = amountValues.min && amountValues.min !== "";
+    const hasMax = amountValues.max && amountValues.max !== "";
+
+    // Validate range: if both min and max exist, min should not be greater than max
+    const isValidRange =
+      !hasMin ||
+      !hasMax ||
+      parseFloat(amountValues.min) <= parseFloat(amountValues.max);
+
+    if (!isValidRange) {
+      // Skip adding invalid range parameters
+      console.warn(
+        "Invalid amount range: min cannot be greater than max",
+        amountValues
+      );
+    } else {
+      // If both min and max are set and equal, use amount_equal instead
+      // This handles the "between X and X" case which should match exact value
+      if (hasMin && hasMax && amountValues.min == amountValues.max) {
+        queryParams.push(`amount_equal=${amountValues.min}`);
+      } else {
+        if (hasMin) {
+          queryParams.push(`amount_min=${amountValues.min}`);
+        }
+        if (hasMax) {
+          queryParams.push(`amount_max=${amountValues.max}`);
+        }
+      }
+
+      if (amountValues.equal && amountValues.equal !== "") {
+        queryParams.push(`amount_equal=${amountValues.equal}`);
+      }
     }
   }
 

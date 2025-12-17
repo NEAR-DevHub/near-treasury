@@ -75,6 +75,21 @@ export function useProposals({
     {}
   );
 
+  // Check if amount filter is invalid (min > max)
+  const hasInvalidAmountFilter =
+    normalizedAmountValues.min &&
+    normalizedAmountValues.max &&
+    parseFloat(normalizedAmountValues.min) >
+      parseFloat(normalizedAmountValues.max);
+
+  // Check if date filter is invalid (from date > to date)
+  // ISO date strings (YYYY-MM-DD) can be compared directly
+  const dateFilter = normalizedFilters.created_date;
+  const hasInvalidDateFilter =
+    dateFilter?.values?.[0] &&
+    dateFilter?.values?.[1] &&
+    dateFilter.values[0] > dateFilter.values[1];
+
   const queryKey = [
     "proposals",
     daoId,
@@ -93,8 +108,12 @@ export function useProposals({
 
   const query = useQuery({
     queryKey,
-    queryFn: () =>
-      getProposalsFromIndexer({
+    queryFn: () => {
+      // If amount or date filter is invalid, return empty results immediately
+      if (hasInvalidAmountFilter || hasInvalidDateFilter) {
+        return Promise.resolve({ proposals: [], total: 0 });
+      }
+      return getProposalsFromIndexer({
         daoId,
         category,
         statuses,
@@ -107,7 +126,8 @@ export function useProposals({
         amountValues: debouncedAmountValues,
         proposalType,
         accountId,
-      }),
+      });
+    },
     enabled: enabled && !!daoId,
     staleTime: 30 * 1000, // 30 seconds
   });

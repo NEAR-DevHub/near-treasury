@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { setupLockupAccount } from "../../util/lockup.js";
 import { StakingScenarios, mockStakingScenario } from "./staking-mocks.js";
+import { setupTestEnvironment } from "../../util/sandbox.js";
 import {
   setupTestDAO,
-  setupTestEnvironment,
   navigateToStakeDelegation,
   openCreateRequestForm,
   voteAndApproveProposal,
@@ -40,10 +40,8 @@ test.describe("Stake Request Form Validation", () => {
     const TEST_DAO_ID = "testing-astradao.sputnik-dao.near";
 
     // Navigate to stake delegation page
-    await page.goto(`http://localhost:3000/${TEST_DAO_ID}/stake-delegation`, {
-      waitUntil: "networkidle",
-    });
-    await page.waitForTimeout(2000);
+    await page.goto(`http://localhost:3000/${TEST_DAO_ID}/stake-delegation`);
+    await page.waitForTimeout(5000);
 
     // Click Create Request button to open dropdown
     await openCreateRequestForm({ page, requestType: "Stake" });
