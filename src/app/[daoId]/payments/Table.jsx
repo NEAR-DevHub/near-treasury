@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useDao } from "@/context/DaoContext";
 import { Near } from "@/api/near";
@@ -11,6 +11,7 @@ import {
   formatSubmissionTimeStamp,
 } from "@/helpers/daoHelpers";
 import { fetchTokenMetadataByDefuseAssetId } from "@/api/backend";
+import { isBulkPaymentApproveProposal } from "@/api/bulk-payment";
 import DateTimeDisplay from "@/components/ui/DateTimeDisplay";
 import HistoryStatus from "@/components/proposals/HistoryStatus";
 import Profile from "@/components/ui/Profile";
@@ -169,6 +170,8 @@ const Table = ({
     return (
       <tbody style={{ overflowX: "auto" }}>
         {proposals?.map((item, index) => {
+          // Check if this is a bulk payment approve_list proposal with a linked buy_storage
+          const isBulkPayment = isBulkPaymentApproveProposal(item);
           const notes = decodeProposalDescription("notes", item.description);
           const title = decodeProposalDescription("title", item.description);
           const summary = decodeProposalDescription(
@@ -234,6 +237,38 @@ const Table = ({
                 item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
               ? "Lockup"
               : "SputnikDAO";
+
+          // Extract bulk payment info from encoded description
+          let bulkPaymentRecipientCount = null;
+          let bulkPaymentContract = null;
+          let bulkPaymentAmount = null;
+          let bulkPaymentTitle = null;
+          if (isBulkPayment) {
+            // Decode from markdown format: proposal_action: "bulk-payment", recipients, contract
+            const recipients = decodeProposalDescription(
+              "recipients",
+              item.description
+            );
+            const contract = decodeProposalDescription(
+              "contract",
+              item.description
+            );
+            const amount = decodeProposalDescription(
+              "amount",
+              item.description
+            );
+
+            const bulkTitle = decodeProposalDescription(
+              "title",
+              item.description
+            );
+            bulkPaymentRecipientCount = recipients
+              ? parseInt(recipients, 10)
+              : null;
+            bulkPaymentContract = contract || null;
+            bulkPaymentAmount = amount || null;
+            bulkPaymentTitle = bulkTitle || null;
+          }
           const intentsToken =
             isIntentWithdraw &&
             (intentsTokensData || []).find(
@@ -305,7 +340,13 @@ const Table = ({
               )}
 
               <td className={isVisible("Title")} style={{ minWidth: 200 }}>
-                {description ? (
+                {isBulkPayment ? (
+                  bulkPaymentTitle ? (
+                    <div className="fw-semi-bold">{bulkPaymentTitle}</div>
+                  ) : (
+                    <div className="fw-semi-bold">Bulk Payment</div>
+                  )
+                ) : description ? (
                   description
                 ) : (
                   <Tooltip
@@ -333,15 +374,38 @@ const Table = ({
                 </Tooltip>
               </td>
               <td className={"fw-semi-bold " + isVisible("Recipient")}>
-                <Profile accountId={args.receiver_id} />
+                {isBulkPayment ? (
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="d-flex align-items-center justify-content-center rounded-circle"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        backgroundColor: "var(--grey-04)",
+                      }}
+                    >
+                      <i className="bi bi-people-fill text-secondary"></i>
+                    </div>
+                    <div>
+                      <div className="fw-semi-bold">
+                        {bulkPaymentRecipientCount} Recipient
+                        {bulkPaymentRecipientCount !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Profile accountId={args.receiver_id} />
+                )}
               </td>
               <td className={isVisible("Requested Token") + " text-center"}>
-                <TokenIcon address={args.token_id} />
+                <TokenIcon address={bulkPaymentContract || args.token_id} />
               </td>
               <td className={isVisible("Funding Ask") + " text-right"}>
                 <TokenAmount
-                  amountWithoutDecimals={args.amount}
-                  address={args.token_id}
+                  {...(isBulkPayment
+                    ? { amountWithDecimals: bulkPaymentAmount }
+                    : { amountWithoutDecimals: args.amount })}
+                  address={bulkPaymentContract || args.token_id}
                   price={oneClickPrices[args.token_id] || undefined}
                   showUSDValue={false}
                 />
@@ -408,26 +472,34 @@ const Table = ({
                 </td>
               )}
               {isPendingRequests &&
-                (hasVotingPermission || hasDeletePermission) && (
-                  <td
-                    className="text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <VoteActions
-                      votes={item.votes}
-                      proposalId={item.id}
-                      hasDeletePermission={hasDeletePermission}
-                      hasVotingPermission={hasVotingPermission}
-                      proposalCreator={item.proposer}
-                      hasOneDeleteIcon={hasOneDeleteIcon}
-                      isIntentsRequest={isIntentWithdraw}
-                      currentAmount={args.amount}
-                      currentContract={args.token_id}
-                      proposal={item}
-                      context="payment"
-                    />
+                (isBulkPayment ? (
+                  <td className="text-right">
+                    <button className="btn btn-sm btn-outline-secondary">
+                      View Details
+                    </button>
                   </td>
-                )}
+                ) : (
+                  (hasVotingPermission || hasDeletePermission) && (
+                    <td
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <VoteActions
+                        votes={item.votes}
+                        proposalId={item.id}
+                        hasDeletePermission={hasDeletePermission}
+                        hasVotingPermission={hasVotingPermission}
+                        proposalCreator={item.proposer}
+                        hasOneDeleteIcon={hasOneDeleteIcon}
+                        isIntentsRequest={isIntentWithdraw}
+                        currentAmount={bulkPaymentAmount || args.amount}
+                        currentContract={bulkPaymentContract || args.token_id}
+                        proposal={item}
+                        context="payment"
+                      />
+                    </td>
+                  )
+                ))}
             </tr>
           );
         })}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useDao } from "@/context/DaoContext";
 import { useProposals } from "@/hooks/useProposals";
 import { normalize } from "@/helpers/formatters";
+import { LOCAL_STORAGE_KEYS } from "@/constants/localStorage";
 import Table from "@/app/[daoId]/payments/Table";
 import ProposalDetailsPage from "@/app/[daoId]/payments/ProposalDetailsPage";
 import CreatePaymentRequest from "@/app/[daoId]/payments/CreatePaymentRequest";
@@ -16,6 +17,24 @@ import OffCanvas from "@/components/ui/OffCanvas";
 import Pagination from "@/components/ui/Pagination";
 import SettingsDropdown from "@/components/dropdowns/SettingsDropdown";
 import InsufficientBannerModal from "@/components/proposals/InsufficientBannerModal";
+
+const exportMultipleIcon = (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M9.95614 10.0001L16.6667 16.7106M9.95614 10.0001L16.6667 3.28955M9.95614 10.0001H6.97368H2.5M16.6667 16.7106V12.9825M16.6667 16.7106H12.9386M16.6667 3.28955V7.01762M16.6667 3.28955H12.9386"
+      stroke="var(--icon-color)"
+      strokeWidth="1.67"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 const PaymentsIndex = () => {
   const searchParams = useSearchParams();
@@ -33,7 +52,7 @@ const PaymentsIndex = () => {
     title: tab === "history" ? "History" : "Pending Requests",
   };
   const [isBulkImport, setIsBulkImport] = useState(false);
-  const [bulkPreviewData, setBulkPreviewData] = useState(null);
+  const [bulkPreview, setBulkPreview] = useState(null); // { data, sourceWallet, selectedToken, title }
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
@@ -47,8 +66,36 @@ const PaymentsIndex = () => {
     value: "between",
   });
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showBulkTooltip, setShowBulkTooltip] = useState(false);
+  const createButtonRef = useRef(null);
 
   const hasCreatePermission = hasPermission?.("transfer", "AddProposal");
+
+  // Check if bulk import tooltip should be shown on first visit
+  useEffect(() => {
+    const dismissed = localStorage.getItem(
+      LOCAL_STORAGE_KEYS.BULK_IMPORT_TOOLTIP_DISMISSED
+    );
+    if (!dismissed && hasCreatePermission) {
+      // Show tooltip after a short delay for better UX
+      const timer = setTimeout(() => setShowBulkTooltip(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasCreatePermission]);
+
+  const dismissBulkTooltip = () => {
+    setShowBulkTooltip(false);
+    localStorage.setItem(
+      LOCAL_STORAGE_KEYS.BULK_IMPORT_TOOLTIP_DISMISSED,
+      "true"
+    );
+  };
+
+  const handleTryBulkImport = () => {
+    dismissBulkTooltip();
+    setIsBulkImport(true);
+    setShowCreateRequest(true);
+  };
 
   // Use the proposals hook
   const {
@@ -88,6 +135,21 @@ const PaymentsIndex = () => {
     setSortDirection(newDirection);
   };
 
+  if (bulkPreview) {
+    return (
+      <div className="container-md mt-3" style={{ maxWidth: "1000px" }}>
+        <BulkImportPreviewTable
+          proposals={bulkPreview.data}
+          sourceWallet={bulkPreview.sourceWallet?.label || "SputnikDAO"}
+          selectedToken={bulkPreview.selectedToken}
+          title={bulkPreview.title}
+          closePreviewTable={() => {
+            setBulkPreview(null);
+          }}
+        />
+      </div>
+    );
+  }
   return (
     <div className="w-100 h-100 flex-grow-1 d-flex flex-column">
       {typeof proposalDetailsPageId === "number" ? (
@@ -99,53 +161,36 @@ const PaymentsIndex = () => {
         </div>
       ) : (
         <div className="h-100 w-100 flex-grow-1 d-flex flex-column">
-          {bulkPreviewData && (
-            <BulkImportPreviewTable
-              proposals={bulkPreviewData}
-              closePreviewTable={() => setBulkPreviewData(null)}
-            />
-          )}
-
           <OffCanvas
             showCanvas={showCreateRequest}
             onClose={toggleCreatePage}
             title={
               isBulkImport
-                ? "Import Payment Requests"
+                ? "Create Bulk Payment Request"
                 : "Create Payment Request"
             }
           >
             {isBulkImport ? (
-              <div>
-                <div className="mb-3" style={{ fontSize: "13px" }}>
-                  Create multiple payment requests at once by pasting data
-                  copied from our spreadsheet template. Review and submit your
-                  bulk requests with ease. You can add up to 10 requests at a
-                  time.
-                  <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="primary-text-color cursor-pointer"
-                    href="https://docs.neartreasury.com/payments/bulk-import"
-                  >
-                    {" "}
-                    View Step-by-Step Instructions
-                  </a>
-                </div>
-                <BulkImportForm
-                  onCloseCanvas={toggleCreatePage}
-                  showPreviewTable={(data) => {
-                    setBulkPreviewData(data);
-                    toggleCreatePage();
-                    setIsBulkImport(false);
-                  }}
-                />
-              </div>
-            ) : (
-              <CreatePaymentRequest
+              <BulkImportForm
                 onCloseCanvas={toggleCreatePage}
-                setIsBulkImport={setIsBulkImport}
+                showPreviewTable={(
+                  data,
+                  sourceWallet,
+                  selectedToken,
+                  title
+                ) => {
+                  setBulkPreview({
+                    data,
+                    sourceWallet,
+                    selectedToken,
+                    title: title || "",
+                  });
+                  toggleCreatePage();
+                  setIsBulkImport(false);
+                }}
               />
+            ) : (
+              <CreatePaymentRequest onCloseCanvas={toggleCreatePage} />
             )}
           </OffCanvas>
 
@@ -264,19 +309,99 @@ const PaymentsIndex = () => {
                       />
 
                       {hasCreatePermission && (
-                        <div style={{ minWidth: "fit-content" }}>
-                          <InsufficientBannerModal
-                            ActionButton={() => (
-                              <button className="btn primary-button d-flex align-items-center gap-2 mb-0">
-                                <i className="bi bi-plus-lg h5 mb-0"></i>
-                                <span className="responsive-text">
-                                  Create Request
-                                </span>
+                        <div
+                          className="dropdown position-relative"
+                          style={{ minWidth: "fit-content" }}
+                          ref={createButtonRef}
+                        >
+                          <button
+                            className="btn primary-button d-flex align-items-center gap-2 mb-0 dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            onClick={() => {
+                              if (showBulkTooltip) {
+                                dismissBulkTooltip();
+                              }
+                            }}
+                          >
+                            <i className="bi bi-plus-lg h5 mb-0"></i>
+                            <span className="responsive-text">
+                              Create Request
+                            </span>
+                          </button>
+                          <ul className="dropdown-menu">
+                            <li>
+                              <button
+                                className="dropdown-item d-flex align-items-center gap-2"
+                                onClick={() => {
+                                  setIsBulkImport(false);
+                                  setShowCreateRequest(true);
+                                }}
+                              >
+                                <i className="bi bi-arrow-right h5 mb-0"></i>
+                                <span>Single Payment</span>
                               </button>
-                            )}
-                            checkForDeposit={true}
-                            callbackAction={() => setShowCreateRequest(true)}
-                          />
+                            </li>
+                            <li>
+                              <button
+                                className="dropdown-item d-flex align-items-center gap-2"
+                                onClick={() => {
+                                  setIsBulkImport(true);
+                                  setShowCreateRequest(true);
+                                }}
+                              >
+                                {exportMultipleIcon}
+                                <span>Bulk Payment</span>
+                              </button>
+                            </li>
+                          </ul>
+
+                          {/* Bulk Import Tooltip */}
+                          {showBulkTooltip && (
+                            <div
+                              className="position-absolute"
+                              style={{
+                                top: "calc(100% + 8px)",
+                                right: 0,
+                                zIndex: 1060,
+                                minWidth: "350px",
+                                maxWidth: "400px",
+                              }}
+                            >
+                              <div className="card shadow-lg rounded-4 overflow-hidden theme-inverted">
+                                <div
+                                  className="card-body p-3"
+                                  style={{
+                                    background: "var(--bg-page-color)",
+                                  }}
+                                >
+                                  <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 className="fw-bold mb-0">
+                                      Save Time with Bulk Payments
+                                    </h6>
+                                    <i
+                                      className="bi bi-x-lg cursor-pointer text-secondary"
+                                      aria-label="Close"
+                                      onClick={dismissBulkTooltip}
+                                    ></i>
+                                  </div>
+                                  <p className="mb-1 text-secondary small">
+                                    Create one proposal to pay multiple
+                                    recipients. Upload a CSV file to begin.
+                                  </p>
+                                  <div className="d-flex justify-content-end">
+                                    <button
+                                      className="btn theme-btn btn-sm "
+                                      onClick={handleTryBulkImport}
+                                    >
+                                      Try It
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

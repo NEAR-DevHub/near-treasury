@@ -518,10 +518,11 @@ test.describe("Payment Request UI Flow", () => {
     await page.waitForTimeout(1000);
     console.log("✓ Navigated to Payments page");
 
-    // Click Create Request button
+    // Click Create Request dropdown and select Single Payment
     const createRequestButton = await page.getByText("Create Request");
     await createRequestButton.click();
-    console.log("✓ Clicked 'Create Request' button");
+    await page.getByText("Single Payment").click();
+    console.log("✓ Clicked 'Create Request' and selected 'Single Request'");
 
     // Verify payment request modal/page is visible
     await expect(page.getByText("Create Payment Request")).toBeVisible();
@@ -584,8 +585,8 @@ test.describe("Payment Request UI Flow", () => {
     console.log("✓ Filled BTC recipient address");
 
     // Fill in amount
-    await page.getByRole("spinbutton", { name: "Total Amount" }).click();
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2");
+    await page.getByRole("spinbutton", { name: "Amount" }).click();
+    await page.getByRole("spinbutton", { name: "Amount" }).fill("2");
     console.log("✓ Filled amount: 2 BTC");
 
     // Verify no validation errors and submit button is enabled
@@ -853,8 +854,9 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Payments" }).click();
     await page.waitForTimeout(1000);
 
-    // Click Create Request
+    // Click Create Request dropdown and select Single Payment
     await page.getByText("Create Request").click();
+    await page.getByText("Single Payment").click();
     await expect(page.getByText("Create Payment Request")).toBeVisible();
 
     // Select intents wallet
@@ -889,7 +891,7 @@ test.describe("Payment Request UI Flow", () => {
     await page
       .getByPlaceholder(/Enter .* Address \(0x/)
       .fill("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2500");
+    await page.getByRole("spinbutton", { name: "Amount" }).fill("2500");
     console.log("✓ Filled form with USDC payment details");
 
     // Submit
@@ -1072,8 +1074,9 @@ test.describe("Payment Request UI Flow", () => {
     await page.getByRole("link", { name: "Payments" }).click();
     await page.waitForTimeout(1000);
 
-    // Click Create Request
+    // Click Create Request dropdown and select Single Payment
     await page.getByText("Create Request").click();
+    await page.getByText("Single Payment").click();
     await expect(page.getByText("Create Payment Request")).toBeVisible();
 
     // Select intents wallet
@@ -1109,6 +1112,10 @@ test.describe("Payment Request UI Flow", () => {
       .getByRole("textbox", { name: "Summary" })
       .fill("Withdrawal of wNEAR tokens from intents contract");
 
+    // Fill amount first (new order - amount before recipient)
+    await page.getByRole("spinbutton", { name: /Amount/i }).fill("50");
+    await page.waitForTimeout(500);
+
     // Fill recipient with keypress simulation to trigger validation
     const recipientInput = page.getByPlaceholder(
       /treasury.near|Enter NEAR Account/
@@ -1117,8 +1124,6 @@ test.describe("Payment Request UI Flow", () => {
     await recipientInput.clear();
     await recipientInput.pressSequentially(recipientAccountId, { delay: 50 });
     await page.waitForTimeout(500); // Wait for validation to complete
-
-    await page.getByRole("spinbutton", { name: "Total Amount" }).fill("50");
     console.log("✓ Filled form with wNEAR payment details");
 
     // Submit

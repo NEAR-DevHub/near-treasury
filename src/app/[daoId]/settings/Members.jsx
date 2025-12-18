@@ -19,6 +19,7 @@ import WarningTable from "./WarningTable";
 import isEqual from "lodash/isEqual";
 import cloneDeep from "lodash/cloneDeep";
 import { REFRESH_DELAY } from "@/constants/ui";
+import Edit from "@/components/icons/Edit";
 
 const MembersEditor = ({
   isEdit,
@@ -714,7 +715,7 @@ const Members = () => {
                         }}
                         title="Edit member"
                       >
-                        <i className="bi bi-pencil h5 mb-0"></i>
+                        <Edit width={24} height={24} />
                       </button>
                       <button
                         className="action-btn border-0 bg-transparent rounded p-1 text-danger"
@@ -1087,7 +1088,7 @@ const Members = () => {
                       disabled={showEditor || showDeleteModal || isTxnCreated}
                       onClick={onClick}
                     >
-                      <i className="bi bi-pencil" />
+                      <Edit width={24} height={24} />
                       Edit
                     </button>
                   )}

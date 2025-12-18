@@ -26,6 +26,9 @@
   --grey-045: #f4f4f4;
   --grey-05: #f7f7f7;
 
+  /* Muted/Disabled Colors */
+  --general-muted-foreground: rgba(115, 115, 115, 1);
+
   --secondary-foreground-bg-color: rgba(245, 245, 245, 1);
   --secondary-foreground-color: rgba(23, 23, 23, 1) /* Status Colors */
     --other-primary: #2775c9;
@@ -67,6 +70,37 @@
   color: var(--text-secondary-color) !important;
 }
 
+/* Form Disabled State */
+.form-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.form-disabled * {
+  color: var(--general-muted-foreground) !important;
+  cursor: not-allowed !important;
+}
+
+.form-disabled input,
+.form-disabled textarea,
+.form-disabled button:not(.theme-btn),
+.form-disabled select,
+.form-disabled .btn:not(.theme-btn),
+.form-disabled a.btn:not(.theme-btn),
+.form-disabled .dropdown button {
+  color: var(--general-muted-foreground) !important;
+  border-color: rgba(115, 115, 115, 0.3) !important;
+}
+
+.form-disabled a {
+  color: var(--general-muted-foreground) !important;
+  pointer-events: none;
+}
+
+.form-disabled i {
+  color: var(--general-muted-foreground) !important;
+}
+
 /* Dark Theme */
 [data-theme="dark"] {
   /* Theme Colors (same primary) */
@@ -95,6 +129,9 @@
   --grey-045: #1d1d1d;
   --grey-05: #1b1b18;
 
+  /* Muted/Disabled Colors */
+  --general-muted-foreground: rgba(140, 140, 140, 1);
+
   --secondary-foreground-bg-color: rgba(38, 38, 38, 1);
   --secondary-foreground-color-dark: rgba(245, 245, 245, 1);
   /* Status Colors (same) */
@@ -107,6 +144,39 @@
   /* Bootstrap Integration */
   --bs-body-bg: var(--bg-page-color);
   --bs-border-color: var(--border-color);
+}
+
+/* Theme Inverted - Use opposite theme colors for a specific component */
+/* In light mode, this class applies dark theme colors */
+.theme-inverted {
+  --bg-page-color: #222222;
+  --bg-system-color: #131313;
+  --text-color: #cacaca;
+  --text-secondary-color: #878787;
+  --border-color: #3b3b3b;
+  --grey-01: #f4f4f4;
+  --grey-02: #b3b3b3;
+  --grey-03: #555555;
+  --grey-035: #3e3e3e;
+  --grey-04: #323232;
+  --grey-045: #1d1d1d;
+  --grey-05: #1b1b18;
+}
+
+/* In dark mode, this class applies light theme colors */
+[data-theme="dark"] .theme-inverted {
+  --bg-page-color: #ffffff;
+  --bg-system-color: #f4f4f4;
+  --text-color: #1b1b18;
+  --text-secondary-color: #999999;
+  --border-color: rgba(226, 230, 236, 1);
+  --grey-01: #1b1b18;
+  --grey-02: #555555;
+  --grey-03: #b3b3b3;
+  --grey-035: #e6e6e6;
+  --grey-04: #f4f4f4;
+  --grey-045: #f4f4f4;
+  --grey-05: #f7f7f7;
 }
 
 html,
@@ -630,14 +700,14 @@ fieldset:disabled:not(.no-transparent) {
   background: inherit;
 }
 
-.table th:first-child,
-.table td:first-child {
+.table:not(.no-padding) th:first-child,
+.table:not(.no-padding) td:first-child {
   padding-left: 20px;
 }
 
-.table th:last-child,
-.table td:last-child {
-  padding-right: 20px;
+.table:not(.no-padding) th:last-child,
+.table:not(.no-padding) td:last-child {
+  padding-left: 20px;
 }
 
 .text-clamp {
@@ -1431,6 +1501,47 @@ input.hide-bg:active {
 
 input.hide-bg:focus-visible {
   background-color: transparent !important;
+}
+
+.form-custom-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+}
+
+.form-custom-tabs .nav-item {
+  list-style: none;
+}
+
+.form-custom-tabs .nav-link {
+  padding: 0.5rem;
+  color: var(--text-secondary-color);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+  bottom: -1px;
+}
+
+.form-custom-tabs .nav-link:hover {
+  color: var(--text-color);
+  background: transparent;
+}
+
+.form-custom-tabs .nav-link.active {
+  color: var(--text-color);
+  background: transparent;
+  border-bottom: 2px solid var(--text-color);
+  font-weight: 600;
+}
+
+.fw-550 {
+  font-weight: 550;
 }
 
 .color-picker-input::-webkit-color-swatch-wrapper {

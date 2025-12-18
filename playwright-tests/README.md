@@ -575,7 +575,7 @@ await page.getByText("Create Request").click();
 await page
   .getByRole("textbox", { name: "Title" })
   .fill("Payment request title");
-await page.getByRole("spinbutton", { name: "Total Amount" }).fill("2");
+await page.getByRole("spinbutton", { name: "Amount" }).fill("2");
 
 // Submit form (transaction will be signed by injected wallet)
 await page.getByRole("button", { name: "Submit" }).click();

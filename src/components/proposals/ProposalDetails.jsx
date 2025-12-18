@@ -26,6 +26,7 @@ const ProposalDetails = ({
   onClose,
   VoteActions,
   ProposalContent,
+  customStatus = null,
 }) => {
   const router = useRouter();
 
@@ -48,7 +49,27 @@ const ProposalDetails = ({
       );
     };
 
-    switch (proposalData?.status) {
+    // Use custom status if provided (e.g., "Processing" for bulk payments)
+    const effectiveStatus = customStatus || proposalData?.status;
+
+    switch (effectiveStatus) {
+      case "Processing":
+        return (
+          <Status
+            className="warning-icon"
+            bgColor="rgba(177, 113, 8, 0.16)"
+            icon={
+              <div
+                className="spinner-border text-warning"
+                role="status"
+                style={{ width: 32, height: 32 }}
+              >
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            }
+            label={proposalStatusLabel?.processing || "Processing"}
+          />
+        );
       case "Approved":
         return (
           <Status
