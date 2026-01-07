@@ -14,6 +14,11 @@ import {
 
 const NearWalletContext = createContext(null);
 
+// Wallets to HIDE
+const BLOCKED_WALLET_IDS = [
+  "near-mobile", // have issue of receiverid not specified
+];
+
 export const NearWalletProvider = ({ children }) => {
   const [connector, setConnector] = useState(null);
   const [accountId, setAccountId] = useState(null);
@@ -30,7 +35,7 @@ export const NearWalletProvider = ({ children }) => {
       newConnector = new NearConnector({
         network: "mainnet",
         walletConnect: {
-          projectId: "near-treasury",
+          projectId: "24be6bd9795ab4a6c2cb0953302a520f",
           metadata: {
             name: NEAR_TREASURY_CONFIG.brandName,
             description: NEAR_TREASURY_CONFIG.brandDescription,
@@ -49,6 +54,16 @@ export const NearWalletProvider = ({ children }) => {
     newConnector.on("wallet:signIn", (t) => {
       setAccountId(t.accounts?.[0]?.accountId ?? null);
     });
+
+    // Wait for manifest to load before filtering wallets
+    await newConnector.whenManifestLoaded;
+
+    if (BLOCKED_WALLET_IDS && newConnector.wallets) {
+      newConnector.wallets = newConnector.wallets.filter((wallet) => {
+        const walletId = wallet.manifest?.id;
+        return !BLOCKED_WALLET_IDS.includes(walletId);
+      });
+    }
 
     setConnector(newConnector);
 
