@@ -15,10 +15,13 @@ import DropDown from "@/components/dropdowns/DropDown";
  * @param {boolean} isStakingDelegationPage - Check if lockup staking is allowed
  */
 const WalletDropdown = ({
+  hideLabel = false,
   selectedValue,
   onUpdate,
   showIntents = false,
   isStakingDelegationPage = false,
+  hideLockup = false,
+  disabled = false,
 }) => {
   const {
     daoId: treasuryDaoID,
@@ -39,7 +42,7 @@ const WalletDropdown = ({
     const additionalOptions = [];
 
     // Add lockup option if contract exists
-    if (lockupContract) {
+    if (lockupContract && !hideLockup) {
       additionalOptions.push({
         label: "Lockup",
         value: lockupContract,
@@ -55,7 +58,7 @@ const WalletDropdown = ({
     }
 
     return [...baseOptions, ...additionalOptions];
-  }, [lockupContract, showIntents, treasuryDaoID]);
+  }, [lockupContract, showIntents, treasuryDaoID, hideLockup]);
 
   // Check if lockup staking is allowed (for staking delegation page)
   useEffect(() => {
@@ -86,8 +89,9 @@ const WalletDropdown = ({
 
   return (
     <div className="d-flex flex-column gap-1">
-      <label>Treasury Wallet</label>
+      {!hideLabel && <label>Treasury Wallet</label>}
       <DropDown
+        disabled={disabled}
         options={walletOptions}
         selectedValue={selectedValue}
         onUpdate={onUpdate}

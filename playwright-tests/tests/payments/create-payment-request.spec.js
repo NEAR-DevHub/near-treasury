@@ -189,13 +189,19 @@ test.describe("Create Payment Request", () => {
     });
     console.log("✓ Pending Requests tab visible");
 
-    // Click Create Request button
+    // Click Create Request dropdown button
     const createRequestButton = page.getByRole("button", {
       name: "Create Request",
     });
     await expect(createRequestButton).toBeVisible({ timeout: 20000 });
     await createRequestButton.click();
-    console.log("✓ Clicked Create Request button");
+    console.log("✓ Clicked Create Request dropdown");
+
+    // Click "Single Payment" from the dropdown menu
+    const singlePaymentOption = page.getByText("Single Payment");
+    await expect(singlePaymentOption).toBeVisible({ timeout: 5000 });
+    await singlePaymentOption.click();
+    console.log("✓ Selected Single Payment option");
 
     // Wait for the offcanvas (sidebar form) to open
     const offcanvas = page.locator(".offcanvas-body");
@@ -232,13 +238,6 @@ test.describe("Create Payment Request", () => {
     await summaryInput.fill("Testing payment request creation via Playwright");
     console.log("✓ Filled proposal summary");
 
-    // Fill in recipient - use creator account since it exists in sandbox
-    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
-    await recipientInput.waitFor({ state: "visible", timeout: 10000 });
-    await recipientInput.fill(creatorAccountId);
-    await page.waitForTimeout(500);
-    console.log("✓ Filled recipient");
-
     // Select NEAR token
     const tokenDropdown = offcanvas.getByText("Select token");
     await tokenDropdown.waitFor({ state: "visible", timeout: 10000 });
@@ -248,16 +247,20 @@ test.describe("Create Payment Request", () => {
     await page.waitForTimeout(1000);
     console.log("✓ Selected NEAR token");
 
-    // Fill in amount - find input near "Total Amount" label (might be type="number")
-    const amountInput = offcanvas
-      .locator("input")
-      .filter({ hasText: "" })
-      .last();
+    // Fill in amount - must come before recipient
+    const amountInput = offcanvas.locator('input[type="number"]').first();
     await amountInput.waitFor({ state: "visible", timeout: 10000 });
     await amountInput.click();
     await amountInput.fill("5");
     await page.waitForTimeout(500);
     console.log("✓ Filled amount (5 NEAR)");
+
+    // Fill in recipient - use creator account since it exists in sandbox
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
+    await recipientInput.waitFor({ state: "visible", timeout: 10000 });
+    await recipientInput.fill(creatorAccountId);
+    await page.waitForTimeout(500);
+    console.log("✓ Filled recipient");
 
     // Submit the form
     const submitBtn = offcanvas.getByRole("button", { name: "Submit" });
@@ -361,8 +364,9 @@ test.describe("Create Payment Request", () => {
       waitUntil: "networkidle",
     });
 
-    // Create payment request
+    // Create payment request - click dropdown then select Single Request
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Payment").click();
     const offcanvas = page.locator(".offcanvas-body");
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 
@@ -378,9 +382,6 @@ test.describe("Create Payment Request", () => {
     await titleInput.fill("Payment for recipient");
     const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing end-to-end payment workflow");
-    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
-    await recipientInput.fill(recipientAccountId);
-    await page.waitForTimeout(500);
 
     // Select NEAR token
     const tokenDropdown = offcanvas.getByText("Select token");
@@ -389,12 +390,14 @@ test.describe("Create Payment Request", () => {
     await page.getByText("NEAR", { exact: true }).first().click();
     await page.waitForTimeout(1000);
 
-    // Enter amount (10 NEAR)
-    const amountInput = offcanvas
-      .locator("input")
-      .filter({ hasText: "" })
-      .last();
+    // Enter amount (10 NEAR) - must come before recipient
+    const amountInput = offcanvas.locator('input[type="number"]').first();
     await amountInput.fill("10");
+    await page.waitForTimeout(500);
+
+    // Fill recipient - after amount
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
+    await recipientInput.fill(recipientAccountId);
     await page.waitForTimeout(500);
 
     // Submit
@@ -632,8 +635,9 @@ test.describe("Create Payment Request", () => {
       waitUntil: "networkidle",
     });
 
-    // Create FT payment request
+    // Create FT payment request - click dropdown then select Single Request
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Payment").click();
     const offcanvas = page.locator(".offcanvas-body");
     await expect(offcanvas).toBeVisible({ timeout: 10000 });
 
@@ -649,9 +653,6 @@ test.describe("Create Payment Request", () => {
     await titleInput.fill("wNEAR Payment for recipient");
     const summaryInput = offcanvas.locator("textarea").first();
     await summaryInput.fill("Testing FT payment workflow with wNEAR");
-    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
-    await recipientInput.fill(recipientAccountId);
-    await page.waitForTimeout(500);
 
     // Select wNEAR token from dropdown
     const tokenDropdown = offcanvas.getByText("Select token");
@@ -663,12 +664,14 @@ test.describe("Create Payment Request", () => {
     await page.waitForTimeout(1000);
     console.log("✓ Selected wNEAR token");
 
-    // Enter amount (5 wNEAR)
-    const amountInput = offcanvas
-      .locator("input")
-      .filter({ hasText: "" })
-      .last();
+    // Enter amount (5 wNEAR) - must come before recipient
+    const amountInput = offcanvas.locator('input[type="number"]').first();
     await amountInput.fill("5");
+    await page.waitForTimeout(500);
+
+    // Fill recipient - after amount
+    const recipientInput = offcanvas.getByPlaceholder("treasury.near");
+    await recipientInput.fill(recipientAccountId);
     await page.waitForTimeout(500);
 
     // Submit

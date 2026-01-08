@@ -36,6 +36,8 @@ const VoteActions = ({
   isQuoteExpired = false,
   quoteDeadline,
   context = "request", // Default context for toast messages
+  onVoteSuccess = null, // Callback after successful vote
+  getShowVoteToast = (proposalResult) => true, // Default to showing toast
 }) => {
   const { accountId, signAndSendTransactions } = useNearWallet();
   const {
@@ -180,34 +182,36 @@ const VoteActions = ({
 
     setTxnCreated(true);
     try {
-      const result = await signAndSendTransactions({
-        transactions: [
+      // Build transactions array
+      const transactions = [];
+
+      // Add the main proposal action
+      transactions.push({
+        signerId: accountId,
+        receiverId: treasuryDaoID,
+        actions: [
           {
-            signerId: accountId,
-            receiverId: treasuryDaoID,
-            actions: [
-              {
-                type: "FunctionCall",
-                params: {
-                  methodName: "act_proposal",
-                  args: {
-                    id: proposalId,
-                    action: vote,
-                    proposal: proposal?.kind,
-                  },
-                  gas: "300000000000000",
-                  deposit: "0",
-                },
+            type: "FunctionCall",
+            params: {
+              methodName: "act_proposal",
+              args: {
+                id: proposalId,
+                action: vote,
+                proposal: proposal?.kind,
               },
-            ],
+              gas: "300000000000000",
+              deposit: "0",
+            },
           },
         ],
       });
+
+      const result = await signAndSendTransactions({ transactions });
       console.log("Result:", result);
       if (
         result &&
         result.length > 0 &&
-        typeof result[0]?.status?.SuccessValue === "string"
+        typeof result[result.length - 1]?.status?.SuccessValue === "string"
       ) {
         // Delay cache invalidation to give the indexer time to process the transaction
         // This prevents a race condition where the refetch happens before indexing completes
@@ -220,7 +224,15 @@ const VoteActions = ({
                 id: proposalId,
               }
             );
-            showToast(proposalResult.status, proposalId, context);
+
+            if (getShowVoteToast(proposalResult)) {
+              showToast(proposalResult.status, proposalId, context);
+            }
+
+            // Call the success callback if provided (for bulk payments to start status checking)
+            if (onVoteSuccess) {
+              onVoteSuccess(proposalResult);
+            }
           } catch {
             // deleted request (thus proposal won't exist)
             showToast("Removed", proposalId, context);

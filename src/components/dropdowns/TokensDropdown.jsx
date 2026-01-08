@@ -19,15 +19,17 @@ import {
  * @param {Function} setSelectedTokenBlockchain - Callback to set token blockchain
  * @param {Function} setTokensAvailable - Callback to set available token balance
  * @param {Function} setSelectedTokenIsIntent - Callback to set if token is intent-based
+ * @param {Function} setTokenMetadata - Callback to set token metadata (decimals, symbol, price, etc.)
  * @param {string} selectedWallet - Currently selected wallet (SputnikDAO, Lockup, or Intents)
  * @param {boolean} disabled - Disable the dropdown
  */
 const TokensDropdown = ({
   selectedValue,
   onChange,
-  setSelectedTokenBlockchain,
-  setTokensAvailable,
-  setSelectedTokenIsIntent,
+  setSelectedTokenBlockchain = () => {},
+  setTokensAvailable = () => {},
+  setSelectedTokenIsIntent = () => {},
+  setTokenMetadata = () => {},
   selectedWallet,
   disabled = false,
 }) => {
@@ -128,6 +130,8 @@ const TokensDropdown = ({
         value: "NEAR",
         tokenBalance: walletConfig.nearBalances?.availableParsed || "0",
         blockchain: null,
+        decimals: 24,
+        price: null,
       });
     }
 
@@ -153,6 +157,8 @@ const TokensDropdown = ({
                   token.ft_meta.decimals
                 )
               ),
+          decimals: token.ft_meta.decimals,
+          price: token.ft_meta.price,
         }))
       );
     }
@@ -165,7 +171,6 @@ const TokensDropdown = ({
     return tokens;
   }, [walletConfig, tokensWithBalance, formattedIntentsTokens]);
 
-  console.log(options);
   // Get staked tokens for display
   const stakedTokens = walletConfig.isLockup
     ? lockupStakedBalances?.total
@@ -191,6 +196,16 @@ const TokensDropdown = ({
     setSelectedTokenBlockchain(option.blockchain);
     setSelectedTokenIsIntent(option.isIntent || false);
     setTokensAvailable(option.tokenBalance);
+
+    // Pass complete token data
+    setTokenMetadata({
+      symbol: option.title,
+      decimals: option.decimals,
+      contract: option.value,
+      price: option.price,
+      icon: option.icon,
+      tokenBalance: option.tokenBalance,
+    });
   };
 
   // Update available balance when selected value changes

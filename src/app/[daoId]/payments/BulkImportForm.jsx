@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import Big from "big.js";
+import { useState, useEffect } from "react";
 import { useDao } from "@/context/DaoContext";
-import { searchFTToken } from "@/api/backend";
-import { Near } from "@/api/near";
-import { isValidNearAccount } from "@/helpers/nearHelpers";
+import { viewStorageCredits } from "@/api/bulk-payment";
 import Modal from "@/components/ui/Modal";
+import WalletDropdown from "@/components/dropdowns/WalletDropdown";
+import TokensDropdown from "@/components/dropdowns/TokensDropdown";
+import { parseAmount } from "@/helpers/formatters";
 
 const NEAR_CONTRACT = "near";
 
@@ -17,14 +17,55 @@ const NEAR_CONTRACT = "near";
 const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   const { daoId: treasuryDaoID, daoNearBalances, daoFtBalances } = useDao();
 
+  // Step 1: Source wallet and token
+  const [selectedWallet, setSelectedWallet] = useState(null);
+  const [selectedToken, setSelectedToken] = useState(null); // Holds full token object with metadata
+
+  // Title input
+  const [title, setTitle] = useState("");
+
+  // Storage credits
+  const [storageCredits, setStorageCredits] = useState(0);
+  const [isLoadingCredits, setIsLoadingCredits] = useState(true);
+
+  // Check if form should be disabled (no credits available)
+  const isFormDisabled = !isLoadingCredits && storageCredits === 0;
+
+  // Step 3: Data input
+  const [activeTab, setActiveTab] = useState("paste"); // "paste" or "upload"
   const [csvData, setCsvData] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null); // {name, size}
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [dataWarnings, setDataWarnings] = useState(null);
   const [dataErrors, setDataErrors] = useState(null);
-  const [validatedData, setValidatedData] = useState(null);
 
-  // CSV Parsing Utilities (kept local to this component)
+  // Fetch storage credits on mount
+  useEffect(() => {
+    async function fetchCredits() {
+      setIsLoadingCredits(true);
+      try {
+        const credits = await viewStorageCredits(treasuryDaoID);
+        setStorageCredits(credits);
+      } catch (error) {
+        console.error("Error fetching storage credits:", error);
+        setStorageCredits(0);
+      } finally {
+        setIsLoadingCredits(false);
+      }
+    }
+
+    if (treasuryDaoID) {
+      fetchCredits();
+    }
+  }, [treasuryDaoID]);
+
+  // Reset errors when wallet, token, or CSV data changes
+  useEffect(() => {
+    setDataErrors(null);
+    setDataWarnings(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWallet, selectedToken, csvData]);
 
   /**
    * Parse CSV/TSV data with auto-delimiter detection
@@ -79,44 +120,11 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   }
 
   /**
-   * Check if NEAR account exists on blockchain
+   * Parse CSV input data - only validate structure, not values
    */
-  async function isNearAccountExists(accountId) {
-    try {
-      const accountData = await Near.viewAccount(accountId);
-      return !!accountData;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Get all treasury token balances from DaoContext
-   */
-  function getAllTreasuryBalances() {
-    const balances = {};
-
-    // Add NEAR balance
-    balances[NEAR_CONTRACT] = daoNearBalances?.available || "0";
-
-    // Add FT balances
-    if (daoFtBalances?.fts) {
-      daoFtBalances.fts.forEach((t) => {
-        balances[t.contract] = t.amount || "0";
-      });
-    }
-
-    return balances;
-  }
-
-  /**
-   * Validate CSV input data
-   */
-  async function validateCsvInput() {
+  function parseAndValidateStructure() {
     const errors = [];
-    const warnings = [];
-    const tokensSum = [];
-    const validData = [];
+    const parsedData = [];
 
     const rows = parseCsv(csvData || "");
 
@@ -126,190 +134,91 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
       return;
     }
 
-    const headers = rows[0];
-
-    const colIdx = (name) =>
-      headers.findIndex((h) =>
-        (h || "").trim().toLowerCase().startsWith(name.toLowerCase())
-      );
-
-    const titleIdx = colIdx("Title");
-    const summaryIdx = colIdx("Summary");
-    const recipientIdx = colIdx("Recipient");
-    const requestedTokenIdx = colIdx("Requested Token");
-    const fundingAskIdx = colIdx("Funding Ask");
-    const notesIdx = colIdx("Notes");
-
-    if (rows.length - 1 > 10) {
-      warnings.push({
-        message:
-          "You have added more than 10 requests. You can continue, but only the first 10 will be added to list.",
-      });
-    }
-
-    if (
-      titleIdx === -1 ||
-      recipientIdx === -1 ||
-      requestedTokenIdx === -1 ||
-      fundingAskIdx === -1
-    ) {
-      errors.push({
-        row: 0,
-        message:
-          "Missing one or more required columns: Title, Recipient, Requested Token, Funding Ask",
-      });
-      setDataErrors(errors);
+    // Use token metadata from selected token
+    const tokenMeta = selectedToken;
+    if (!tokenMeta) {
+      setDataErrors([{ row: 0, message: "Invalid token selected" }]);
       setIsValidating(false);
       return;
     }
 
-    const rowPromises = [];
+    const firstRow = rows[0];
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const rowNum = i;
-
-      const processRow = () => {
-        const rowErrors = [];
-        const data = {};
-
-        const title = (row[titleIdx] || "")?.trim();
-        if (!title) {
-          rowErrors.push("Title is missing.");
-        } else {
-          data["Title"] = title;
-        }
-
-        const summary = (row[summaryIdx] || "")?.trim() || "";
-        data["Summary"] = summary;
-
-        const recipient = (row[recipientIdx] || "")?.trim();
-        let recipientCheckPromise;
-
-        if (!recipient) {
-          rowErrors.push("Recipient is missing.");
-          recipientCheckPromise = Promise.resolve(null);
-        } else {
-          if (!isValidNearAccount(recipient)) {
-            rowErrors.push("Invalid recipient address.");
-            recipientCheckPromise = Promise.resolve(null);
-          } else {
-            recipientCheckPromise = isNearAccountExists(recipient).then(
-              (exists) => {
-                if (!exists) {
-                  rowErrors.push("Recipient account does not exist.");
-                  return null;
-                } else {
-                  data["Recipient"] = recipient;
-                  return true;
-                }
-              }
-            );
-          }
-        }
-
-        return recipientCheckPromise.then((recipientValid) => {
-          const token = (row[requestedTokenIdx] || "")?.trim();
-
-          if (!token) {
-            rowErrors.push("Requested Token is missing.");
-            return { rowErrors, data };
-          }
-
-          return searchFTToken(token).then((tokenMeta) => {
-            if (!tokenMeta) {
-              rowErrors.push("Invalid token address.");
-            }
-
-            const amountStr = (row[fundingAskIdx] || "")?.trim();
-            if (!amountStr) {
-              rowErrors.push("Funding Ask is missing.");
-            } else {
-              const value = parseFloat(amountStr.replace(/,/g, ""));
-              if (isNaN(value) || value < 0) {
-                rowErrors.push("Funding Ask should be a non-negative number.");
-              } else if (tokenMeta) {
-                const adjustedAmount = Big(value)
-                  .times(Big(10).pow(tokenMeta.decimals))
-                  .toFixed();
-
-                data["Requested Token"] = tokenMeta.contract;
-                data["Funding Ask"] = adjustedAmount.toString();
-
-                const existing = tokensSum.find(
-                  (t) => t.contract === tokenMeta.contract
-                );
-                if (existing) {
-                  existing.ask = Big(existing.ask)
-                    .plus(adjustedAmount)
-                    .toFixed();
-                } else {
-                  tokensSum.push({
-                    contract: tokenMeta.contract,
-                    symbol: tokenMeta.symbol || "",
-                    ask: adjustedAmount,
-                    balance: 0,
-                  });
-                }
-              }
-            }
-
-            const notes = (row[notesIdx] || "")?.trim() || "";
-            data["Notes"] = notes;
-
-            return { rowErrors, data };
-          });
-        });
-      };
-
-      rowPromises.push(
-        processRow().then(({ rowErrors, data }) => {
-          if (rowErrors && rowErrors.length) {
-            for (const msg of rowErrors) {
-              errors.push({ row: rowNum, message: msg });
-            }
-          } else if (data) {
-            validData.push(data);
-          }
-        })
+    // Check if first row is a header or data
+    const hasHeader = firstRow.some((cell) => {
+      const cellLower = (cell || "").trim().toLowerCase();
+      return (
+        cellLower.startsWith("recipient") || cellLower.startsWith("amount")
       );
+    });
+
+    let recipientIdx, amountIdx, startRow;
+
+    if (hasHeader) {
+      // Has headers - find column indices
+      const colIdx = (name) =>
+        firstRow.findIndex((h) =>
+          (h || "").trim().toLowerCase().startsWith(name.toLowerCase())
+        );
+
+      recipientIdx = colIdx("Recipient");
+      amountIdx = colIdx("Amount");
+
+      // Check for required columns
+      if (recipientIdx === -1 || amountIdx === -1) {
+        errors.push({
+          row: 0,
+          message: "Missing one or more required columns: Recipient, Amount",
+        });
+        setDataErrors(errors);
+        setIsValidating(false);
+        return;
+      }
+
+      startRow = 1; // Start from second row (skip header)
+    } else {
+      // No headers - assume first column is Recipient, second is Amount
+      recipientIdx = 0;
+      amountIdx = 1;
+      startRow = 0; // Start from first row (it's data)
     }
 
-    return Promise.all(rowPromises)
-      .then(() => {
-        // Check treasury balances if no errors
-        if (errors.length === 0 && tokensSum.length > 0) {
-          const balancesMap = getAllTreasuryBalances();
+    // Parse all rows without validation
+    for (let i = startRow; i < rows.length; i++) {
+      const row = rows[i];
 
-          const results = tokensSum.map(({ contract, ask, symbol }) => {
-            const balance = balancesMap[contract] || "0";
-            return { contract, symbol, ask, balance };
-          });
+      // Skip completely empty rows
+      if (row.every((cell) => !cell || !cell.trim())) {
+        continue;
+      }
 
-          const insufficient = results.filter(({ ask, balance }) =>
-            Big(balance).lt(ask)
-          );
+      const amountStr = (row[amountIdx] || "").trim();
+      const parsedAmountValue = parseAmount(amountStr);
 
-          if (insufficient.length > 0) {
-            const tokens = insufficient.map(({ symbol }) => symbol).join(", ");
-            warnings.push({
-              message: `Treasury balance for ${tokens} is too low for the payments in this batch. Requests can be created but may not be approved until balances are refilled.`,
-            });
-          }
-        }
+      const data = {
+        Recipient: (row[recipientIdx] || "").trim(),
+        // Normalize amount to use dot as decimal separator
+        Amount: !isNaN(parsedAmountValue)
+          ? String(parsedAmountValue)
+          : amountStr,
+      };
 
-        // Set final state
-        if (!errors.length) {
-          setValidatedData(validData.slice(0, 10));
-        }
-        setDataErrors(errors);
-        setDataWarnings(warnings);
-        setIsValidating(false);
-      })
-      .catch((err) => {
-        console.error("Validation failed:", err);
-        setIsValidating(false);
-      });
+      parsedData.push(data);
+    }
+
+    if (parsedData.length === 0) {
+      setDataErrors([{ row: 0, message: "No valid data rows found" }]);
+      setIsValidating(false);
+      return;
+    }
+
+    // Clear errors and go directly to preview
+    setDataErrors(null);
+    setDataWarnings(null);
+    setIsValidating(false);
+
+    // Automatically go to preview table
+    showPreviewTable(parsedData, selectedWallet, selectedToken, title);
   }
 
   /**
@@ -340,7 +249,7 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
   }
 
   return (
-    <div className="d-flex flex-column gap-3">
+    <div className="d-flex flex-column gap-4 pb-4" style={{ fontSize: "14px" }}>
       <Modal
         isOpen={showCancelModal}
         heading="Are you sure you want to cancel?"
@@ -372,95 +281,370 @@ const BulkImportForm = ({ onCloseCanvas = () => {}, showPreviewTable }) => {
           form and cannot be undone.
         </p>
       </Modal>
-
+      {/* Header */}
       <div className="d-flex flex-column gap-2">
-        <h6 className="mb-0 fw-bold">Step 1</h6>
-        <div>Get the template and fill out the required payment details</div>
-        <a
-          target="_blank"
-          rel="noopener noreferrer"
-          href="https://docs.google.com/spreadsheets/d/1VGpYu7Nzuuf1mgdeYiMgB2I6rX3VYtvbKP3RY2HuIj4/"
-          className="btn btn-outline-secondary d-flex align-items-center gap-2"
-          style={{ width: "fit-content" }}
-        >
-          <i className="bi bi-download h6 mb-0"></i> Get the Template
-        </a>
-      </div>
+        <p className="mb-0 text-secondary">
+          Pay multiple recipients with a single proposal. Upload a CSV file or
+          paste your payment data below.
+        </p>
 
-      <div className="d-flex flex-column gap-2">
-        <h6 className="mb-0 fw-bold">Step 2</h6>
-        <div>
-          Copy all the filled data from file and paste it into the field below
-        </div>
-        <div className="text-sm">Paste Data Below</div>
-        <textarea
-          className="form-control"
-          rows={10}
-          value={csvData ?? ""}
-          onChange={(e) => {
-            setCsvData(e.target.value);
-            setValidatedData(null);
-            setDataWarnings(null);
-            setDataErrors(null);
-          }}
-          placeholder="Paste your CSV/TSV data here..."
-        />
-      </div>
-
-      {dataErrors?.length > 0 && (
-        <div className="error-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start">
-          <i className="bi bi-exclamation-octagon h5 mb-0"></i>
-          {formatCsvErrors(dataErrors)}
-        </div>
-      )}
-
-      {dataWarnings?.length > 0 && (
-        <div className="d-flex flex-column gap-2">
-          {dataWarnings.map((w, i) => (
-            <div
-              key={i}
-              className="warning-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start"
-            >
-              <i className="bi bi-exclamation-triangle h5 mb-0"></i>
-              <div>{w.message}</div>
+        {/* Credits Info Bar */}
+        {!isLoadingCredits && storageCredits === 0 ? (
+          <div className="d-flex align-items-center gap-3 px-3 py-2 rounded-3 info-box">
+            <i className="bi bi-info-circle h6 mb-0"></i>
+            <div>
+              <div className="fw-bold">
+                You've used all available recipient slots.
+              </div>
+              <div>
+                Need more?{" "}
+                <a
+                  href="https://docs.neartreasury.com/support"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-decoration-underline"
+                >
+                  Contact us
+                </a>{" "}
+                and we'll help you upgrade.
+              </div>
             </div>
-          ))}
+          </div>
+        ) : !isLoadingCredits ? (
+          <div>
+            You can include up to <strong>{storageCredits}</strong> recipient
+            {storageCredits !== 1 ? "s" : ""} in each bulk payment.{" "}
+            <a
+              href="https://docs.neartreasury.com/support"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-decoration-underline"
+            >
+              Contact Us
+            </a>{" "}
+            to increase this limit.
+          </div>
+        ) : null}
+      </div>
+      {/* Form Container - Apply disabled class when credits are 0 */}
+      <div
+        className={
+          "d-flex flex-column gap-3" + (isFormDisabled ? " form-disabled" : "")
+        }
+      >
+        {/* Step 1: Select Source Wallet & Token */}
+        <div className="d-flex flex-column gap-3">
+          <div className="d-flex gap-2 align-items-start">
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center fw-550"
+              style={{
+                width: "32px",
+                height: "32px",
+                backgroundColor: "var(--grey-05)",
+              }}
+            >
+              1
+            </div>
+            <div className="d-flex flex-column gap-2 flex-grow-1">
+              <h6 className="mb-0 fw-550 my-1">Select Source Wallet & Token</h6>
+
+              <div className="d-flex flex-column gap-3 pl-3">
+                <WalletDropdown
+                  hideLabel={true}
+                  selectedValue={selectedWallet}
+                  onUpdate={(wallet) => {
+                    if (!isFormDisabled) {
+                      setSelectedWallet(wallet);
+                      setSelectedToken(null);
+                    }
+                  }}
+                  hideLockup={true}
+                  disabled={isFormDisabled}
+                />
+
+                <TokensDropdown
+                  selectedWallet={selectedWallet?.value}
+                  disabled={!selectedWallet || isFormDisabled}
+                  selectedValue={selectedToken?.contract}
+                  onChange={() => {}} // Not used, we use setTokenMetadata
+                  setTokenMetadata={(tokenData) =>
+                    !isFormDisabled && setSelectedToken(tokenData)
+                  }
+                />
+              </div>
+            </div>
+          </div>
         </div>
-      )}
 
-      <div className="d-flex mt-2 gap-3 justify-content-end">
-        <button
-          type="button"
-          className="btn btn-outline-secondary"
-          onClick={() => setShowCancelModal(true)}
-          disabled={isValidating}
-        >
-          Cancel
-        </button>
+        {/* Step 2: Get the template */}
+        <div className="d-flex flex-column gap-3">
+          <div className="d-flex gap-2 align-items-start">
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center fw-550"
+              style={{
+                width: "32px",
+                height: "32px",
+                backgroundColor: "var(--grey-05)",
+              }}
+            >
+              2
+            </div>
+            <div className="d-flex flex-column gap-2 flex-grow-1">
+              <h6 className="mb-0 fw-550 my-1">
+                Get the template and fill out the required payment details.
+              </h6>
 
-        {validatedData ? (
-          <button
-            type="button"
-            className="btn theme-btn"
-            onClick={() => {
-              showPreviewTable(validatedData);
-            }}
-          >
-            Show {validatedData.length} Preview
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn theme-btn"
-            disabled={!csvData || isValidating || dataErrors?.length}
-            onClick={() => {
-              setIsValidating(true);
-              validateCsvInput();
-            }}
-          >
-            {isValidating ? "Validating..." : "Validate Data"}
-          </button>
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                href="https://docs.google.com/spreadsheets/d/14wVi5X3iQQi8qE2h135jwtY8rQi0aFAhDz3LHApZkuM"
+                className="btn btn-outline-secondary d-flex gap-2 align-items-center justify-content-center"
+                style={{ width: "100%" }}
+              >
+                <span className="w-100 text-start">Get the Template</span>
+                <i className="bi bi-download h6 mb-0"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3: Provide payment data */}
+        <div className="d-flex flex-column gap-3">
+          <div className="d-flex gap-2 align-items-start">
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center fw-550"
+              style={{
+                width: "32px",
+                height: "32px",
+                backgroundColor: "var(--grey-05)",
+              }}
+            >
+              3
+            </div>
+            <div className="d-flex flex-column gap-2 flex-grow-1">
+              <h6 className="mb-0 fw-550 my-1">Provide payment data</h6>
+
+              {/* Title Input */}
+              <div className="d-flex flex-column gap-2">
+                <label htmlFor="bulk-title" className="form-label mb-0">
+                  Title
+                </label>
+                <input
+                  id="bulk-title"
+                  type="text"
+                  className="form-control"
+                  value={title}
+                  onChange={(e) => !isFormDisabled && setTitle(e.target.value)}
+                  placeholder="Short descriptive title (e.g., Team Payout, Marketing Budget)"
+                  disabled={isFormDisabled}
+                />
+              </div>
+
+              {/* Tabs */}
+              <ul className="form-custom-tabs nav">
+                <li className="nav-item">
+                  <button
+                    className={`nav-link ${activeTab === "paste" ? "active" : ""}`}
+                    onClick={() => !isFormDisabled && setActiveTab("paste")}
+                    type="button"
+                    disabled={isFormDisabled}
+                  >
+                    Paste Data
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className={`nav-link ${activeTab === "upload" ? "active" : ""}`}
+                    onClick={() => !isFormDisabled && setActiveTab("upload")}
+                    type="button"
+                    disabled={isFormDisabled}
+                  >
+                    Upload File
+                  </button>
+                </li>
+              </ul>
+
+              {/* Tab content */}
+              <div className="tab-content">
+                {activeTab === "paste" && (
+                  <div className="d-flex flex-column gap-2">
+                    <textarea
+                      className="form-control"
+                      rows={10}
+                      value={csvData ?? ""}
+                      onChange={(e) => {
+                        if (!isFormDisabled) {
+                          setCsvData(e.target.value);
+                          setDataWarnings(null);
+                          setDataErrors(null);
+                        }
+                      }}
+                      placeholder="Copy all the filled data from file and past it here"
+                      disabled={isFormDisabled}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "upload" && (
+                  <div className="d-flex flex-column gap-2">
+                    {uploadedFile ? (
+                      // Show uploaded file info
+                      <div
+                        className="border rounded-3 p-3 d-flex align-items-center justify-content-between"
+                        style={{ backgroundColor: "var(--grey-05)" }}
+                      >
+                        <div className="d-flex align-items-center gap-3">
+                          <i className="bi bi-file-earmark-text text-secondary h4 mb-0"></i>
+                          <div>
+                            <div className="fw-550">{uploadedFile.name}</div>
+                            <div className="text-secondary text-sm">
+                              {(uploadedFile.size / 1024).toFixed(0)}KB
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 text-secondary"
+                          onClick={() => {
+                            if (!isFormDisabled) {
+                              setUploadedFile(null);
+                              setCsvData(null);
+                              setDataWarnings(null);
+                              setDataErrors(null);
+                            }
+                          }}
+                          disabled={isFormDisabled}
+                        >
+                          <i className="bi bi-x h4 mb-0"></i>
+                        </button>
+                      </div>
+                    ) : (
+                      // Show upload dropzone
+                      <div
+                        className="border rounded-3 p-4 text-center"
+                        style={{
+                          borderStyle: "dashed",
+                          backgroundColor: "var(--grey-05)",
+                        }}
+                      >
+                        <input
+                          type="file"
+                          id="file-upload"
+                          accept=".csv,.tsv,.txt"
+                          style={{ display: "none" }}
+                          disabled={isFormDisabled}
+                          onChange={(e) => {
+                            if (!isFormDisabled) {
+                              const file = e.target.files[0];
+                              if (file) {
+                                // Store file info
+                                setUploadedFile({
+                                  name: file.name,
+                                  size: file.size,
+                                });
+
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  setCsvData(event.target.result);
+                                  setDataWarnings(null);
+                                  setDataErrors(null);
+                                };
+                                reader.onerror = (error) => {
+                                  console.error("Error reading file:", error);
+                                  setUploadedFile(null);
+                                  setDataErrors([
+                                    { row: 0, message: "Failed to read file" },
+                                  ]);
+                                };
+                                reader.readAsText(file);
+                              }
+                              // Reset input so same file can be selected again
+                              e.target.value = "";
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="file-upload"
+                          className="d-flex flex-column align-items-center cursor-pointer"
+                        >
+                          <i className="bi bi-upload text-secondary h4"></i>
+                          <div className="fw-550">
+                            Click to upload or drag and drop a file
+                          </div>
+                          <div className="text-secondary text-sm">
+                            max 1 file up to 1.5 MB, CSV file only
+                          </div>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Errors */}
+        {dataErrors?.length > 0 && (
+          <div className="error-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start">
+            <i className="bi bi-exclamation-octagon h5 mb-0"></i>
+            {formatCsvErrors(dataErrors)}
+          </div>
         )}
+
+        {/* Warnings */}
+        {dataWarnings?.length > 0 && (
+          <div className="d-flex flex-column gap-2">
+            {dataWarnings.map((w, i) => (
+              <div
+                key={i}
+                className="warning-box d-flex gap-3 px-3 py-2 rounded-3 align-items-start"
+              >
+                <i className="bi bi-exclamation-triangle h5 mb-0"></i>
+                <div>{w.message}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer Buttons */}
+        <div className="d-flex mt-2 gap-3 justify-content-end">
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => setShowCancelModal(true)}
+            disabled={isValidating}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="btn theme-btn"
+            disabled={
+              isFormDisabled ||
+              !csvData ||
+              !selectedWallet ||
+              !selectedToken ||
+              isValidating ||
+              dataErrors?.length
+            }
+            onClick={() => {
+              if (!isFormDisabled) {
+                setIsValidating(true);
+                parseAndValidateStructure();
+              }
+            }}
+          >
+            {isValidating ? (
+              <div className="spinner-border spinner-border-sm" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            ) : (
+              "Continue"
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

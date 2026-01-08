@@ -180,6 +180,7 @@ test.describe("Vote on Payment Request - Overlay View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     const offcanvas = page.locator(".offcanvas-body");
@@ -288,6 +289,7 @@ test.describe("Vote on Payment Request - Overlay View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     const offcanvas = page.locator(".offcanvas-body");
@@ -395,6 +397,7 @@ test.describe("Vote on Payment Request - Overlay View", () => {
     });
 
     await page.getByRole("button", { name: "Create Request" }).click();
+    await page.getByText("Single Payment").click();
     await page.waitForTimeout(1000);
 
     // Wait for offcanvas and select wallet
