@@ -549,6 +549,7 @@ const ProposalDetailsPage = ({ id, isCompactVersion, onClose, currentTab }) => {
             hasVotingPermission={hasVotingPermission}
             proposalCreator={proposalData?.proposer}
             isIntentsRequest={proposalData?.isIntentsPayment}
+            isLockupRequest={proposalData?.isLockupTransfer}
             currentAmount={proposalData?.args?.amount}
             currentContract={proposalData?.args?.token_id}
             isProposalDetailsPage={true}
