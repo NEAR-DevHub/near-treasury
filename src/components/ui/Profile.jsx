@@ -48,8 +48,8 @@ const Profile = ({
             alt={name}
           />
           <div className="d-flex flex-column gap-1">
-            <div className="h6 mb-0">{name}</div>
-            <div className="text-break">@{accountId}</div>
+            {name && <div className="h6 mb-0">{name}</div>}
+            {accountId && <div className="text-break">@{accountId}</div>}
           </div>
         </div>
         <div
