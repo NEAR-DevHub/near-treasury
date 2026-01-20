@@ -746,7 +746,11 @@ const CreatePaymentRequest = ({
                   <TokensDropdown
                     daoAccount={selectedWallet.value}
                     selectedValue={tokenId}
-                    onChange={(v) => setValueWithDefaults("tokenId", v)}
+                    onChange={(v) => {
+                      setValueWithDefaults("tokenId", v);
+                      // Reset amount when token changes
+                      setValue("amount", "");
+                    }}
                     setSelectedTokenBlockchain={(blockchain) => {
                       if (blockchain !== selectedTokenBlockchain) {
                         setValue("receiver", "");
