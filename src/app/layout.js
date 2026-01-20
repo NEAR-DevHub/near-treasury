@@ -12,6 +12,14 @@ import Script from "next/script";
 import { Inter } from "next/font/google";
 const inter = Inter();
 
+export const metadata = {
+  title: "NEAR Treasury",
+  description: "Manage your DAO treasury on NEAR Protocol",
+  icons: {
+    icon: "https://cdn.prod.website-files.com/68800faa8d67015b1cfe30eb/688010ccfbb267e1f9647285_webclip.png",
+  },
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.className}>
