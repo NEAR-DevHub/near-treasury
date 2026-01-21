@@ -35,6 +35,9 @@ export const ProposalToastProvider = ({ children }) => {
 
     if (!daoId) return;
 
+    // Close any existing toast first
+    setToastState((prev) => ({ ...prev, show: false }));
+
     // Wait for indexer to process the transaction
     setTimeout(async () => {
       let actualProposalId = proposalId;
