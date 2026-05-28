@@ -36,6 +36,7 @@ const VoteActions = ({
   isQuoteExpired = false,
   quoteDeadline,
   context = "request", // Default context for toast messages
+  isLockupRequest = false,
 }) => {
   const { accountId, signAndSendTransactions } = useNearWallet();
   const {
@@ -43,6 +44,7 @@ const VoteActions = ({
     daoNearBalances,
     daoFtBalances,
     intentsBalances,
+    lockupNearBalances,
     refreshDaoBalances,
     refreshLockupBalances,
     refetchDaoPolicy,
@@ -83,10 +85,12 @@ const VoteActions = ({
   // Get user balance from DAO context
   useEffect(() => {
     if (isNEAR) {
+      // Use lockup balance if it's a lockup request, otherwise use DAO balance
+      const balances = isLockupRequest ? lockupNearBalances : daoNearBalances;
       setUserBalance(
         isHumanReadableCurrentAmount
-          ? daoNearBalances.availableParsed
-          : daoNearBalances.available
+          ? balances?.availableParsed || "0"
+          : balances?.available || "0"
       );
     } else if (isIntentsRequest && intentsBalances) {
       // Find the balance for the current contract in intents balances
@@ -126,6 +130,8 @@ const VoteActions = ({
     isNEAR,
     isHumanReadableCurrentAmount,
     daoNearBalances,
+    lockupNearBalances,
+    isLockupRequest,
     isIntentsRequest,
     currentContract,
     daoFtBalances,

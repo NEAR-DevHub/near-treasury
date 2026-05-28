@@ -70,3 +70,14 @@ export const parseKeyToReadableFormat = (key) => {
  * Check if string is 64-character hexadecimal (implicit account)
  */
 export const isHex64 = (str) => /^[0-9a-fA-F]{64}$/.test(str);
+
+/**
+ * Parse formatted token amount to numeric value
+ * Removes commas, dollar signs, and other formatting characters
+ * @param {string|number} value - Formatted token amount (e.g., "1,234.56" or "$1,234.56")
+ * @returns {string} - Clean numeric string
+ */
+export const parseFormattedAmount = (value) => {
+  if (!value) return "0";
+  return value.toString().replace(/,/g, "").replace(/\$/g, "").trim();
+};

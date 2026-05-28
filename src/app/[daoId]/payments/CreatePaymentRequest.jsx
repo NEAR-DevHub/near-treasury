@@ -20,7 +20,7 @@ import {
   fetchApprovedProposals,
 } from "@/api/backend";
 import { encodeToMarkdown } from "@/helpers/daoHelpers";
-import { parseString } from "@/helpers/formatters";
+import { parseString, parseFormattedAmount } from "@/helpers/formatters";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { useProposalToastContext } from "@/context/ProposalToastContext";
 import { REFRESH_DELAY } from "@/constants/ui";
@@ -746,7 +746,11 @@ const CreatePaymentRequest = ({
                   <TokensDropdown
                     daoAccount={selectedWallet.value}
                     selectedValue={tokenId}
-                    onChange={(v) => setValueWithDefaults("tokenId", v)}
+                    onChange={(v) => {
+                      setValueWithDefaults("tokenId", v);
+                      // Reset amount when token changes
+                      setValue("amount", "");
+                    }}
                     setSelectedTokenBlockchain={(blockchain) => {
                       if (blockchain !== selectedTokenBlockchain) {
                         setValue("receiver", "");
@@ -837,12 +841,35 @@ const CreatePaymentRequest = ({
                   )}
                 </div>
                 <div className="d-flex flex-column gap-1">
-                  <label htmlFor="amount">
-                    Total Amount
-                    {errors.amount && (
-                      <span className="text-danger ms-1">*</span>
+                  <div className="d-flex justify-content-between">
+                    <label htmlFor="amount">
+                      Total Amount
+                      {errors.amount && (
+                        <span className="text-danger ms-1">*</span>
+                      )}
+                    </label>
+                    {selectedTokensAvailable && (
+                      <div
+                        className="px-3 py-1 rounded-2"
+                        style={{
+                          color: "#007aff",
+                          cursor: "pointer",
+                          fontSize: 13,
+                        }}
+                        onClick={() => {
+                          const cleanValue = parseFormattedAmount(
+                            selectedTokensAvailable
+                          );
+                          setValue("amount", cleanValue, {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          });
+                        }}
+                      >
+                        Use Max
+                      </div>
                     )}
-                  </label>
+                  </div>
                   <input
                     id="amount"
                     type="number"
@@ -898,7 +925,7 @@ const CreatePaymentRequest = ({
                 </div>
                 {selectedTokensAvailable &&
                   amount &&
-                  parseFloat(selectedTokensAvailable) <
+                  parseFloat(parseFormattedAmount(selectedTokensAvailable)) <
                     parseFloat(amount ? amount : 0) && (
                     <div className="warning-box d-flex gap-3 align-items-center px-3 py-2 rounded-3">
                       <i className="bi bi-exclamation-triangle h5"></i>

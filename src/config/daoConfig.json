@@ -23,6 +23,7 @@
     "root-treasury.sputnik-dao.near": {
       "showFunctionCall": true
     },
-    "shitzu.sputnik-dao.near": { "showFunctionCall": true }
+    "shitzu.sputnik-dao.near": { "showFunctionCall": true },
+    "peerfolio.sputnik-dao.near": { "showFunctionCall": true }
   }
 }

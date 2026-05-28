@@ -228,10 +228,12 @@ const Table = ({
                 }
               : item.kind.Transfer;
 
+          const isLockupTransfer =
+            isFunctionType &&
+            item.kind.FunctionCall?.actions[0]?.method_name === "transfer";
           const sourceWallet = isIntentWithdraw
             ? "Intents"
-            : isFunctionType &&
-                item.kind.FunctionCall?.actions[0]?.method_name === "transfer"
+            : isLockupTransfer
               ? "Lockup"
               : "SputnikDAO";
           const intentsToken =
@@ -421,6 +423,7 @@ const Table = ({
                       proposalCreator={item.proposer}
                       hasOneDeleteIcon={hasOneDeleteIcon}
                       isIntentsRequest={isIntentWithdraw}
+                      isLockupRequest={isLockupTransfer}
                       currentAmount={args.amount}
                       currentContract={args.token_id}
                       proposal={item}

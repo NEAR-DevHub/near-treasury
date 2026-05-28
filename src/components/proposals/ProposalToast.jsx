@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDao } from "@/context/DaoContext";
 
@@ -12,9 +13,24 @@ const ProposalToast = ({
   const searchParams = useSearchParams();
   const { daoId } = useDao();
 
-  if (!toastState?.show || !toastState?.status) return null;
+  const { status, proposalId } = toastState || {};
 
-  const { status, proposalId } = toastState;
+  // Auto-close failed toasts after 3 seconds
+  useEffect(() => {
+    const isErrorStatus =
+      status === "ErrorAddingProposal" || status === "ErrorVoting";
+
+    if (isErrorStatus && toastState?.show) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [status, toastState?.show, onClose]);
+
+  // Early return AFTER all hooks
+  if (!toastState?.show || !toastState?.status) return null;
 
   // Get context-specific messages
   const getContextMessages = () => {

@@ -523,7 +523,7 @@ const FtLockupPortfolio = ({
               account_id: treasuryDaoID,
             },
             gas: "300000000000000",
-            deposit: "0",
+            deposit: "1",
           },
         },
       ],
