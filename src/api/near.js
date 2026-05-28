@@ -8,6 +8,7 @@ import {
 export const client = new NearRpcClient({
   endpoint: "https://rpc.mainnet.fastnear.com",
   headers: { Authorization: process.env.NEXT_PUBLIC_FASTNEAR_API_KEY || "" },
+  retries: 1,
 });
 
 export const Near = {
