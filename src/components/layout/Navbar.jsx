@@ -10,12 +10,14 @@ import NearTreasuryLogo from "@/components/icons/Logo";
 import Profile from "@/components/ui/Profile";
 import Skeleton from "@/components/ui/Skeleton";
 import MyTreasuries from "@/app/[daoId]/dashboard/MyTreasuries";
+import TrezuBanner from "@/components/layout/TrezuBanner";
 
 const Navbar = () => {
   const { accountId, isInitializing, connect, disconnect } = useNearWallet();
   const { isDarkTheme, toggleTheme } = useTheme();
   const { daoId, isDaoLoading, customConfig } = useDao();
   const pathname = usePathname();
+  const showTrezuBanner = pathname === "/" || Boolean(daoId);
 
   const handleSignIn = async () => {
     try {
@@ -207,6 +209,7 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
+      {showTrezuBanner && <TrezuBanner showClose={Boolean(daoId)} />}
       {(daoId || isDaoLoading) && (
         <div className="px-4 mt-1 d-flex gap-3 align-items-center">
           {isDaoLoading && !daoId ? (

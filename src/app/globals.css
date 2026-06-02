@@ -34,6 +34,14 @@
   --other-green-light: #3cb1791a;
   --other-red: #d95c4a;
 
+  /* Trezu Banner */
+  --trezu-banner-bg: rgba(215, 235, 255, 1);
+  --trezu-banner-text: rgba(39, 117, 201, 1);
+  --trezu-banner-btn-bg: rgba(9, 83, 255, 1);
+  --trezu-banner-btn-text: rgba(255, 255, 255, 1);
+  --trezu-banner-close-icon: rgba(153, 153, 153, 1);
+  --trezu-banner-close-hover-bg: rgba(39, 117, 201, 0.12);
+
   /* Bootstrap Integration */
   --bs-body-bg: var(--bg-page-color);
   --bs-border-color: var(--border-color);
@@ -103,6 +111,14 @@
   --other-green: #3cb179;
   --other-green-light: #3cb1791a;
   --other-red: #d95c4a;
+
+  /* Trezu Banner */
+  --trezu-banner-bg: rgba(17, 34, 51, 1);
+  --trezu-banner-text: rgba(40, 143, 255, 1);
+  --trezu-banner-btn-bg: rgba(9, 83, 255, 1);
+  --trezu-banner-btn-text: rgba(255, 255, 255, 1);
+  --trezu-banner-close-icon: rgba(135, 135, 135, 1);
+  --trezu-banner-close-hover-bg: rgba(40, 143, 255, 0.14);
 
   /* Bootstrap Integration */
   --bs-body-bg: var(--bg-page-color);
@@ -939,6 +955,58 @@ fieldset:disabled:not(.no-transparent) {
 
 .system-update-banner a {
   text-decoration: underline;
+}
+
+.trezu-banner-wrapper {
+  background-color: transparent;
+}
+
+.trezu-banner {
+  border-radius: 12px;
+  background: var(--trezu-banner-bg);
+  padding: 10px 14px;
+}
+
+.trezu-banner-text {
+  color: var(--trezu-banner-text);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.trezu-banner-btn {
+  background-color: var(--trezu-banner-btn-bg) !important;
+  color: var(--trezu-banner-btn-text) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.trezu-banner-btn:hover {
+  background-color: #185fd8 !important;
+  color: #ffffff !important;
+}
+
+.trezu-banner-close {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--trezu-banner-close-icon) !important;
+  line-height: 1;
+}
+
+.trezu-banner-close i {
+  color: var(--trezu-banner-close-icon) !important;
+}
+
+.trezu-banner-close:hover {
+  background-color: var(--trezu-banner-close-hover-bg) !important;
 }
 
 .proposal-row:hover {
