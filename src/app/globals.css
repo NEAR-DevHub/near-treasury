@@ -941,6 +941,58 @@ fieldset:disabled:not(.no-transparent) {
   text-decoration: underline;
 }
 
+.trezu-banner-wrapper {
+  background-color: transparent;
+}
+
+.trezu-banner {
+  border-radius: 12px;
+  background: rgba(215, 235, 255, 1);
+  padding: 10px 14px;
+}
+
+.trezu-banner-text {
+  color: rgba(39, 117, 201, 1);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.trezu-banner-btn {
+  background-color: rgba(9, 83, 255, 1) !important;
+  color: rgba(255, 255, 255, 1) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.trezu-banner-btn:hover {
+  background-color: #185fd8 !important;
+  color: #ffffff !important;
+}
+
+.trezu-banner-close {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: rgba(153, 153, 153, 1) !important;
+  line-height: 1;
+}
+
+.trezu-banner-close i {
+  color: rgba(153, 153, 153, 1) !important;
+}
+
+.trezu-banner-close:hover {
+  background-color: rgba(39, 117, 201, 0.12) !important;
+}
+
 .proposal-row:hover {
   background-color: var(--grey-04) !important;
 }
